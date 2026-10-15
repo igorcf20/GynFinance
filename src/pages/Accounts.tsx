@@ -34,7 +34,7 @@ export function Accounts() {
         subtitulo="O que você tem para pagar e para receber."
         acoes={
           <span className="hidden sm:inline-flex">
-            <ButtonLink to={`/lancar?conta=${aba}`} variante="secundario" icone={<Plus size={16} />}>
+            <ButtonLink to={`/lancar?conta=${aba}`} icone={<Plus size={17} strokeWidth={2.4} />}>
               Nova conta
             </ButtonLink>
           </span>
@@ -46,21 +46,23 @@ export function Accounts() {
           rotulo="Tipo de conta"
           valor={aba}
           onChange={setAba}
-          className="w-full sm:w-auto"
+          grande
+          estilo="navy"
+          className="w-full sm:w-[400px]"
           opcoes={[
             { valor: 'pagar', rotulo: 'A pagar', contagem: pagar.length },
             { valor: 'receber', rotulo: 'A receber', contagem: receber.length },
           ]}
         />
-        <div className="relative sm:ml-auto sm:w-64">
-          <Search size={16} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-slate" aria-hidden />
+        <div className="relative sm:ml-auto sm:w-72">
+          <Search size={17} strokeWidth={2} className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-navy" aria-hidden />
           <input
             type="search"
             aria-label="Buscar conta"
             placeholder="Buscar conta…"
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
-            className="h-10 w-full rounded-[10px] border border-line bg-surface pr-3 pl-9 text-[14px] placeholder:text-muted focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10"
+            className="h-12 w-full rounded-[14px] border border-[#e3e9f1] bg-surface pr-3 pl-10 text-[14px] shadow-[var(--shadow-card)] placeholder:text-muted focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10"
           />
         </div>
         <span className="sm:hidden">
@@ -90,10 +92,10 @@ export function Accounts() {
             const itens = lista.filter((l) => grupoPrazo(l.dataVencimento!, hoje) === g.id)
             if (!itens.length) return null
             return (
-              <Card key={g.id} className="!py-4">
-                <div className="flex items-center justify-between">
-                  <h2 className={`text-[15px] font-semibold ${g.id === 'atrasadas' ? 'text-danger' : 'text-ink'}`}>{g.titulo}</h2>
-                  <span className="num text-[13px] text-ink-2">{brl(itens.reduce((t, l) => t + l.valor, 0))}</span>
+              <Card key={g.id} className="!py-2">
+                <div className="flex items-center justify-between border-b border-line py-3">
+                  <h2 className={`text-[16px] font-bold tracking-[-0.01em] ${g.id === 'atrasadas' ? 'text-[#b4232f]' : 'text-ink'}`}>{g.titulo}</h2>
+                  <span className="num rounded-full bg-[#f1f5fa] px-3 py-1 text-[13px] font-semibold text-[#3d5170]">{brl(itens.reduce((t, l) => t + l.valor, 0))}</span>
                 </div>
                 <ul className="divide-y divide-line">
                   {itens.map((c) => (
@@ -103,8 +105,8 @@ export function Accounts() {
               </Card>
             )
           })}
-          <p className="num text-right text-[13px] text-ink-2">
-            Total {aba === 'pagar' ? 'a pagar' : 'a receber'}: <span className="font-semibold text-ink">{brl(total)}</span>
+          <p className="num text-right text-[14px] text-ink-2">
+            Total {aba === 'pagar' ? 'a pagar' : 'a receber'}: <span className="text-[16px] font-bold text-ink">{brl(total)}</span>
           </p>
         </div>
       )}

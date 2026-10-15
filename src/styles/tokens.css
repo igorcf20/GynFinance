@@ -1,37 +1,42 @@
-/* Tokens do Gynfinance (DESIGN.md, seção 3). Não usar cores fora daqui. */
+/* Tokens do Gynfinance (DESIGN.md, seção 3, ajustados à imagem de referência das telas).
+   Não usar cores fora daqui. */
 @theme {
   --font-sans: 'Inter Variable', 'Inter', ui-sans-serif, system-ui, sans-serif;
 
-  --color-bg: #f5f7fa;
+  --color-bg: #f3f6fa;
   --color-surface: #ffffff;
-  --color-sidebar: #f8fafc;
+  --color-sidebar: #f8fafd;
   --color-primary: #3478f6;
-  --color-primary-hover: #2463d9;
-  --color-primary-soft: #eaf2ff;
+  --color-primary-hover: #2563eb;
+  --color-primary-soft: #e8f0fe;
+  --color-primary-line: #a9c7fb;
+  /* Azul-marinho dos itens ativos (ícone da sidebar, aba "A pagar"). */
+  --color-navy: #1f3f78;
   --color-slate: #6f8faf;
-  --color-ink: #172b4d;
-  --color-ink-2: #64748b;
+  --color-ink: #13213d;
+  --color-ink-2: #5b6b82;
   /* Texto auxiliar: #94A3B8 do DESIGN.md só para decoração; em texto usa-se um tom
      um pouco mais escuro para manter contraste AA sobre branco. */
   --color-muted: #8291a7;
-  --color-line: #e8edf3;
-  --color-success: #168653;
-  --color-success-soft: #e7f5ee;
-  --color-danger: #d9485a;
-  --color-danger-soft: #fdecee;
-  --color-warning: #b9771c;
-  --color-warning-base: #d99432;
-  --color-warning-soft: #fdf3e3;
-  --color-hover: #f1f4f8;
+  --color-line: #e7ecf3;
+  --color-success: #12925a;
+  --color-success-soft: #e3f6ec;
+  --color-danger: #e0324a;
+  --color-danger-soft: #fdebee;
+  --color-warning: #c2610c;
+  --color-warning-base: #f08a24;
+  --color-warning-soft: #fff1e3;
+  --color-hover: #eff3f8;
 
-  --radius-card: 16px;
-  --radius-btn: 10px;
-  --radius-field: 9px;
+  --radius-card: 18px;
+  --radius-btn: 12px;
+  --radius-field: 12px;
 
-  --shadow-card: 0 4px 18px rgba(30, 55, 90, 0.035), 0 1px 3px rgba(30, 55, 90, 0.025);
-  --shadow-card-hover: 0 8px 26px rgba(30, 55, 90, 0.06), 0 2px 5px rgba(30, 55, 90, 0.035);
-  --shadow-pop: 0 18px 50px rgba(23, 43, 77, 0.16);
+  --shadow-card: 0 1px 2px rgba(16, 32, 64, 0.04), 0 12px 32px -16px rgba(31, 63, 120, 0.16);
+  --shadow-card-hover: 0 2px 4px rgba(16, 32, 64, 0.05), 0 18px 40px -16px rgba(31, 63, 120, 0.24);
+  --shadow-pop: 0 24px 60px -12px rgba(19, 33, 61, 0.28);
+  --shadow-primary: 0 10px 22px -10px rgba(37, 99, 235, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.18);
 
-  --breakpoint-md: 768px;
-  --breakpoint-xl: 1200px;
+  --breakpoint-md: 48rem; /* 768px (em rem, como os outros, para a ordem das regras sair certa) */
+  --breakpoint-xl: 75rem; /* 1200px */
 }

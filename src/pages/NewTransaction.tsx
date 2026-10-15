@@ -1,4 +1,4 @@
-import { ArrowDownLeft, ArrowUpRight, Calendar, Check, ChevronDown, CreditCard, ExternalLink, ImagePlus, Repeat, UserRound, Wallet, X } from 'lucide-react'
+import { ArrowDown, ArrowUpRight, CircleCheck, Calendar, Check, ChevronDown, CreditCard, ExternalLink, ImagePlus, Repeat, UserRound, Wallet, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Header } from '../components/layout/Header'
@@ -87,7 +87,7 @@ export function NewTransaction() {
   const [nota, setNota] = useState<NotaEmitida>(editando?.notaEmitida === 'sim' ? 'sim' : 'nao')
   const [pessoal, setPessoal] = useState(!!editando?.pagoComDinheiroPessoal)
   const [comprovante, setComprovante] = useState<string>('')
-  const [detalhes, setDetalhes] = useState(!!(editando?.descricao || editando?.contraparte || contaNova))
+  const [detalhes, setDetalhes] = useState(true)
   const [erro, setErro] = useState<{ valor?: string; categoria?: string }>({})
   const [salvando, setSalvando] = useState(false)
   const refValor = useRef<HTMLInputElement>(null)
@@ -196,12 +196,13 @@ export function NewTransaction() {
           <Segmentado
             rotulo="Tipo de lançamento"
             grande
+            estilo="azul"
             className="w-full sm:w-auto sm:self-start"
             valor={tipo}
             onChange={mudarTipo}
             opcoes={[
-              { valor: 'entrada', rotulo: 'Entrou dinheiro', icone: <ArrowUpRight size={17} className="text-success" /> },
-              { valor: 'saida', rotulo: 'Saiu dinheiro', icone: <ArrowDownLeft size={17} className="text-danger" /> },
+              { valor: 'entrada', rotulo: 'Entrou dinheiro', icone: <ArrowUpRight size={18} strokeWidth={2.3} className={tipo === 'entrada' ? 'text-white' : 'text-success'} /> },
+              { valor: 'saida', rotulo: 'Saiu dinheiro', icone: <ArrowDown size={18} strokeWidth={2.3} className={tipo === 'saida' ? 'text-white' : 'text-danger'} /> },
             ]}
           />
 
@@ -218,11 +219,11 @@ export function NewTransaction() {
           )}
 
           <div>
-            <label htmlFor="valor" className="mb-1 block text-[13px] font-semibold text-ink">
+            <label htmlFor="valor" className="mb-1 block text-[15px] font-bold text-ink">
               Valor
             </label>
-            <div className="flex items-baseline gap-2 border-b border-line pb-2 focus-within:border-primary">
-              <span className="text-[24px] font-bold text-ink-2 md:text-[28px]">R$</span>
+            <div className="flex items-baseline gap-2.5 border-b-2 border-transparent pb-1 transition-colors focus-within:border-primary/40">
+              <span className={`valor-grande text-[36px] md:text-[46px] ${valorTxt ? 'text-ink' : 'text-[#c5cfdb]'}`}>R$</span>
               <input
                 id="valor"
                 ref={refValor}
@@ -236,7 +237,7 @@ export function NewTransaction() {
                   setErro((x) => ({ ...x, valor: undefined }))
                 }}
                 onBlur={() => valor > 0 && setValorTxt(valorInicial({ valor } as Lancamento))}
-                className="num w-full bg-transparent text-[36px] font-bold text-ink placeholder:text-[#c5cfdb] focus:outline-none md:text-[40px]"
+                className="valor-grande w-full bg-transparent text-[36px] text-ink placeholder:text-[#c5cfdb] focus:outline-none md:text-[46px]"
               />
             </div>
             {erro.valor && <p className="mt-1 text-[12px] text-danger">{erro.valor}</p>}
@@ -244,7 +245,7 @@ export function NewTransaction() {
 
           {modo === 'normal' && (
             <div>
-              <p className="mb-2 text-[13px] font-semibold text-ink">Categoria</p>
+              <p className="mb-2.5 text-[15px] font-bold text-ink">Categoria</p>
               <Chips
                 rotulo="Categoria"
                 valor={categoriaEhOutra ? '' : categoriaId}
@@ -252,7 +253,7 @@ export function NewTransaction() {
                   setCategoriaId(v)
                   setErro((x) => ({ ...x, categoria: undefined }))
                 }}
-                opcoes={rapidas.map((c) => ({ valor: c.id, rotulo: c.nome, icone: categoriaId === c.id ? <Check size={14} /> : undefined }))}
+                opcoes={rapidas.map((c) => ({ valor: c.id, rotulo: c.nome }))}
               />
               {outras.length > 0 && (
                 <Select
@@ -314,10 +315,10 @@ export function NewTransaction() {
           </div>
 
           {aPrazo && modo === 'normal' && (
-            <div className="anim-subir grid grid-cols-1 items-end gap-4 rounded-[12px] bg-[#f8fafc] p-4 sm:grid-cols-2">
+            <div className="anim-subir grid grid-cols-1 items-end gap-4 rounded-[16px] border border-[#e3ebf6] bg-gradient-to-b from-[#f7faff] to-[#f1f6fd] p-4 sm:grid-cols-2">
               <Input label="Vencimento" type="date" value={vencimento} onChange={(e) => setVencimento(e.target.value || hoje)} />
-              <label className="flex h-[42px] cursor-pointer items-center gap-2.5 text-[13px] font-medium text-ink">
-                <input id="repetir" type="checkbox" checked={repetir} onChange={(e) => setRepetir(e.target.checked)} className="size-4 accent-[#3478F6]" />
+              <label className="flex h-11 cursor-pointer items-center gap-2.5 text-[14px] font-medium text-ink">
+                <input id="repetir" type="checkbox" checked={repetir} onChange={(e) => setRepetir(e.target.checked)} className="size-[18px] accent-[#3478F6]" />
                 <Repeat size={15} className="text-slate" aria-hidden />
                 Repetir todo mês
               </label>
@@ -333,8 +334,8 @@ export function NewTransaction() {
                       { valor: 'adiar', rotulo: 'Adiar para segunda' },
                     ]}
                   />
-                  <label className="flex h-[42px] cursor-pointer items-center gap-2.5 text-[13px] font-medium text-ink">
-                    <input id="valor-varia" type="checkbox" checked={valorVaria} onChange={(e) => setValorVaria(e.target.checked)} className="size-4 accent-[#3478F6]" />
+                  <label className="flex h-11 cursor-pointer items-center gap-2.5 text-[14px] font-medium text-ink">
+                    <input id="valor-varia" type="checkbox" checked={valorVaria} onChange={(e) => setValorVaria(e.target.checked)} className="size-[18px] accent-[#3478F6]" />
                     O valor muda todo mês (luz, água)
                   </label>
                 </>
@@ -403,18 +404,27 @@ export function NewTransaction() {
         <div className="flex flex-col gap-4 md:gap-5">
           {tipo === 'entrada' && modo === 'normal' && (
             <Card>
-              <p className="mb-3 text-[14px] font-semibold text-ink">Nota emitida?</p>
-              <Segmentado
-                rotulo="Nota emitida"
-                className="w-full"
-                valor={nota === 'sim' ? 'sim' : 'nao'}
-                onChange={(v) => setNota(v as NotaEmitida)}
-                opcoes={[
-                  { valor: 'sim', rotulo: 'Sim' },
-                  { valor: 'nao', rotulo: 'Não' },
-                ]}
-              />
-              <a href={portalNota} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1.5 text-[13px] font-semibold text-primary hover:underline">
+              <p className="mb-3 text-[15px] font-bold text-ink">Nota emitida?</p>
+              <div role="radiogroup" aria-label="Nota emitida" className="grid grid-cols-2 gap-2.5">
+                {(['sim', 'nao'] as const).map((o) => {
+                  const ativo = (nota === 'sim' ? 'sim' : 'nao') === o
+                  return (
+                    <button
+                      key={o}
+                      role="radio"
+                      aria-checked={ativo}
+                      onClick={() => setNota(o as NotaEmitida)}
+                      className={`inline-flex h-12 items-center justify-center gap-2 rounded-[12px] text-[14px] font-semibold transition-all ${
+                        ativo ? 'grad-primario text-white' : 'border border-line bg-surface text-ink shadow-[0_1px_2px_rgba(16,32,64,0.04)] hover:border-primary-line'
+                      }`}
+                    >
+                      {ativo && <CircleCheck size={17} fill="white" className="text-primary" aria-hidden />}
+                      {o === 'sim' ? 'Sim' : 'Não'}
+                    </button>
+                  )
+                })}
+              </div>
+              <a href={portalNota} target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center gap-1.5 text-[14px] font-semibold text-primary underline decoration-primary/40 underline-offset-4 hover:decoration-primary">
                 Emitir nota no portal
                 <ExternalLink size={14} aria-hidden />
               </a>
@@ -443,9 +453,11 @@ export function NewTransaction() {
             ) : (
               <button
                 onClick={() => refArquivo.current?.click()}
-                className="flex w-full flex-col items-center gap-1.5 rounded-[12px] border border-dashed border-[#d3dce7] px-4 py-6 text-[13px] text-ink-2 transition-colors hover:border-primary hover:bg-primary-soft/40 hover:text-primary"
+                className="flex w-full flex-col items-center gap-2.5 rounded-[16px] border-[1.5px] border-dashed border-[#cfdae8] bg-[#fafcff] px-4 py-8 text-[14px] text-ink-2 transition-colors hover:border-primary hover:bg-primary-soft/40 hover:text-primary"
               >
-                <ImagePlus size={22} strokeWidth={1.6} aria-hidden />
+                <span className="inline-flex size-12 items-center justify-center rounded-full bg-gradient-to-b from-[#eef4ff] to-[#dde9fd] text-primary">
+                  <ImagePlus size={22} strokeWidth={1.9} aria-hidden />
+                </span>
                 Adicionar foto do comprovante
               </button>
             )}
@@ -453,7 +465,7 @@ export function NewTransaction() {
 
           {tipo === 'saida' && (
             <Card className="flex flex-col gap-1">
-              <p className="mb-1 text-[14px] font-semibold text-ink">Atalhos</p>
+              <p className="mb-1 text-[15px] font-bold text-ink">Atalhos</p>
               <button
                 onClick={() => {
                   setModo(modo === 'retirada' ? 'normal' : 'retirada')
@@ -461,9 +473,11 @@ export function NewTransaction() {
                   setAPrazo(false)
                 }}
                 aria-pressed={modo === 'retirada'}
-                className={`flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-left text-[13px] transition-colors ${modo === 'retirada' ? 'bg-primary-soft text-primary' : 'text-ink hover:bg-hover'}`}
+                className={`-mx-2 flex items-center gap-3 rounded-[12px] px-2 py-2.5 text-left text-[14px] transition-colors ${modo === 'retirada' ? 'bg-primary-soft text-primary' : 'text-ink hover:bg-hover'}`}
               >
-                <UserRound size={18} className="shrink-0 text-slate" aria-hidden />
+                <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#f3f6fa] to-[#e5ecf4] text-[#2f4a72]">
+                  <UserRound size={18} strokeWidth={2} aria-hidden />
+                </span>
                 <span className="flex-1">
                   <span className="block font-semibold">Retirada para mim</span>
                   <span className="block text-[12px] text-ink-2">Lança como pró-labore, fora das despesas.</span>
@@ -471,7 +485,7 @@ export function NewTransaction() {
                 {modo === 'retirada' && <Check size={16} />}
               </button>
               {modo === 'normal' && !aPrazo && (
-                <div className="px-3">
+                <div className="border-t border-line">
                   <Toggle checked={pessoal} onChange={setPessoal} label="Paguei com dinheiro pessoal" descricao="Registra também um aporte seu, para o caixa não ficar errado." />
                 </div>
               )}

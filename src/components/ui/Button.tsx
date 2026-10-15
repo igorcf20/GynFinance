@@ -2,21 +2,23 @@ import type { ButtonHTMLAttributes, ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { Loader2 } from 'lucide-react'
 
-type Variante = 'primario' | 'secundario' | 'discreto' | 'perigo'
+type Variante = 'primario' | 'secundario' | 'contorno' | 'discreto' | 'perigo'
 type Tamanho = 'md' | 'sm' | 'lg'
 
 const base =
-  'inline-flex items-center justify-center gap-2 whitespace-nowrap font-semibold text-[13px] rounded-[10px] transition-colors duration-150 disabled:opacity-60 select-none'
+  'inline-flex items-center justify-center gap-2 whitespace-nowrap font-semibold text-[14px] rounded-[12px] transition-all duration-150 disabled:opacity-60 select-none active:translate-y-px'
 const variantes: Record<Variante, string> = {
-  primario: 'bg-primary text-white hover:bg-primary-hover active:bg-primary-hover shadow-[0_1px_2px_rgba(52,120,246,0.25)]',
-  secundario: 'bg-surface text-ink-2 border border-line hover:border-[#d6dee8] hover:text-ink hover:bg-[#fbfcfe]',
+  primario: 'grad-primario text-white hover:brightness-[1.06]',
+  secundario: 'bg-surface text-ink border border-line shadow-[0_1px_2px_rgba(16,32,64,0.04)] hover:border-[#d3dce8] hover:bg-[#fbfcfe]',
+  // Botão branco com borda azul ("Paguei", "Marcar como pago").
+  contorno: 'bg-surface text-primary border-[1.5px] border-primary-line hover:border-primary hover:bg-primary-soft/60',
   discreto: 'bg-transparent text-ink-2 hover:bg-hover hover:text-ink',
-  perigo: 'bg-danger text-white hover:brightness-95',
+  perigo: 'bg-danger text-white shadow-[0_10px_22px_-10px_rgba(224,50,74,0.7)] hover:brightness-95',
 }
 const tamanhos: Record<Tamanho, string> = {
-  sm: 'h-8 px-3',
-  md: 'h-10 px-4',
-  lg: 'h-12 px-5 text-[14px]',
+  sm: 'h-9 px-4 text-[13px]',
+  md: 'h-11 px-5',
+  lg: 'h-[52px] px-6 text-[15px]',
 }
 
 export function classesBotao(v: Variante = 'primario', t: Tamanho = 'md', extra = '') {

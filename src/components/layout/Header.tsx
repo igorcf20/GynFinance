@@ -11,8 +11,8 @@ export function SeletorMes() {
   const atual = hoje.slice(0, 7)
   const meses = Array.from({ length: 12 }, (_, i) => addMeses(atual, -i))
   return (
-    <label className="relative inline-flex h-10 items-center gap-2 rounded-[10px] border border-line bg-surface pr-9 pl-3 text-[13px] font-semibold text-ink transition-colors hover:border-[#d6dee8]">
-      <CalendarDays size={17} strokeWidth={1.7} className="text-slate" aria-hidden />
+    <label className="relative inline-flex h-11 items-center gap-2.5 whitespace-nowrap rounded-[12px] border border-[#e3e9f1] bg-surface pr-10 pl-3.5 text-[14px] font-semibold text-ink shadow-[var(--shadow-card)] transition-all hover:-translate-y-px">
+      <CalendarDays size={18} strokeWidth={1.9} className="text-navy" aria-hidden />
       <span className="sr-only">Período</span>
       <select value={mes} onChange={(e) => setMes(e.target.value)} className="absolute inset-0 cursor-pointer opacity-0">
         {meses.map((m) => (
@@ -22,7 +22,7 @@ export function SeletorMes() {
         ))}
       </select>
       {mesAno(mes)}
-      <ChevronDown size={16} className="absolute right-3 text-slate" aria-hidden />
+      <ChevronDown size={16} className="absolute right-3.5 text-navy" aria-hidden />
     </label>
   )
 }
@@ -44,13 +44,13 @@ function Notificacoes() {
         onClick={() => setAberto((v) => !v)}
         aria-label={`Notificações${lista.length ? `, ${lista.length} novas` : ''}`}
         aria-expanded={aberto}
-        className="relative inline-flex size-10 items-center justify-center rounded-[10px] text-slate transition-colors hover:bg-hover hover:text-ink"
+        className="relative inline-flex size-11 items-center justify-center rounded-full text-navy transition-colors hover:bg-white hover:shadow-[var(--shadow-card)]"
       >
-        <Bell size={20} strokeWidth={1.7} />
-        {lista.length > 0 && <span className="absolute top-2 right-2.5 size-2 rounded-full bg-danger ring-2 ring-bg" aria-hidden />}
+        <Bell size={21} strokeWidth={1.9} />
+        {lista.length > 0 && <span className="absolute top-2.5 right-3 size-2 rounded-full bg-danger ring-2 ring-white" aria-hidden />}
       </button>
       {aberto && (
-        <div className="anim-subir absolute right-0 z-30 mt-2 w-80 rounded-[14px] border border-line bg-surface p-2 shadow-[var(--shadow-pop)]">
+        <div className="anim-subir absolute right-0 z-30 mt-2 w-80 rounded-[16px] border border-line bg-surface p-2 shadow-[var(--shadow-pop)]">
           <p className="px-3 pt-2 pb-1 text-[12px] font-semibold text-ink-2">Avisos</p>
           {lista.length === 0 && <p className="px-3 py-4 text-[13px] text-ink-2">Nenhum aviso agora. Tudo em dia.</p>}
           {lista.map((a) => (
@@ -78,8 +78,8 @@ export function Header({ titulo, subtitulo, periodo, acoes }: { titulo: ReactNod
         <LogoMarca size={32} />
       </Link>
       <div className="min-w-0 flex-1">
-        <h1 className="truncate text-[20px] font-[650] tracking-[-0.01em] text-ink md:text-[22px]">{titulo}</h1>
-        {subtitulo && <p className="truncate text-[13px] text-ink-2 md:text-[14px]">{subtitulo}</p>}
+        <h1 className="truncate text-[22px] font-bold tracking-[-0.025em] text-ink md:text-[26px]">{titulo}</h1>
+        {subtitulo && <p className="mt-0.5 truncate text-[13px] text-ink-2 md:text-[15px]">{subtitulo}</p>}
       </div>
       <div className="flex items-center gap-1.5 md:gap-2">
         {acoes}
@@ -92,7 +92,7 @@ export function Header({ titulo, subtitulo, periodo, acoes }: { titulo: ReactNod
         <Link
           to="/configuracoes"
           aria-label="Perfil da empresa"
-          className="hidden size-10 items-center justify-center rounded-full bg-primary-soft text-[15px] font-bold text-primary md:inline-flex"
+          className="hidden size-11 items-center justify-center rounded-full bg-gradient-to-b from-[#eaf0f8] to-[#d9e3f0] text-[17px] font-extrabold text-navy ring-2 ring-white md:inline-flex"
         >
           {dados.empresa.nomeDono.charAt(0).toUpperCase()}
         </Link>

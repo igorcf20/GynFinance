@@ -9,7 +9,7 @@ export function MainLayout() {
   return (
     <div className="flex min-h-dvh">
       <Sidebar />
-      <main className="min-w-0 flex-1 px-4 pt-5 pb-28 md:px-6 md:pt-7 md:pb-10 xl:px-8">
+      <main className="min-w-0 flex-1 px-4 pt-5 pb-28 md:px-7 md:pt-8 md:pb-10 xl:px-10">
         <div key={pathname} className="anim-aparecer mx-auto max-w-[1240px]">
           <Outlet />
         </div>

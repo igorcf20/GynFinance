@@ -235,22 +235,28 @@ export function Settings() {
   return (
     <>
       <Header titulo="Configurações" />
-      <div className="grid grid-cols-1 gap-4 md:gap-5 lg:grid-cols-[220px_1fr]">
-        <nav aria-label="Configurações" className="-mx-4 flex gap-1 overflow-x-auto px-4 pb-1 lg:mx-0 lg:flex-col lg:overflow-visible lg:px-0">
-          {SECOES.map((s) => (
-            <NavLink
-              key={s.id}
-              to={`/configuracoes/${s.id}`}
-              className={() =>
-                `flex h-10 shrink-0 items-center gap-2.5 rounded-[9px] px-3 text-[14px] font-medium transition-colors ${
-                  secao === s.id ? 'bg-primary-soft text-primary' : 'text-ink-2 hover:bg-hover hover:text-ink'
-                }`
-              }
-            >
-              <s.icone size={18} strokeWidth={1.7} aria-hidden />
-              {s.rotulo}
-            </NavLink>
-          ))}
+      <div className="grid grid-cols-1 gap-4 md:gap-5 lg:grid-cols-[240px_1fr] lg:items-start">
+        <nav
+          aria-label="Configurações"
+          className="-mx-4 flex gap-1 overflow-x-auto px-4 pb-1 lg:card lg:mx-0 lg:flex-col lg:overflow-visible lg:p-2.5"
+        >
+          {SECOES.map((s) => {
+            const ativo = secao === s.id
+            return (
+              <NavLink
+                key={s.id}
+                to={`/configuracoes/${s.id}`}
+                className={`flex h-11 shrink-0 items-center gap-3 rounded-[12px] px-2.5 text-[14px] transition-colors ${
+                  ativo ? 'bg-gradient-to-r from-[#dbe7fc] to-[#e9f1fe] font-bold text-navy' : 'font-medium text-[#3d5170] hover:bg-hover hover:text-ink'
+                }`}
+              >
+                <span className={`inline-flex size-[28px] items-center justify-center rounded-[8px] ${ativo ? 'grad-navy text-white' : 'text-[#2f4a72]'}`}>
+                  <s.icone size={ativo ? 16 : 19} strokeWidth={ativo ? 2.2 : 1.8} aria-hidden />
+                </span>
+                {s.rotulo}
+              </NavLink>
+            )
+          })}
         </nav>
         <div key={secao} className="anim-aparecer min-w-0">
           <Conteudo />

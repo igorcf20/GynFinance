@@ -1,8 +1,8 @@
-import { CalendarClock, CheckCircle2, ChevronRight, Circle, Clock, ExternalLink, FileText, Info, TrendingUp } from 'lucide-react'
+import { CalendarClock, ChartColumnIncreasing, CheckCircle2, ChevronRight, CircleAlert, CircleCheck, CircleDashed, ExternalLink, FileText, Info } from 'lucide-react'
 import { useState } from 'react'
 import { Header } from '../components/layout/Header'
 import { Badge } from '../components/ui/Badge'
-import { Button } from '../components/ui/Button'
+import { Button, classesBotao } from '../components/ui/Button'
 import { Card, CardTitulo, EstadoVazio, IconeBox } from '../components/ui/Card'
 import { Modal, useToast } from '../components/ui/Modal'
 import { estadoDas, situacaoMei, type EstadoDas } from '../domain/calc'
@@ -20,42 +20,42 @@ const ESTADO: Record<EstadoDas, { texto: string; tom: 'verde' | 'ambar' | 'verme
 function RevenueLimit() {
   const { dados, hoje } = useStore()
   const s = situacaoMei(dados, hoje)
-  const cor = s.usado >= 0.9 ? 'bg-danger' : s.usado >= 0.7 ? 'bg-warning-base' : 'bg-primary'
+  const cor = s.usado >= 0.9 ? 'linear-gradient(90deg,#f26b7e,#e0324a)' : s.usado >= 0.7 ? 'linear-gradient(90deg,#ffb066,#f08a24)' : 'linear-gradient(90deg,#3478f6,#6aa6ff)'
   return (
     <Card>
-      <p className="flex items-center gap-1.5 text-[14px] font-semibold text-ink">
+      <p className="flex items-center gap-1.5 text-[15px] font-bold text-ink">
         Faturamento do ano
-        <span title="Soma das vendas e serviços do ano, pela data da venda. É assim que a Receita conta." className="text-slate">
-          <Info size={15} aria-label="Como é calculado" />
+        <span title="Soma das vendas e serviços do ano, pela data da venda. É assim que a Receita conta." className="text-navy">
+          <Info size={16} strokeWidth={2} aria-label="Como é calculado" />
         </span>
       </p>
-      <div className="mt-1 flex items-baseline justify-between gap-3">
-        <p className="num">
-          <span className="text-[30px] font-bold text-ink md:text-[34px]">{brl(s.faturado)}</span>
-          <span className="ml-1.5 text-[13px] text-ink-2">de {brl(s.limite)}</span>
+      <div className="mt-2 flex items-baseline justify-between gap-3">
+        <p>
+          <span className="valor-grande text-[32px] text-ink md:text-[38px]">{brl(s.faturado)}</span>
+          <span className="num ml-2 text-[15px] font-medium text-ink-2">de {brl(s.limite)}</span>
         </p>
-        <span className="num text-[18px] font-bold text-ink">{pct(s.usado)}</span>
+        <span className="num text-[20px] font-extrabold text-ink">{pct(s.usado)}</span>
       </div>
       <div
-        className="mt-3 h-2.5 rounded-full bg-[#eef2f6]"
+        className="mt-4 h-3 rounded-full bg-[#e9eef5]"
         role="progressbar"
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={Math.round(s.usado * 100)}
         aria-label="Limite anual do MEI usado"
       >
-        <div className={`h-2.5 rounded-full ${cor}`} style={{ width: `${Math.min(100, s.usado * 100)}%` }} />
+        <div className="h-3 rounded-full shadow-[0_4px_10px_-4px_rgba(37,99,235,0.6)]" style={{ width: `${Math.min(100, s.usado * 100)}%`, backgroundImage: cor }} />
       </div>
-      <p className="mt-3 text-[13px] text-ink-2">
+      <p className="mt-3 text-[14px] text-ink-2">
         {s.restante > 0 ? `Ainda pode faturar ${brl(s.restante)} este ano.` : 'Você passou o limite do MEI. Fale com um contador.'}
       </p>
-      <div className="mt-5 flex items-center gap-3 rounded-[12px] bg-[#f8fafc] px-4 py-3.5">
-        <IconeBox tom="neutro" className="!size-9">
-          <TrendingUp size={18} strokeWidth={1.7} />
-        </IconeBox>
+      <div className="mt-5 flex items-center gap-4 rounded-[16px] bg-gradient-to-r from-[#f1f5fa] to-[#f7f9fc] px-5 py-4">
+        <span className="text-[#8aa0bf]">
+          <ChartColumnIncreasing size={30} strokeWidth={2.2} aria-hidden />
+        </span>
         <div>
-          <p className="text-[12px] text-ink-2">No ritmo atual, você fecha o ano com</p>
-          <p className={`num text-[18px] font-bold ${s.projecao > s.limite ? 'text-danger' : 'text-ink'}`}>{brl(s.projecao)}</p>
+          <p className="text-[14px] text-ink-2">No ritmo atual, você fecha o ano com</p>
+          <p className={`valor-grande text-[22px] ${s.projecao > s.limite ? 'text-danger' : 'text-ink'}`}>{brl(s.projecao)}</p>
         </div>
       </div>
     </Card>
@@ -73,29 +73,24 @@ function DASCard() {
   return (
     <Card>
       <div className="flex items-start gap-3">
-        <IconeBox tom={estado === 'pago' ? 'verde' : estado === 'atrasado' ? 'vermelho' : 'ambar'}>
-          <FileText size={19} strokeWidth={1.7} />
+        <IconeBox tom={estado === 'pago' ? 'verde' : estado === 'atrasado' ? 'vermelho' : 'azul'}>
+          <FileText size={20} strokeWidth={2} />
         </IconeBox>
         <div className="min-w-0 flex-1">
-          <p className="font-semibold text-ink">DAS de {nomeMes(mes)}</p>
-          <p className="text-[13px] text-ink-2">
+          <p className="text-[16px] font-bold text-ink">DAS de {nomeMes(mes)}</p>
+          <p className={`text-[14px] font-medium ${estado === 'pago' ? 'text-ink-2' : estado === 'atrasado' ? 'text-danger' : 'text-[#e8640c]'}`}>
             Vence dia {parametroDoAno(Number(mes.slice(0, 4))).dasDiaVencimento} de {nomeMes(mes)} · <span className="num">{brl(valor, { centavos: true })}</span>
           </p>
         </div>
         <Badge tom={ESTADO[estado].tom}>{ESTADO[estado].texto}</Badge>
       </div>
       {estado !== 'pago' ? (
-        <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <a
-            href={LINKS.pgmei}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-[10px] bg-primary px-4 text-[13px] font-semibold text-white transition-colors hover:bg-primary-hover"
-          >
+        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <a href={LINKS.pgmei} target="_blank" rel="noreferrer" className={classesBotao('primario', 'lg')}>
             Pagar no portal
-            <ExternalLink size={15} aria-hidden />
+            <ExternalLink size={16} aria-hidden />
           </a>
-          <Button variante="secundario" onClick={() => setConfirmar(true)}>
+          <Button variante="contorno" tamanho="lg" onClick={() => setConfirmar(true)}>
             Marcar como pago
           </Button>
         </div>
@@ -147,13 +142,15 @@ function DASTimeline() {
             m,
             hoje,
           )
-          const Icone = estado === 'pago' ? CheckCircle2 : estado === 'futuro' ? Circle : Clock
-          const cor = estado === 'pago' ? 'text-success' : estado === 'pendente' ? 'text-warning' : estado === 'atrasado' ? 'text-danger' : 'text-[#c5cfdb]'
+          const Icone = estado === 'pago' ? CircleCheck : estado === 'futuro' ? CircleDashed : CircleAlert
+          const cor =
+            estado === 'pago' ? 'text-[#1fa463]' : estado === 'pendente' ? 'text-warning-base' : estado === 'atrasado' ? 'text-danger' : 'text-[#c5cfdb]'
           return (
-            <li key={m} className="flex items-center gap-3 border-b border-line py-2 text-[13px] last:border-0">
-              <span className="w-20 text-ink-2">{capitalizar(nomeMes(m))}</span>
-              <Icone size={16} className={cor} aria-hidden />
-              <span className={estado === 'futuro' ? 'text-muted' : 'font-medium text-ink'}>{estado === 'futuro' ? 'A vencer' : ESTADO[estado].texto === 'Não pago' ? 'Pendente' : ESTADO[estado].texto}</span>
+            <li key={m} className="flex items-center gap-3 border-b border-line py-2.5 text-[14px] last:border-0">
+              <span className="w-28 text-[#3d5170]">{capitalizar(nomeMes(m))}</span>
+              {/* Ícone cheio com o desenho em branco, como na imagem de referência. */}
+              <Icone size={19} className={cor} fill={estado === 'futuro' ? 'none' : 'currentColor'} stroke={estado === 'futuro' ? 'currentColor' : 'white'} strokeWidth={2.2} aria-hidden />
+              <span className={`whitespace-nowrap ${estado === 'futuro' ? 'text-muted' : estado === 'pendente' ? 'font-semibold text-warning' : 'font-medium text-ink'}`}>{estado === 'futuro' ? 'A vencer' : ESTADO[estado].texto === 'Não pago' ? 'Pendente' : ESTADO[estado].texto}</span>
             </li>
           )
         })}
@@ -186,15 +183,15 @@ export function MEI() {
         <div className="flex flex-col gap-4 md:gap-5">
           <DASTimeline />
           <a href={LINKS.dasn} target="_blank" rel="noreferrer">
-            <Card interativo className="flex items-center gap-3 !py-4">
-              <IconeBox tom="neutro" className="!size-9">
-                <CalendarClock size={18} strokeWidth={1.7} />
+            <Card interativo className="flex items-center gap-3.5 !py-4">
+              <IconeBox tom="azul">
+                <CalendarClock size={20} strokeWidth={2} />
               </IconeBox>
               <div className="flex-1">
-                <p className="text-[13px] font-semibold text-ink">Declaração anual (DASN-SIMEI)</p>
-                <p className="text-[12px] text-ink-2">Até 31 de maio de {anoQueVem}, com o faturamento deste ano.</p>
+                <p className="text-[15px] font-bold text-ink">Declaração anual (DASN-SIMEI)</p>
+                <p className="text-[13px] text-ink-2">Até 31 de maio de {anoQueVem}, com o faturamento deste ano.</p>
               </div>
-              <ChevronRight size={18} className="text-slate" aria-hidden />
+              <ChevronRight size={20} className="text-navy" aria-hidden />
             </Card>
           </a>
         </div>

@@ -9,6 +9,11 @@
     @apply bg-bg font-sans text-ink antialiased;
     font-size: 14px;
     line-height: 1.5;
+    background-image:
+      radial-gradient(900px 480px at 92% -8%, rgba(52, 120, 246, 0.08), transparent 62%),
+      radial-gradient(700px 420px at 20% 110%, rgba(52, 120, 246, 0.05), transparent 60%);
+    background-attachment: fixed;
+    font-feature-settings: 'cv11', 'ss01';
   }
   :focus-visible {
     outline: 2px solid var(--color-primary);
@@ -28,9 +33,27 @@
   letter-spacing: -0.01em;
 }
 
+/* Valor grande dos cartões (R$ 2.480). */
+@utility valor-grande {
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
+}
+
+/* Fundo azul em degradê dos botões e itens selecionados. */
+@utility grad-primario {
+  background-image: linear-gradient(180deg, #4b8dfb 0%, #2b6ae9 100%);
+  box-shadow: var(--shadow-primary);
+}
+@utility grad-navy {
+  background-image: linear-gradient(180deg, #2c5394 0%, #1f3f78 100%);
+  box-shadow: 0 8px 18px -10px rgba(31, 63, 120, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
 @utility card {
   background: var(--color-surface);
-  border: 1px solid var(--color-line);
+  border: 1px solid rgba(231, 236, 243, 0.8);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
   transition:

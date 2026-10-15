@@ -47,17 +47,17 @@ export function Reports() {
               const ativo = aberto === rel.id
               const conteudo = (
                 <>
-                  <IconeBox tom={ativo ? 'azul' : 'neutro'} className="!size-9">
-                    <rel.icone size={18} strokeWidth={1.7} />
+                  <IconeBox tom={ativo ? 'solido' : 'azul'}>
+                    <rel.icone size={19} strokeWidth={2} />
                   </IconeBox>
                   <span className="min-w-0 flex-1">
-                    <span className="block font-semibold text-ink">{rel.titulo}</span>
-                    <span className="block text-[12px] text-ink-2">{rel.pergunta}</span>
+                    <span className="block text-[15px] font-bold text-ink">{rel.titulo}</span>
+                    <span className="block text-[13px] text-ink-2">{rel.pergunta}</span>
                   </span>
-                  <ChevronRight size={17} className="text-slate" aria-hidden />
+                  <ChevronRight size={18} className="text-navy" aria-hidden />
                 </>
               )
-              const cls = `flex w-full items-center gap-3 rounded-[12px] px-3 py-3 text-left transition-colors ${ativo ? 'bg-primary-soft/60' : 'hover:bg-hover'}`
+              const cls = `flex w-full items-center gap-3.5 rounded-[14px] px-3 py-3 text-left transition-colors ${ativo ? 'bg-gradient-to-r from-[#dbe7fc] to-[#e9f1fe]' : 'hover:bg-hover'}`
               return (
                 <li key={rel.id}>
                   {rel.para ? (
@@ -86,8 +86,8 @@ export function Reports() {
                 ['Retirei', r.retirei, 'text-primary'],
               ].map(([k, v, c]) => (
                 <div key={k as string}>
-                  <dt className="text-[12px] text-ink-2">{k}</dt>
-                  <dd className={`num text-[18px] font-bold ${c}`}>{brl(v as number)}</dd>
+                  <dt className="text-[13px] font-medium text-[#3d5170]">{k}</dt>
+                  <dd className={`valor-grande mt-1 text-[21px] ${c}`}>{brl(v as number)}</dd>
                 </div>
               ))}
             </dl>
@@ -110,11 +110,11 @@ export function Reports() {
               <CardTitulo>Pró-labore e retiradas</CardTitulo>
               <ul className="divide-y divide-line">
                 {[...retiradas].reverse().map((m) => (
-                  <li key={m.mes} className="flex items-center justify-between gap-3 py-3 text-[13px]">
+                  <li key={m.mes} className="flex items-center justify-between gap-3 py-3.5 text-[14px]">
                     <span className="text-ink">{mesAno(m.mes)}</span>
                     <span className="flex items-center gap-3">
                       {m.retirei > m.sobrou && m.retirei > 0 && <Badge tom="ambar">Acima do que sobrou</Badge>}
-                      <span className="num font-semibold text-ink">{brl(m.retirei)}</span>
+                      <span className="num font-bold text-ink">{brl(m.retirei)}</span>
                     </span>
                   </li>
                 ))}

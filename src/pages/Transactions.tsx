@@ -2,6 +2,7 @@ import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Download, Pencil, Plus, 
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Header, SeletorMes } from '../components/layout/Header'
+import { IconeCategoria } from '../components/financial/categoriaVisual'
 import { Badge, type TomBadge } from '../components/ui/Badge'
 import { Button, ButtonLink } from '../components/ui/Button'
 import { Card, EstadoVazio } from '../components/ui/Card'
@@ -26,7 +27,7 @@ export function situacaoBadge(l: Lancamento): { texto: string; tom: TomBadge } {
   if (l.situacao === 'previsto') return { texto: l.natureza === 'entrada' ? 'A receber' : 'A pagar', tom: 'ambar' }
   if (l.natureza === 'entrada') return { texto: 'Recebido', tom: 'verde' }
   if (l.natureza === 'transferencia') return { texto: 'Separado', tom: 'azul' }
-  return { texto: 'Pago', tom: 'verde' }
+  return { texto: 'Pago', tom: 'neutro' }
 }
 
 const dataRef = (l: Lancamento) => l.dataPagamento ?? l.dataVencimento ?? l.dataCompetencia
@@ -125,11 +126,13 @@ export function Transactions() {
         subtitulo="Tudo o que entrou e saiu, mês a mês."
         acoes={
           <>
-            <Button variante="discreto" icone={<Download size={16} />} onClick={() => exportarCsv([...linhas].sort((a, b) => dataRef(a).localeCompare(dataRef(b))), dados.categorias, mes)} className="hidden lg:inline-flex" title="Planilha para o contador">
-              Exportar CSV
-            </Button>
+            <span className="hidden lg:inline-flex">
+              <Button variante="secundario" icone={<Download size={16} />} onClick={() => exportarCsv([...linhas].sort((a, b) => dataRef(a).localeCompare(dataRef(b))), dados.categorias, mes)} title="Planilha para o contador">
+                Exportar CSV
+              </Button>
+            </span>
             <span className="hidden sm:inline-flex">
-              <ButtonLink to="/lancar" icone={<Plus size={16} />}>
+              <ButtonLink to="/lancar" icone={<Plus size={17} strokeWidth={2.4} />}>
                 Novo lançamento
               </ButtonLink>
             </span>
@@ -140,14 +143,14 @@ export function Transactions() {
       <Card className="!p-0">
         <div className="flex flex-col gap-3 border-b border-line p-4 md:p-5 lg:flex-row lg:items-center">
           <div className="relative lg:w-64">
-            <Search size={16} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-slate" aria-hidden />
+            <Search size={17} strokeWidth={2} className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-navy" aria-hidden />
             <input
               type="search"
               aria-label="Buscar lançamentos"
               placeholder="Buscar lançamentos…"
               value={busca}
               onChange={(e) => resetPagina(setBusca)(e.target.value)}
-              className="h-10 w-full rounded-[10px] border border-line bg-surface pr-3 pl-9 text-[14px] placeholder:text-muted focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10"
+              className="h-11 w-full rounded-[12px] border border-line bg-surface pr-3 pl-10 text-[14px] shadow-[0_1px_2px_rgba(16,32,64,0.04)] placeholder:text-muted focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10"
             />
           </div>
           <Segmentado
@@ -164,7 +167,7 @@ export function Transactions() {
             <SeletorMes />
             <Select
               aria-label="Categoria"
-              className="sm:w-48"
+              className="sm:w-52"
               value={categoria}
               onChange={(e) => resetPagina(setCategoria)(e.target.value)}
               opcoes={[{ valor: '', rotulo: 'Todas as categorias' }, ...dados.categorias.map((c) => ({ valor: c.id, rotulo: c.nome }))]}
@@ -199,9 +202,9 @@ export function Transactions() {
           <>
             {/* Desktop e tablet: tabela */}
             <div className="hidden overflow-x-auto md:block">
-              <table className="w-full min-w-[760px] text-left text-[13px]">
+              <table className="w-full min-w-[760px] text-left text-[14px]">
                 <thead>
-                  <tr className="border-b border-line text-[12px] text-ink-2">
+                  <tr className="border-b border-line bg-[#fafbfd] text-[13px] text-[#3d5170]">
                     <th scope="col" className="px-5 py-3 font-medium">
                       <button onClick={() => ordenar('data')} className="inline-flex items-center gap-1 hover:text-ink" aria-label="Ordenar por data">
                         Data <SetaOrdem campo="data" />
@@ -225,16 +228,21 @@ export function Transactions() {
                   {visiveis.map((l) => {
                     const s = situacaoBadge(l)
                     return (
-                      <tr key={l.id} className="border-b border-line last:border-0 hover:bg-[#fafbfd]">
-                        <td className="num px-5 py-3 text-ink-2">{diaMes(dataRef(l))}</td>
-                        <td className="px-3 py-3">
-                          <p className="font-medium text-ink">{l.descricao || NATUREZA[l.natureza]}</p>
+                      <tr key={l.id} className="border-b border-line transition-colors last:border-0 hover:bg-[#f7faff]">
+                        <td className="num px-5 py-3.5 font-medium text-[#3d5170]">{diaMes(dataRef(l))}</td>
+                        <td className="px-3 py-3.5">
+                          <p className="font-bold text-ink">{l.descricao || NATUREZA[l.natureza]}</p>
                           {l.contraparte && <p className="text-[12px] text-ink-2">{l.contraparte}</p>}
                         </td>
-                        <td className="px-3 py-3 text-ink-2">{l.natureza === 'transferencia' ? 'Reserva' : nomeCategoria(l.categoriaId)}</td>
-                        <td className="px-3 py-3 text-ink-2">{FORMAS.find((f) => f.valor === l.formaPagamento)?.rotulo}</td>
-                        <td className={`num px-3 py-3 text-right font-semibold ${valorCor(l)}`}>{valorTxt(l)}</td>
-                        <td className="px-3 py-3">
+                        <td className="px-3 py-3.5">
+                          <span className="inline-flex items-center gap-2.5 text-[#3d5170]">
+                            <IconeCategoria l={l} categorias={dados.categorias} />
+                            {l.natureza === 'transferencia' ? 'Reserva' : nomeCategoria(l.categoriaId)}
+                          </span>
+                        </td>
+                        <td className="px-3 py-3.5 text-[#3d5170]">{FORMAS.find((f) => f.valor === l.formaPagamento)?.rotulo}</td>
+                        <td className={`num px-3 py-3.5 text-right font-bold ${valorCor(l)}`}>{valorTxt(l)}</td>
+                        <td className="px-3 py-3.5">
                           <Badge tom={s.tom}>{s.texto}</Badge>
                         </td>
                         <td className="px-5 py-3">
@@ -261,14 +269,15 @@ export function Transactions() {
                 return (
                   <li key={l.id}>
                     <button onClick={() => navigate(`/lancar?id=${l.id}`)} className="flex w-full items-center gap-3 px-4 py-3.5 text-left active:bg-hover">
+                      <IconeCategoria l={l} categorias={dados.categorias} />
                       <div className="min-w-0 flex-1">
-                        <p className="truncate font-medium text-ink">{l.descricao || NATUREZA[l.natureza]}</p>
+                        <p className="truncate font-bold text-ink">{l.descricao || NATUREZA[l.natureza]}</p>
                         <p className="truncate text-[12px] text-ink-2">
                           {diaMes(dataRef(l))} · {l.natureza === 'transferencia' ? 'Reserva' : nomeCategoria(l.categoriaId)}
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className={`num font-semibold ${valorCor(l)}`}>{valorTxt(l)}</p>
+                        <p className={`num mb-0.5 font-bold ${valorCor(l)}`}>{valorTxt(l)}</p>
                         <Badge tom={s.tom}>{s.texto}</Badge>
                       </div>
                     </button>

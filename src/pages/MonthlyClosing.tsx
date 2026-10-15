@@ -1,13 +1,14 @@
-import { AlertTriangle, ChevronRight, MessageCircle, PiggyBank } from 'lucide-react'
+import { MessageCircle, PiggyBank } from 'lucide-react'
 import { useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
-import { BarrasHorizontais } from '../components/financial/charts'
+import { useSearchParams } from 'react-router-dom'
+import { Aviso } from '../components/financial/Aviso'
+import { BarrasHorizontais, SobrouMesesChart } from '../components/financial/charts'
 import { Header } from '../components/layout/Header'
 import { Button } from '../components/ui/Button'
 import { Card, CardTitulo, IconeBox } from '../components/ui/Card'
 import { Select } from '../components/ui/Field'
 import { Modal, useToast } from '../components/ui/Modal'
-import { gastosPorCategoria, reservaPendente, resumoMes, vendasSemNota } from '../domain/calc'
+import { gastosPorCategoria, reservaPendente, resumoMes, serieMensal, vendasSemNota } from '../domain/calc'
 import { useStore } from '../data/store'
 import { addMeses, brl, capitalizar, mesAno, nomeMes } from '../lib/format'
 
@@ -50,24 +51,39 @@ export function MonthlyClosing() {
         acoes={
           <Select
             aria-label="Mês"
-            className="w-44"
+            className="hidden w-48 sm:block"
             value={mes}
             onChange={(e) => setParams({ mes: e.target.value })}
             opcoes={opcoes.map((m) => ({ valor: m, rotulo: mesAno(m) }))}
           />
         }
       />
+      <Select
+        aria-label="Mês"
+        className="-mt-2 mb-4 sm:hidden"
+        value={mes}
+        onChange={(e) => setParams({ mes: e.target.value })}
+        opcoes={opcoes.map((m) => ({ valor: m, rotulo: mesAno(m) }))}
+      />
 
       <div className="grid grid-cols-1 gap-4 md:gap-5 xl:grid-cols-[1.5fr_1fr]">
         <div className="flex flex-col gap-4 md:gap-5">
-          <Card>
-            <p className="text-[14px] font-semibold text-ink">Sobrou</p>
-            <p className={`num text-[34px] font-bold md:text-[36px] ${r.sobrou < 0 ? 'text-danger' : 'text-ink'}`}>{brl(r.sobrou)}</p>
-            <dl className="mt-5 grid grid-cols-2 gap-4 border-t border-line pt-5 sm:grid-cols-4">
-              {itens.map((i) => (
-                <div key={i.rotulo}>
-                  <dt className="text-[12px] text-ink-2">{i.rotulo}</dt>
-                  <dd className={`num text-[18px] font-bold ${i.cor}`}>{brl(i.valor)}</dd>
+          <Card className="flex items-end gap-5 md:!p-7">
+            <div className="min-w-0 flex-1">
+              <p className="text-[16px] font-bold text-ink">Sobrou</p>
+              <p className={`valor-grande mt-1.5 text-[40px] md:text-[46px] ${r.sobrou < 0 ? 'text-danger' : 'text-ink'}`}>{brl(r.sobrou)}</p>
+            </div>
+            <div className="hidden w-[150px] sm:block">
+              <SobrouMesesChart serie={serieMensal(dados.lancamentos, mes, 4)} altura={90} discreto />
+            </div>
+          </Card>
+
+          <Card className="!p-0">
+            <dl className="grid grid-cols-2 sm:grid-cols-4">
+              {itens.map((i, idx) => (
+                <div key={i.rotulo} className={`px-5 py-4 ${idx > 0 ? 'sm:border-l' : ''} ${idx % 2 ? 'border-l' : ''} ${idx > 1 ? 'border-t sm:border-t-0' : ''} border-line`}>
+                  <dt className="text-[13px] font-medium text-[#3d5170]">{i.rotulo}</dt>
+                  <dd className={`valor-grande mt-1 text-[21px] ${i.cor}`}>{brl(i.valor)}</dd>
                 </div>
               ))}
             </dl>
@@ -79,32 +95,28 @@ export function MonthlyClosing() {
           </Card>
 
           {semNota > 0 && (
-            <Link to="/lancamentos" className="flex items-center gap-3 rounded-[14px] border border-[#f3e0bf] bg-warning-soft px-4 py-3.5">
-              <AlertTriangle size={19} className="text-warning" aria-hidden />
-              <p className="flex-1 text-[13px] font-medium text-ink">
-                {semNota} {semNota === 1 ? 'venda do mês está' : 'vendas do mês estão'} sem nota.
-              </p>
-              <ChevronRight size={18} className="text-slate" aria-hidden />
-            </Link>
+            <Aviso nivel="atencao" para="/lancamentos">
+              {semNota} {semNota === 1 ? 'venda do mês está' : 'vendas do mês estão'} sem nota.
+            </Aviso>
           )}
         </div>
 
         <div className="flex flex-col gap-4 md:gap-5">
           {reserva > 0 ? (
-            <Card className="!border-[#d6e4fb] !bg-[#f4f8ff] text-center">
-              <IconeBox tom="azul" className="mx-auto mb-3">
-                <PiggyBank size={20} strokeWidth={1.7} />
+            <Card className="!border-[#d3e2fc] !bg-gradient-to-b !from-[#e3edfd] !to-[#f1f6ff] text-center md:!p-7">
+              <IconeBox tom="solido" tamanho="lg" className="mx-auto mb-4">
+                <PiggyBank size={26} strokeWidth={2} />
               </IconeBox>
-              <p className="text-[16px] font-semibold text-ink">Separe {brl(reserva)} para a reserva.</p>
-              <p className="mt-1 text-[13px] text-ink-2">É metade do que ficou na empresa. Ajuda nos meses mais fracos.</p>
-              <Button className="mt-4 w-full" onClick={() => setConfirmar(true)}>
+              <p className="text-[19px] leading-snug font-bold tracking-[-0.01em] text-ink">Separe {brl(reserva)} para a reserva.</p>
+              <p className="mt-1.5 text-[14px] text-ink-2">É metade do que ficou na empresa. Ajuda nos meses mais fracos.</p>
+              <Button tamanho="lg" className="mt-5 w-full" onClick={() => setConfirmar(true)}>
                 Separar
               </Button>
             </Card>
           ) : (
             <Card className="text-center">
-              <IconeBox tom="neutro" className="mx-auto mb-3">
-                <PiggyBank size={20} strokeWidth={1.7} />
+              <IconeBox tom="neutro" tamanho="lg" className="mx-auto mb-3">
+                <PiggyBank size={24} strokeWidth={1.9} />
               </IconeBox>
               <p className="font-semibold text-ink">{r.ficou > 0 ? 'Reserva deste mês já separada.' : 'Sem sobra para reserva neste mês.'}</p>
             </Card>
@@ -114,9 +126,11 @@ export function MonthlyClosing() {
             href={`https://wa.me/?text=${encodeURIComponent(textoWhats)}`}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-[10px] border border-line bg-surface px-4 text-[13px] font-semibold text-ink transition-colors hover:border-[#d6dee8] hover:bg-[#fbfcfe]"
+            className="inline-flex h-[52px] items-center justify-center gap-2.5 rounded-[14px] border-[1.5px] border-[#d8e1ec] bg-surface px-4 text-[14px] font-semibold text-ink shadow-[var(--shadow-card)] transition-all hover:-translate-y-0.5 hover:border-[#9fdcb9]"
           >
-            <MessageCircle size={17} className="text-success" aria-hidden />
+            <span className="inline-flex size-7 items-center justify-center rounded-full bg-[#25d366] text-white">
+              <MessageCircle size={16} strokeWidth={2.4} aria-hidden />
+            </span>
             Compartilhar resumo no WhatsApp
           </a>
         </div>

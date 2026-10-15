@@ -2,11 +2,11 @@ import { ChevronDown } from 'lucide-react'
 import { useId, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from 'react'
 
 const campo =
-  'h-[42px] w-full rounded-[9px] border border-line bg-surface px-3 text-[14px] text-ink placeholder:text-muted transition-[border-color,box-shadow] duration-150 focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10'
+  'h-11 w-full rounded-[12px] border border-line bg-surface px-3.5 text-[14px] font-medium text-ink shadow-[0_1px_2px_rgba(16,32,64,0.04)] placeholder:font-normal placeholder:text-muted transition-[border-color,box-shadow] duration-150 hover:border-[#d3dce8] focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/12'
 
 export function Label({ htmlFor, children }: { htmlFor?: string; children: ReactNode }) {
   return (
-    <label htmlFor={htmlFor} className="mb-1.5 block text-[12px] font-medium text-ink-2">
+    <label htmlFor={htmlFor} className="mb-1.5 block text-[13px] font-medium text-ink-2">
       {children}
     </label>
   )
@@ -18,8 +18,8 @@ export function Input({ label, erro, icone, className = '', ...rest }: InputHTML
     <div className={className}>
       <Label htmlFor={id}>{label}</Label>
       <div className="relative">
-        {icone && <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-slate">{icone}</span>}
-        <input id={id} aria-invalid={!!erro} aria-describedby={erro ? `${id}-erro` : undefined} className={`${campo} ${icone ? 'pl-9' : ''}`} {...rest} />
+        {icone && <span className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-[#3d5170]">{icone}</span>}
+        <input id={id} aria-invalid={!!erro} aria-describedby={erro ? `${id}-erro` : undefined} className={`${campo} ${icone ? 'pl-10' : ''}`} {...rest} />
       </div>
       {erro && (
         <p id={`${id}-erro`} className="mt-1 text-[12px] text-danger">
@@ -42,8 +42,8 @@ export function Select({
     <div className={className}>
       {label && <Label htmlFor={id}>{label}</Label>}
       <div className="relative">
-        {icone && <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-slate">{icone}</span>}
-        <select id={id} className={`${campo} appearance-none pr-9 ${icone ? 'pl-9' : ''}`} {...rest}>
+        {icone && <span className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-[#3d5170]">{icone}</span>}
+        <select id={id} className={`${campo} appearance-none pr-9 ${icone ? 'pl-10' : ''}`} {...rest}>
           {opcoes.map((o) => (
             <option key={o.valor} value={o.valor}>
               {o.rotulo}
@@ -71,7 +71,7 @@ export function Toggle({ checked, onChange, label, descricao }: { checked: boole
         role="switch"
         aria-checked={checked}
         onClick={() => onChange(!checked)}
-        className={`relative h-6 w-11 shrink-0 rounded-full transition-colors duration-150 ${checked ? 'bg-primary' : 'bg-[#d5dde7]'}`}
+        className={`relative h-6 w-11 shrink-0 rounded-full transition-colors duration-150 ${checked ? 'grad-primario' : 'bg-[#d5dde7]'}`}
       >
         <span className={`absolute top-0.5 left-0.5 size-5 rounded-full bg-white shadow transition-transform duration-150 ${checked ? 'translate-x-5' : ''}`} />
       </button>

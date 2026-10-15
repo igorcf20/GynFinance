@@ -6,7 +6,7 @@ import { useRef, useState } from 'react'
 import { useStore } from '../../data/store'
 import { Modal, useToast } from '../ui/Modal'
 import { Button } from '../ui/Button'
-import { Badge } from '../ui/Badge'
+import { IconeBox, type TomIcone } from '../ui/Card'
 
 const ICONES: Record<string, LucideIcon> = {
   aluguel: Home,
@@ -48,8 +48,11 @@ export function ContaItem({ conta, compacto, mostrarCobrar }: { conta: Lancament
   const refValor = useRef<HTMLInputElement>(null)
   const Icone = iconeConta(conta)
   const receber = conta.natureza === 'entrada'
-  const atrasada = grupoPrazo(conta.dataVencimento!, hoje) === 'atrasadas'
-  const estado = estadoConta(conta, hoje)
+  const prazo = grupoPrazo(conta.dataVencimento!, hoje)
+  const atrasada = prazo === 'atrasadas'
+  // Cores como na imagem: atrasada em vermelho, a receber em verde, a pagar em laranja.
+  const tom: TomIcone = atrasada ? 'vermelho' : receber ? 'verde' : 'laranja'
+  const corLinha = atrasada ? 'text-danger' : prazo === 'semana' ? 'text-[#e8640c]' : 'text-ink-2'
   const baixar = (valorReal = conta.valor) => {
     marcarComoPago(conta.id, valorReal)
     toast(receber ? `Recebimento de ${brl(valorReal)} registrado.` : `Pagamento de ${brl(valorReal)} registrado.`)
@@ -64,28 +67,19 @@ export function ContaItem({ conta, compacto, mostrarCobrar }: { conta: Lancament
   const nome = receber ? conta.contraparte || conta.descricao : conta.descricao || conta.contraparte
 
   return (
-    <li className="flex items-center gap-3 py-3.5 md:gap-4">
-      <span
-        className={`inline-flex size-10 shrink-0 items-center justify-center rounded-[11px] ${
-          atrasada ? 'bg-danger-soft text-danger' : 'bg-[#f1f4f8] text-slate'
-        }`}
-      >
-        <Icone size={19} strokeWidth={1.7} aria-hidden />
-      </span>
+    <li className={`flex items-center gap-3 md:gap-4 ${compacto ? 'py-4' : 'py-4'}`}>
+      <IconeBox tom={tom}>
+        <Icone size={20} strokeWidth={2} aria-hidden />
+      </IconeBox>
       <div className="min-w-0 flex-1">
-        <p className="flex items-center gap-1.5 truncate font-semibold text-ink">
+        <p className="flex items-center gap-1.5 truncate text-[15px] font-bold text-ink">
           {nome}
-          {conta.recorrenciaId && <Repeat size={13} className="shrink-0 text-slate" aria-label="Repete todo mês" />}
+          {conta.recorrenciaId && <Repeat size={13} strokeWidth={2.2} className="shrink-0 text-slate" aria-label="Repete todo mês" />}
         </p>
-        <p className={`truncate text-[12px] ${atrasada ? 'text-danger' : 'text-ink-2'}`}>{descricaoConta(conta, hoje)}</p>
+        <p className={`truncate text-[13px] font-medium ${corLinha}`}>{descricaoConta(conta, hoje)}</p>
       </div>
-      {!compacto && (
-        <span className="hidden md:inline-flex">
-          <Badge tom={estado.tom}>{estado.texto}</Badge>
-        </span>
-      )}
-      <span className="num shrink-0 text-right font-semibold text-ink">
-        {varia && <span className="block text-[11px] font-normal text-ink-2">cerca de</span>}
+      <span className="num shrink-0 text-right text-[15px] font-bold text-ink">
+        {varia && <span className="block text-[11px] font-medium text-ink-2">cerca de</span>}
         {brl(conta.valor)}
       </span>
       <div className="flex shrink-0 gap-2">
@@ -95,13 +89,13 @@ export function ContaItem({ conta, compacto, mostrarCobrar }: { conta: Lancament
             target="_blank"
             rel="noreferrer"
             aria-label={`Cobrar ${conta.contraparte} no WhatsApp`}
-            className="hidden h-8 items-center gap-1.5 rounded-[10px] border border-line px-3 text-[13px] font-semibold text-success transition-colors hover:bg-success-soft sm:inline-flex"
+            className="hidden h-10 items-center gap-1.5 rounded-[12px] border-[1.5px] border-[#bfe6d1] px-3.5 text-[13px] font-semibold text-success transition-colors hover:bg-success-soft sm:inline-flex"
           >
             <MessageCircle size={15} aria-hidden />
             Cobrar
           </a>
         )}
-        <Button variante="secundario" tamanho="sm" onClick={aoTocar} className="!text-primary">
+        <Button variante="contorno" tamanho="sm" onClick={aoTocar} className="!h-10 min-w-[84px] md:min-w-[96px]">
           {receber ? 'Recebi' : 'Paguei'}
         </Button>
       </div>

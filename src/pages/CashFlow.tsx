@@ -50,17 +50,17 @@ export function CashFlow() {
         )}
       </div>
 
-      <Card className="mb-5">
+      <Card className="mb-5 md:!p-7">
         <CardTitulo>Entradas e saídas</CardTitulo>
         <FluxoChart serie={serie} />
       </Card>
 
       <Card className="!p-0">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[480px] text-left text-[13px]">
+          <table className="w-full min-w-[480px] text-left text-[14px]">
             <caption className="sr-only">Resultado por mês</caption>
             <thead>
-              <tr className="border-b border-line text-[12px] text-ink-2">
+              <tr className="border-b border-line bg-[#fafbfd] text-[13px] text-[#3d5170]">
                 <th scope="col" className="px-5 py-3 font-medium">Mês</th>
                 <th scope="col" className="px-3 py-3 text-right font-medium">Entradas</th>
                 <th scope="col" className="px-3 py-3 text-right font-medium">Saídas</th>
@@ -69,16 +69,16 @@ export function CashFlow() {
             </thead>
             <tbody>
               {[...serie].reverse().map((r) => (
-                <tr key={r.mes} className="border-b border-line last:border-0">
-                  <th scope="row" className="px-5 py-3 font-medium text-ink">{mesAno(r.mes)}</th>
-                  <td className="num px-3 py-3 text-right text-success">{brl(r.entrou)}</td>
-                  <td className="num px-3 py-3 text-right text-danger">{brl(r.saiu)}</td>
-                  <td className={`num px-5 py-3 text-right font-semibold ${r.sobrou < 0 ? 'text-danger' : 'text-ink'}`}>{brl(r.sobrou)}</td>
+                <tr key={r.mes} className="border-b border-line transition-colors last:border-0 hover:bg-[#f7faff]">
+                  <th scope="row" className="px-5 py-3.5 font-semibold text-ink">{mesAno(r.mes)}</th>
+                  <td className="num px-3 py-3.5 text-right font-semibold text-success">{brl(r.entrou)}</td>
+                  <td className="num px-3 py-3.5 text-right font-semibold text-danger">{brl(r.saiu)}</td>
+                  <td className={`num px-5 py-3.5 text-right font-bold ${r.sobrou < 0 ? 'text-danger' : 'text-ink'}`}>{brl(r.sobrou)}</td>
                 </tr>
               ))}
             </tbody>
             <tfoot>
-              <tr className="border-t border-line bg-[#fafbfd]">
+              <tr className="border-t border-line bg-gradient-to-r from-[#f1f6fe] to-[#f8fafd]">
                 <th scope="row" className="px-5 py-3 font-semibold text-ink">Total</th>
                 <td className="num px-3 py-3 text-right font-semibold text-success">{brl(totalE)}</td>
                 <td className="num px-3 py-3 text-right font-semibold text-danger">{brl(totalS)}</td>

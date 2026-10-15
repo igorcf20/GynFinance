@@ -1,4 +1,4 @@
-import { BarChart3, CalendarCheck, FileText, Home, LineChart, ReceiptText, Settings, Store, type LucideIcon } from 'lucide-react'
+import { CalendarCheck, ChartSpline, FileChartColumn, FileText, House, ReceiptText, Settings, Store, type LucideIcon } from 'lucide-react'
 
 export interface ItemNav {
   para: string
@@ -9,15 +9,15 @@ export interface ItemNav {
 }
 
 export const NAV_PRINCIPAL: ItemNav[] = [
-  { para: '/', rotulo: 'Início', icone: Home },
+  { para: '/', rotulo: 'Início', icone: House },
   { para: '/lancamentos', rotulo: 'Lançamentos', icone: ReceiptText, tambem: ['/lancar'] },
   { para: '/contas', rotulo: 'Contas', icone: FileText },
   { para: '/mei', rotulo: 'Meu MEI', icone: Store },
-  { para: '/relatorios', rotulo: 'Relatórios', icone: BarChart3 },
+  { para: '/relatorios', rotulo: 'Relatórios', icone: FileChartColumn },
 ]
 
 export const NAV_MAIS: ItemNav[] = [
-  { para: '/fluxo', rotulo: 'Fluxo de caixa', icone: LineChart },
+  { para: '/fluxo', rotulo: 'Fluxo de caixa', icone: ChartSpline },
   { para: '/fechamento', rotulo: 'Fechamento do mês', icone: CalendarCheck },
   { para: '/configuracoes', rotulo: 'Configurações', icone: Settings },
 ]
