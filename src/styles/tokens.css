@@ -1,0 +1,37 @@
+/* Tokens do Gynfinance (DESIGN.md, seção 3). Não usar cores fora daqui. */
+@theme {
+  --font-sans: 'Inter Variable', 'Inter', ui-sans-serif, system-ui, sans-serif;
+
+  --color-bg: #f5f7fa;
+  --color-surface: #ffffff;
+  --color-sidebar: #f8fafc;
+  --color-primary: #3478f6;
+  --color-primary-hover: #2463d9;
+  --color-primary-soft: #eaf2ff;
+  --color-slate: #6f8faf;
+  --color-ink: #172b4d;
+  --color-ink-2: #64748b;
+  /* Texto auxiliar: #94A3B8 do DESIGN.md só para decoração; em texto usa-se um tom
+     um pouco mais escuro para manter contraste AA sobre branco. */
+  --color-muted: #8291a7;
+  --color-line: #e8edf3;
+  --color-success: #168653;
+  --color-success-soft: #e7f5ee;
+  --color-danger: #d9485a;
+  --color-danger-soft: #fdecee;
+  --color-warning: #b9771c;
+  --color-warning-base: #d99432;
+  --color-warning-soft: #fdf3e3;
+  --color-hover: #f1f4f8;
+
+  --radius-card: 16px;
+  --radius-btn: 10px;
+  --radius-field: 9px;
+
+  --shadow-card: 0 4px 18px rgba(30, 55, 90, 0.035), 0 1px 3px rgba(30, 55, 90, 0.025);
+  --shadow-card-hover: 0 8px 26px rgba(30, 55, 90, 0.06), 0 2px 5px rgba(30, 55, 90, 0.035);
+  --shadow-pop: 0 18px 50px rgba(23, 43, 77, 0.16);
+
+  --breakpoint-md: 768px;
+  --breakpoint-xl: 1200px;
+}

@@ -1,0 +1,28 @@
+import { BarChart3, ChevronRight } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { NAV_MAIS } from '../components/layout/navegacao'
+import { Header } from '../components/layout/Header'
+import { Card } from '../components/ui/Card'
+
+/** No celular, tudo o que não cabe na barra inferior. */
+export function More() {
+  const itens = [{ para: '/relatorios', rotulo: 'Relatórios', icone: BarChart3 }, ...NAV_MAIS]
+  return (
+    <>
+      <Header titulo="Mais" />
+      <Card className="!p-2">
+        <ul>
+          {itens.map((i) => (
+            <li key={i.para}>
+              <Link to={i.para} className="flex items-center gap-3 rounded-[12px] px-3 py-3.5 text-ink hover:bg-hover">
+                <i.icone size={20} strokeWidth={1.7} className="text-slate" aria-hidden />
+                <span className="flex-1 font-medium">{i.rotulo}</span>
+                <ChevronRight size={17} className="text-slate" aria-hidden />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </Card>
+    </>
+  )
+}

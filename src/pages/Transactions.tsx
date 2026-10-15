@@ -1,0 +1,317 @@
+import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Download, Pencil, Plus, ReceiptText, Search, Trash2 } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Header, SeletorMes } from '../components/layout/Header'
+import { Badge, type TomBadge } from '../components/ui/Badge'
+import { Button, ButtonLink } from '../components/ui/Button'
+import { Card, EstadoVazio } from '../components/ui/Card'
+import { Select } from '../components/ui/Field'
+import { Modal, useToast } from '../components/ui/Modal'
+import { Segmentado } from '../components/ui/Tabs'
+import type { Lancamento, Natureza } from '../domain/types'
+import { useStore } from '../data/store'
+import { brl, dataBR, diaMes, mesDe } from '../lib/format'
+import { FORMAS } from './NewTransaction'
+
+type Filtro = 'todos' | 'entradas' | 'saidas'
+type Ordem = { campo: 'data' | 'valor'; desc: boolean }
+
+const POR_PAGINA = 10
+
+const NATUREZA: Record<Natureza, string> = { entrada: 'Entrada', saida: 'Saída', retirada: 'Retirada', aporte: 'Aporte', transferencia: 'Transferência' }
+
+export function situacaoBadge(l: Lancamento): { texto: string; tom: TomBadge } {
+  if (l.situacao === 'cancelado') return { texto: 'Cancelado', tom: 'neutro' }
+  if (l.situacao === 'previsto') return { texto: l.natureza === 'entrada' ? 'A receber' : 'A pagar', tom: 'ambar' }
+  if (l.natureza === 'entrada') return { texto: 'Recebido', tom: 'verde' }
+  if (l.natureza === 'transferencia') return { texto: 'Separado', tom: 'azul' }
+  return { texto: 'Pago', tom: 'verde' }
+}
+
+const dataRef = (l: Lancamento) => l.dataPagamento ?? l.dataVencimento ?? l.dataCompetencia
+const sinal = (l: Lancamento) => (l.natureza === 'entrada' || l.natureza === 'aporte' ? 1 : l.natureza === 'transferencia' ? 0 : -1)
+
+function exportarCsv(linhas: Lancamento[], nomeCategoria: (id?: string) => string, mes: string) {
+  const cab = ['Data', 'Tipo', 'Descrição', 'Cliente ou fornecedor', 'Categoria', 'Forma', 'Valor', 'Situação', 'Nota emitida']
+  const esc = (s: string) => `"${s.replace(/"/g, '""')}"`
+  const corpo = linhas.map((l) =>
+    [
+      dataBR(dataRef(l)),
+      NATUREZA[l.natureza],
+      l.descricao ?? '',
+      l.contraparte ?? '',
+      nomeCategoria(l.categoriaId),
+      FORMAS.find((f) => f.valor === l.formaPagamento)?.rotulo ?? '',
+      (sinal(l) * l.valor).toFixed(2).replace('.', ','),
+      situacaoBadge(l).texto,
+      l.notaEmitida === 'sim' ? 'Sim' : l.notaEmitida === 'nao' ? 'Não' : '',
+    ]
+      .map(esc)
+      .join(';'),
+  )
+  const blob = new Blob(['﻿' + [cab.map(esc).join(';'), ...corpo].join('\n')], { type: 'text/csv;charset=utf-8' })
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(blob)
+  a.download = `lancamentos-${mes}.csv`
+  a.click()
+  URL.revokeObjectURL(a.href)
+}
+
+export function Transactions() {
+  const { dados, mes, excluirLancamento } = useStore()
+  const toast = useToast()
+  const navigate = useNavigate()
+  const [filtro, setFiltro] = useState<Filtro>('todos')
+  const [busca, setBusca] = useState('')
+  const [categoria, setCategoria] = useState('')
+  const [situacao, setSituacao] = useState('')
+  const [ordem, setOrdem] = useState<Ordem>({ campo: 'data', desc: true })
+  const [pagina, setPagina] = useState(1)
+  const [excluir, setExcluir] = useState<Lancamento | null>(null)
+
+  const nomeCategoria = (id?: string) => dados.categorias.find((c) => c.id === id)?.nome ?? '—'
+
+  const linhas = useMemo(() => {
+    const termo = busca.trim().toLowerCase()
+    const r = dados.lancamentos.filter((l) => {
+      if (l.espelhoDe) return false
+      if (mesDe(dataRef(l)) !== mes) return false
+      if (filtro === 'entradas' && l.natureza !== 'entrada') return false
+      if (filtro === 'saidas' && !(l.natureza === 'saida' || l.natureza === 'retirada')) return false
+      if (categoria && l.categoriaId !== categoria) return false
+      if (situacao === 'feito' && l.situacao !== 'realizado') return false
+      if (situacao === 'aberto' && l.situacao !== 'previsto') return false
+      if (situacao === 'semnota' && !(l.natureza === 'entrada' && l.notaEmitida === 'nao')) return false
+      if (termo && !`${l.descricao ?? ''} ${l.contraparte ?? ''}`.toLowerCase().includes(termo)) return false
+      return true
+    })
+    return r.sort((a, b) => {
+      const d = ordem.campo === 'data' ? dataRef(a).localeCompare(dataRef(b)) : a.valor - b.valor
+      return ordem.desc ? -d : d
+    })
+  }, [dados.lancamentos, mes, filtro, categoria, situacao, busca, ordem])
+
+  const paginas = Math.max(1, Math.ceil(linhas.length / POR_PAGINA))
+  const atual = Math.min(pagina, paginas)
+  const visiveis = linhas.slice((atual - 1) * POR_PAGINA, atual * POR_PAGINA)
+  const ordenar = (campo: Ordem['campo']) => setOrdem((o) => ({ campo, desc: o.campo === campo ? !o.desc : true }))
+  const SetaOrdem = ({ campo }: { campo: Ordem['campo'] }) => (ordem.campo !== campo ? null : ordem.desc ? <ArrowDown size={13} /> : <ArrowUp size={13} />)
+  const resetPagina = <T,>(f: (v: T) => void) => (v: T) => {
+    f(v)
+    setPagina(1)
+  }
+
+  const valorCor = (l: Lancamento) => (sinal(l) > 0 ? 'text-success' : sinal(l) < 0 ? 'text-danger' : 'text-ink')
+  const valorTxt = (l: Lancamento) => `${sinal(l) < 0 ? '- ' : ''}${brl(l.valor, { centavos: true })}`
+
+  return (
+    <>
+      <Header
+        titulo="Lançamentos"
+        subtitulo="Tudo o que entrou e saiu, mês a mês."
+        acoes={
+          <>
+            <Button variante="discreto" icone={<Download size={16} />} onClick={() => exportarCsv(linhas, nomeCategoria, mes)} className="hidden lg:inline-flex" title="Planilha para o contador">
+              Exportar CSV
+            </Button>
+            <span className="hidden sm:inline-flex">
+              <ButtonLink to="/lancar" icone={<Plus size={16} />}>
+                Novo lançamento
+              </ButtonLink>
+            </span>
+          </>
+        }
+      />
+
+      <Card className="!p-0">
+        <div className="flex flex-col gap-3 border-b border-line p-4 md:p-5 lg:flex-row lg:items-center">
+          <div className="relative lg:w-64">
+            <Search size={16} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-slate" aria-hidden />
+            <input
+              type="search"
+              aria-label="Buscar lançamentos"
+              placeholder="Buscar lançamentos…"
+              value={busca}
+              onChange={(e) => resetPagina(setBusca)(e.target.value)}
+              className="h-10 w-full rounded-[10px] border border-line bg-surface pr-3 pl-9 text-[14px] placeholder:text-muted focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10"
+            />
+          </div>
+          <Segmentado
+            rotulo="Tipo"
+            valor={filtro}
+            onChange={resetPagina(setFiltro)}
+            opcoes={[
+              { valor: 'todos', rotulo: 'Todos' },
+              { valor: 'entradas', rotulo: 'Entradas' },
+              { valor: 'saidas', rotulo: 'Saídas' },
+            ]}
+          />
+          <div className="grid grid-cols-2 gap-3 sm:flex lg:ml-auto">
+            <SeletorMes />
+            <Select
+              aria-label="Categoria"
+              className="sm:w-48"
+              value={categoria}
+              onChange={(e) => resetPagina(setCategoria)(e.target.value)}
+              opcoes={[{ valor: '', rotulo: 'Todas as categorias' }, ...dados.categorias.map((c) => ({ valor: c.id, rotulo: c.nome }))]}
+            />
+            <Select
+              aria-label="Situação"
+              className="col-span-2 sm:w-48"
+              value={situacao}
+              onChange={(e) => resetPagina(setSituacao)(e.target.value)}
+              opcoes={[
+                { valor: '', rotulo: 'Qualquer situação' },
+                { valor: 'feito', rotulo: 'Pago ou recebido' },
+                { valor: 'aberto', rotulo: 'Em aberto' },
+                { valor: 'semnota', rotulo: 'Sem nota emitida' },
+              ]}
+            />
+          </div>
+        </div>
+
+        {linhas.length === 0 ? (
+          <EstadoVazio
+            icone={<ReceiptText size={22} />}
+            titulo="Nenhum lançamento aqui"
+            texto="Mude os filtros ou o mês, ou lance uma entrada ou saída. Leva menos de 10 segundos."
+            acao={
+              <ButtonLink to="/lancar" icone={<Plus size={16} />}>
+                Novo lançamento
+              </ButtonLink>
+            }
+          />
+        ) : (
+          <>
+            {/* Desktop e tablet: tabela */}
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full min-w-[760px] text-left text-[13px]">
+                <thead>
+                  <tr className="border-b border-line text-[12px] text-ink-2">
+                    <th scope="col" className="px-5 py-3 font-medium">
+                      <button onClick={() => ordenar('data')} className="inline-flex items-center gap-1 hover:text-ink" aria-label="Ordenar por data">
+                        Data <SetaOrdem campo="data" />
+                      </button>
+                    </th>
+                    <th scope="col" className="px-3 py-3 font-medium">Descrição</th>
+                    <th scope="col" className="px-3 py-3 font-medium">Categoria</th>
+                    <th scope="col" className="px-3 py-3 font-medium">Forma</th>
+                    <th scope="col" className="px-3 py-3 text-right font-medium">
+                      <button onClick={() => ordenar('valor')} className="inline-flex items-center gap-1 hover:text-ink" aria-label="Ordenar por valor">
+                        Valor <SetaOrdem campo="valor" />
+                      </button>
+                    </th>
+                    <th scope="col" className="px-3 py-3 font-medium">Situação</th>
+                    <th scope="col" className="px-5 py-3 text-right font-medium">
+                      <span className="sr-only">Ações</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visiveis.map((l) => {
+                    const s = situacaoBadge(l)
+                    return (
+                      <tr key={l.id} className="border-b border-line last:border-0 hover:bg-[#fafbfd]">
+                        <td className="num px-5 py-3 text-ink-2">{diaMes(dataRef(l))}</td>
+                        <td className="px-3 py-3">
+                          <p className="font-medium text-ink">{l.descricao || NATUREZA[l.natureza]}</p>
+                          {l.contraparte && <p className="text-[12px] text-ink-2">{l.contraparte}</p>}
+                        </td>
+                        <td className="px-3 py-3 text-ink-2">{l.natureza === 'transferencia' ? 'Reserva' : nomeCategoria(l.categoriaId)}</td>
+                        <td className="px-3 py-3 text-ink-2">{FORMAS.find((f) => f.valor === l.formaPagamento)?.rotulo}</td>
+                        <td className={`num px-3 py-3 text-right font-semibold ${valorCor(l)}`}>{valorTxt(l)}</td>
+                        <td className="px-3 py-3">
+                          <Badge tom={s.tom}>{s.texto}</Badge>
+                        </td>
+                        <td className="px-5 py-3">
+                          <div className="flex justify-end gap-1">
+                            <button onClick={() => navigate(`/lancar?id=${l.id}`)} aria-label={`Editar ${l.descricao ?? 'lançamento'}`} className="rounded-lg p-2 text-slate hover:bg-hover hover:text-ink">
+                              <Pencil size={15} />
+                            </button>
+                            <button onClick={() => setExcluir(l)} aria-label={`Excluir ${l.descricao ?? 'lançamento'}`} className="rounded-lg p-2 text-slate hover:bg-danger-soft hover:text-danger">
+                              <Trash2 size={15} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Celular: lista */}
+            <ul className="divide-y divide-line md:hidden">
+              {visiveis.map((l) => {
+                const s = situacaoBadge(l)
+                return (
+                  <li key={l.id}>
+                    <button onClick={() => navigate(`/lancar?id=${l.id}`)} className="flex w-full items-center gap-3 px-4 py-3.5 text-left active:bg-hover">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium text-ink">{l.descricao || NATUREZA[l.natureza]}</p>
+                        <p className="truncate text-[12px] text-ink-2">
+                          {diaMes(dataRef(l))} · {l.natureza === 'transferencia' ? 'Reserva' : nomeCategoria(l.categoriaId)}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className={`num font-semibold ${valorCor(l)}`}>{valorTxt(l)}</p>
+                        <Badge tom={s.tom}>{s.texto}</Badge>
+                      </div>
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+
+            <div className="flex items-center justify-between gap-3 border-t border-line px-4 py-3 text-[13px] text-ink-2 md:px-5">
+              <span className="num">
+                {linhas.length} {linhas.length === 1 ? 'lançamento' : 'lançamentos'}
+              </span>
+              <div className="flex items-center gap-1">
+                <button disabled={atual <= 1} onClick={() => setPagina(atual - 1)} aria-label="Página anterior" className="rounded-lg p-1.5 hover:bg-hover disabled:opacity-40">
+                  <ChevronLeft size={16} />
+                </button>
+                <span className="num px-2">
+                  {atual} de {paginas}
+                </span>
+                <button disabled={atual >= paginas} onClick={() => setPagina(atual + 1)} aria-label="Próxima página" className="rounded-lg p-1.5 hover:bg-hover disabled:opacity-40">
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+      </Card>
+
+      <Modal
+        aberto={!!excluir}
+        onFechar={() => setExcluir(null)}
+        titulo="Excluir lançamento?"
+        rodape={
+          <>
+            <Button variante="secundario" onClick={() => setExcluir(null)}>
+              Cancelar
+            </Button>
+            <Button
+              variante="perigo"
+              onClick={() => {
+                if (!excluir) return
+                excluirLancamento(excluir.id)
+                toast('Lançamento excluído.')
+                setExcluir(null)
+              }}
+            >
+              Excluir
+            </Button>
+          </>
+        }
+      >
+        {excluir && (
+          <p>
+            "{excluir.descricao || NATUREZA[excluir.natureza]}" de {brl(excluir.valor, { centavos: true })} vai sair dos totais do mês. Não dá para desfazer.
+          </p>
+        )}
+      </Modal>
+    </>
+  )
+}
