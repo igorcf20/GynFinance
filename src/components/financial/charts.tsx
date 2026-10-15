@@ -59,7 +59,7 @@ export function SobrouMesesChart({ serie, altura = 150, discreto }: { serie: Res
             />
           )}
           <Tooltip cursor={{ fill: '#F1F5FB', radius: 8 }} content={<DicaValor />} />
-          <Bar dataKey="Sobrou" radius={[7, 7, 3, 3]} maxBarSize={30} isAnimationActive={false}>
+          <Bar dataKey="Sobrou" radius={[7, 7, 3, 3]} maxBarSize={30} animationBegin={150} animationDuration={900} animationEasing="ease-out">
             {dados.map((_, i) => (
               <Cell key={i} fill={i === n - 1 && !discreto ? `url(#${id}f)` : `url(#${id}b${i})`} />
             ))}
@@ -82,7 +82,7 @@ export function SaldoSparkline({ pontos }: { pontos: { dia: string; saldo: numbe
             </linearGradient>
           </defs>
           <YAxis hide domain={['dataMin - 30000', 'dataMax + 20000']} />
-          <Area type="basis" dataKey="saldo" stroke={AZUL} strokeWidth={2.2} fill="url(#gSaldo)" isAnimationActive={false} />
+          <Area type="basis" dataKey="saldo" stroke={AZUL} strokeWidth={2.2} fill="url(#gSaldo)" animationBegin={250} animationDuration={1200} animationEasing="ease-out" />
         </AreaChart>
       </ResponsiveContainer>
     </div>
@@ -116,8 +116,8 @@ export function FluxoChart({ serie }: { serie: ResumoMes[] }) {
           <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#5B6B82' }} tickFormatter={k} width={74} />
           <Tooltip cursor={{ fill: '#F1F5FB', radius: 8 }} content={<DicaValor />} />
           <Legend align="right" verticalAlign="top" iconType="square" iconSize={11} wrapperStyle={{ fontSize: 13, fontWeight: 600, color: '#3D5170', paddingBottom: 16 }} />
-          <Bar dataKey="Entradas" fill="url(#gEntradas)" radius={[6, 6, 2, 2]} maxBarSize={30} isAnimationActive={false} />
-          <Bar dataKey="Saídas" fill="url(#gSaidas)" radius={[6, 6, 2, 2]} maxBarSize={30} isAnimationActive={false} />
+          <Bar dataKey="Entradas" fill="url(#gEntradas)" radius={[6, 6, 2, 2]} maxBarSize={30} animationDuration={900} animationEasing="ease-out" />
+          <Bar dataKey="Saídas" fill="url(#gSaidas)" radius={[6, 6, 2, 2]} maxBarSize={30} animationBegin={120} animationDuration={900} animationEasing="ease-out" />
         </BarChart>
       </ResponsiveContainer>
     </div>
@@ -135,7 +135,7 @@ export function BarrasHorizontais({ itens }: { itens: { nome: string; valor: num
           <span className="num text-right text-[14px] font-semibold text-ink sm:hidden">{brl(i.valor)}</span>
           <div className="col-span-2 h-2.5 rounded-full bg-[#edf1f6] sm:col-span-1">
             <div
-              className="h-2.5 rounded-full shadow-[0_2px_6px_-2px_rgba(37,99,235,0.5)]"
+              className="anim-encher h-2.5 rounded-full shadow-[0_2px_6px_-2px_rgba(37,99,235,0.5)]"
               style={{ width: `${Math.max(6, (i.valor / max) * 100)}%`, backgroundImage: 'linear-gradient(90deg,#5B9BFD,#2F6FED)' }}
             />
           </div>

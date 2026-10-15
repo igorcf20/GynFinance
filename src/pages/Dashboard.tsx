@@ -1,4 +1,4 @@
-import { ArrowUpRight, ArrowDownRight, ChevronRight, CalendarClock, Info, PiggyBank, Wallet } from 'lucide-react'
+import { ArrowUpRight, ArrowDownRight, ChevronRight, CalendarClock, PiggyBank, Wallet } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { SaldoSparkline, SobrouMesesChart } from '../components/financial/charts'
@@ -8,10 +8,17 @@ import { FinancialSummary } from '../components/financial/FinancialSummary'
 import { Header } from '../components/layout/Header'
 import { Button } from '../components/ui/Button'
 import { Card, CardTitulo, EstadoVazio, IconeBox } from '../components/ui/Card'
+import { Explica } from '../components/ui/Explica'
 import { Modal, useToast } from '../components/ui/Modal'
 import { alertas, fraseSobrou, gastosPorCategoria, proximos7Dias, reservaPendente, resumoMes, saldoCaixa, serieMensal, variacao } from '../domain/calc'
 import { useStore } from '../data/store'
 import { addDias, addMeses, brl, nomeMes, pct } from '../lib/format'
+import { ValorAnimado } from '../components/ui/ValorAnimado'
+
+function saudacao(): string {
+  const h = new Date().getHours()
+  return h < 5 ? 'Boa noite' : h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite'
+}
 
 export function Dashboard() {
   const { dados, hoje, mes, separarReserva } = useStore()
@@ -36,20 +43,28 @@ export function Dashboard() {
 
   return (
     <>
-      <Header titulo={`Olá, ${dados.empresa.nomeDono}`} subtitulo={`${dados.empresa.nomeFantasia} · ${dados.empresa.ehMei ? 'MEI' : 'Empresa'}`} periodo />
+      <Header titulo={`${saudacao()}, ${dados.empresa.nomeDono}`} subtitulo={`${dados.empresa.nomeFantasia} · ${dados.empresa.ehMei ? 'MEI' : 'Empresa'}`} periodo />
 
       <div className="grid grid-cols-1 gap-4 md:gap-5 xl:grid-cols-[1.5fr_1fr]">
         <div className="flex flex-col gap-4 md:gap-5">
           {/* Cartão principal */}
-          <Card className="relative flex flex-col gap-5 overflow-hidden sm:flex-row sm:items-end md:!p-7">
+          <Card className="relative flex flex-col gap-5 sm:flex-row sm:items-end md:!p-7">
             <div className="min-w-0 flex-1">
               <p className="flex items-center gap-1.5 text-[15px] font-bold text-ink">
                 Sobrou no mês
-                <span title="Entradas menos saídas do negócio no mês, sem contar o que você retirou." className="text-navy">
-                  <Info size={16} strokeWidth={2} aria-label="O que é" />
-                </span>
+                <Explica
+                  titulo="Sobrou no mês"
+                  conta={
+                    <>
+                      Entrou {brl(r.entrou)} − Saiu {brl(r.saiu)} = <b className="text-ink">{brl(r.sobrou)}</b>
+                    </>
+                  }
+                >
+                  É o que o negócio gerou no mês: tudo o que entrou menos tudo o que saiu. O que você tirou para você (pró-labore) fica de fora, para mostrar se o negócio
+                  se paga sozinho.
+                </Explica>
               </p>
-              <p className={`valor-grande mt-2 text-[40px] md:text-[46px] ${r.sobrou < 0 ? 'text-danger' : 'text-ink'}`}>{brl(r.sobrou)}</p>
+              <p className={`valor-grande mt-2 text-[40px] md:text-[46px] ${r.sobrou < 0 ? 'text-danger' : 'text-ink'}`}><ValorAnimado centavos={r.sobrou} /></p>
               {v !== null && (
                 <span
                   className={`mt-3.5 inline-flex h-8 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-semibold ${
@@ -70,26 +85,41 @@ export function Dashboard() {
 
           <FinancialSummary r={r} />
 
-          <Link to="/relatorios" className="block">
-            <Card interativo className="flex items-center gap-4 md:gap-5">
+          <Card interativo className="relative flex items-center gap-4 md:gap-5">
               <IconeBox tom="azul" tamanho="lg">
                 <Wallet size={24} strokeWidth={1.9} />
               </IconeBox>
               <div className="min-w-0">
-                <p className="text-[14px] font-bold text-ink">Saldo do caixa hoje</p>
-                <p className="valor-grande mt-1 text-[28px] text-ink">{brl(saldo)}</p>
+                <p className="flex items-center gap-1 text-[14px] font-bold text-ink">
+                  {/* Link esticado: o cartão inteiro abre os relatórios, e o "?" continua clicável por cima. */}
+                  <Link to="/relatorios" className="after:absolute after:inset-0 after:rounded-[18px]">
+                    Saldo do caixa hoje
+                  </Link>
+                  <span className="relative z-10">
+                    <Explica titulo="Saldo do caixa hoje">
+                      Quanto a empresa tem agora, somando dinheiro em espécie e conta bancária. Não inclui a reserva, que fica guardada à parte. A linha mostra como o saldo
+                      andou nos últimos três meses.
+                    </Explica>
+                  </span>
+                </p>
+                <p className="valor-grande mt-1 text-[28px] text-ink"><ValorAnimado centavos={saldo} /></p>
               </div>
               <div className="ml-auto hidden w-56 sm:block xl:w-64">
                 <SaldoSparkline pontos={pontosSaldo} />
               </div>
-              <ChevronRight size={20} className="shrink-0 text-navy" aria-hidden />
+              <ChevronRight size={20} className="shrink-0 text-navy transition-transform duration-300 group-hover:translate-x-1" aria-hidden />
             </Card>
-          </Link>
         </div>
 
         <div className="flex flex-col gap-4 md:gap-5">
           <Card>
             <CardTitulo
+              explica={
+                <Explica titulo="Próximos 7 dias">
+                  Contas a pagar e a receber que vencem nesta semana, e as que já passaram do dia. Toque em Paguei ou Recebi quando o dinheiro sair ou entrar: o
+                  saldo e o painel se atualizam na hora.
+                </Explica>
+              }
               acao={
                 <Link to="/contas" className="text-[14px] font-semibold text-primary hover:underline">
                   Ver todos

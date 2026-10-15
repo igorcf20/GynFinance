@@ -19,7 +19,7 @@ export function MobileNavigation() {
               <Link
                 to="/lancar"
                 aria-label="Novo lançamento"
-                className="-mt-6 inline-flex size-14 items-center justify-center rounded-full grad-primario text-white ring-4 ring-white transition-all duration-150 active:brightness-95"
+                className="-mt-6 inline-flex size-14 items-center justify-center rounded-full grad-primario text-white ring-4 ring-white transition-all duration-300 active:scale-90 active:rotate-90"
               >
                 <Plus size={26} strokeWidth={2.2} />
               </Link>
@@ -28,9 +28,11 @@ export function MobileNavigation() {
             <li key={i.para}>
               <NavLink
                 to={i.para}
-                className={`flex flex-col items-center gap-1 py-1 text-[11px] font-medium ${estaAtivo(i, pathname) ? 'font-bold text-primary' : 'text-[#3d5170]'}`}
+                className={`flex flex-col items-center gap-0.5 py-1 text-[11px] font-medium transition-colors duration-200 active:scale-95 ${estaAtivo(i, pathname) ? 'font-bold text-primary' : 'text-[#3d5170]'}`}
               >
-                <i.icone size={22} strokeWidth={estaAtivo(i, pathname) ? 2.2 : 1.8} aria-hidden />
+                <span className={`inline-flex h-7 w-12 items-center justify-center rounded-full transition-all duration-300 ${estaAtivo(i, pathname) ? 'bg-primary-soft' : ''}`}>
+                  <i.icone size={21} strokeWidth={estaAtivo(i, pathname) ? 2.2 : 1.8} aria-hidden />
+                </span>
                 {i.rotulo}
               </NavLink>
             </li>

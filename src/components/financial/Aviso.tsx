@@ -59,11 +59,15 @@ export function Aviso({
   const classe = `flex items-center gap-3.5 rounded-[18px] border px-4 py-3.5 shadow-[0_10px_28px_-18px_rgba(194,97,12,0.45)] md:px-5 ${e.caixa}`
   if (!acao && para)
     return (
-      <Link to={para} className={`${classe} transition-transform hover:-translate-y-0.5`}>
+      <Link data-entrar to={para} className={`${classe} transition-transform hover:-translate-y-0.5`}>
         {conteudo}
       </Link>
     )
-  return <div className={classe}>{conteudo}</div>
+  return (
+    <div data-entrar className={classe}>
+      {conteudo}
+    </div>
+  )
 }
 
 export function iconeDoAviso(id: string): LucideIcon | undefined {

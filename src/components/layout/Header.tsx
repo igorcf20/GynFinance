@@ -47,7 +47,7 @@ function Notificacoes() {
         className="relative inline-flex size-11 items-center justify-center rounded-full text-navy transition-colors hover:bg-white hover:shadow-[var(--shadow-card)]"
       >
         <Bell size={21} strokeWidth={1.9} />
-        {lista.length > 0 && <span className="absolute top-2.5 right-3 size-2 rounded-full bg-danger ring-2 ring-white" aria-hidden />}
+        {lista.length > 0 && <span className="anim-pulso absolute top-2.5 right-3 size-2 rounded-full bg-danger ring-2 ring-white" aria-hidden />}
       </button>
       {aberto && (
         <div className="anim-subir absolute right-0 z-30 mt-2 w-80 rounded-[16px] border border-line bg-surface p-2 shadow-[var(--shadow-pop)]">

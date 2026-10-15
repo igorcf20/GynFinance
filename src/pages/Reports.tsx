@@ -9,6 +9,7 @@ import { useStore } from '../data/store'
 import { brl, mesAno, nomeMes } from '../lib/format'
 import { Badge } from '../components/ui/Badge'
 import { ContaItem } from '../components/financial/ContaItem'
+import { ValorAnimado } from '../components/ui/ValorAnimado'
 
 interface Relatorio {
   id: string
@@ -87,7 +88,7 @@ export function Reports() {
               ].map(([k, v, c]) => (
                 <div key={k as string}>
                   <dt className="text-[13px] font-medium text-[#3d5170]">{k}</dt>
-                  <dd className={`valor-grande mt-1 text-[21px] ${c}`}>{brl(v as number)}</dd>
+                  <dd className={`valor-grande mt-1 text-[21px] ${c}`}><ValorAnimado centavos={v as number} /></dd>
                 </div>
               ))}
             </dl>

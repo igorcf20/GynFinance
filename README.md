@@ -45,6 +45,8 @@ src/
 ```
 
 - Visual: segue o [DESIGN.md](docs/DESIGN.md) e a [imagem de referência](docs/telas-referencia.png). Cores só pelos tokens de `src/styles/tokens.css`; degradês em `grad-primario` e `grad-navy` (`src/index.css`).
+- Movimento: as curvas e animações ficam em `src/index.css` (`anim-*`) e somem para quem pede menos movimento no sistema.
+  Números contam até o valor (`ValorAnimado`) e os principais têm um "?" (`Explica`) com o que são e a conta do mês.
 - Regras: o painel usa regime de caixa (data de pagamento); o faturamento do MEI usa a data da venda.
 - Limite do MEI e valor do DAS ficam em `src/domain/parametros.ts`, por ano. **Confirmar os valores de 2026 e 2027.**
 - Dinheiro sempre em **centavos inteiros** (`Centavos`). `brl()` formata e `lerValor()` lê o que a pessoa digitou.

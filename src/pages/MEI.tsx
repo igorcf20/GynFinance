@@ -4,11 +4,13 @@ import { Header } from '../components/layout/Header'
 import { Badge } from '../components/ui/Badge'
 import { Button, classesBotao } from '../components/ui/Button'
 import { Card, CardTitulo, EstadoVazio, IconeBox } from '../components/ui/Card'
+import { Explica } from '../components/ui/Explica'
 import { Modal, useToast } from '../components/ui/Modal'
 import { estadoDas, situacaoMei, type EstadoDas } from '../domain/calc'
 import { LINKS, parametroDoAno } from '../domain/parametros'
 import { useStore } from '../data/store'
 import { brl, capitalizar, nomeMes, pct } from '../lib/format'
+import { ValorAnimado } from '../components/ui/ValorAnimado'
 
 const ESTADO: Record<EstadoDas, { texto: string; tom: 'verde' | 'ambar' | 'vermelho' | 'neutro' }> = {
   pago: { texto: 'Pago', tom: 'verde' },
@@ -25,13 +27,21 @@ function RevenueLimit() {
     <Card>
       <p className="flex items-center gap-1.5 text-[15px] font-bold text-ink">
         Faturamento do ano
-        <span title="Soma das vendas e serviços do ano, pela data da venda. É assim que a Receita conta." className="text-navy">
-          <Info size={16} strokeWidth={2} aria-label="Como é calculado" />
-        </span>
+        <Explica
+          titulo="Faturamento do ano"
+          conta={
+            <>
+              {brl(s.faturado)} de {brl(s.limite)} = <b className="text-ink">{pct(s.usado)}</b> do limite
+            </>
+          }
+        >
+          Soma das vendas e serviços do ano, pela data da venda, como a Receita conta. O MEI pode faturar até {brl(s.limite)} por ano; no ano em que a empresa abre, o
+          limite é proporcional aos meses de atividade.
+        </Explica>
       </p>
       <div className="mt-2 flex items-baseline justify-between gap-3">
         <p>
-          <span className="valor-grande text-[32px] text-ink md:text-[38px]">{brl(s.faturado)}</span>
+          <span className="valor-grande text-[32px] text-ink md:text-[38px]"><ValorAnimado centavos={s.faturado} /></span>
           <span className="num ml-2 text-[15px] font-medium text-ink-2">de {brl(s.limite)}</span>
         </p>
         <span className="num text-[20px] font-extrabold text-ink">{pct(s.usado)}</span>
@@ -44,7 +54,7 @@ function RevenueLimit() {
         aria-valuenow={Math.round(s.usado * 100)}
         aria-label="Limite anual do MEI usado"
       >
-        <div className="h-3 rounded-full shadow-[0_4px_10px_-4px_rgba(37,99,235,0.6)]" style={{ width: `${Math.min(100, s.usado * 100)}%`, backgroundImage: cor }} />
+        <div className="anim-encher h-3 rounded-full shadow-[0_4px_10px_-4px_rgba(37,99,235,0.6)]" style={{ width: `${Math.min(100, s.usado * 100)}%`, backgroundImage: cor }} />
       </div>
       <p className="mt-3 text-[14px] text-ink-2">
         {s.restante > 0 ? `Ainda pode faturar ${brl(s.restante)} este ano.` : 'Você passou o limite do MEI. Fale com um contador.'}
@@ -54,8 +64,13 @@ function RevenueLimit() {
           <ChartColumnIncreasing size={30} strokeWidth={2.2} aria-hidden />
         </span>
         <div>
-          <p className="text-[14px] text-ink-2">No ritmo atual, você fecha o ano com</p>
-          <p className={`valor-grande text-[22px] ${s.projecao > s.limite ? 'text-danger' : 'text-ink'}`}>{brl(s.projecao)}</p>
+          <p className="flex items-center gap-1 text-[14px] text-ink-2">
+            No ritmo atual, você fecha o ano com
+            <Explica titulo="Projeção do ano">
+              Pegamos a média do que você faturou por mês até agora e multiplicamos pelos meses do ano. Se passar do limite, o aviso aparece aqui antes de acontecer.
+            </Explica>
+          </p>
+          <p className={`valor-grande text-[22px] ${s.projecao > s.limite ? 'text-danger' : 'text-ink'}`}><ValorAnimado centavos={s.projecao} /></p>
         </div>
       </div>
     </Card>
@@ -77,7 +92,13 @@ function DASCard() {
           <FileText size={20} strokeWidth={2} />
         </IconeBox>
         <div className="min-w-0 flex-1">
-          <p className="text-[16px] font-bold text-ink">DAS de {nomeMes(mes)}</p>
+          <p className="flex items-center gap-1 text-[16px] font-bold text-ink">
+            DAS de {nomeMes(mes)}
+            <Explica titulo="O que é o DAS">
+              É o imposto mensal fixo do MEI, que já inclui o INSS (sua aposentadoria) e o ICMS ou ISS. Vence todo dia 20. Pague no portal do Simples e depois toque em
+              Marcar como pago para o sistema lançar a saída.
+            </Explica>
+          </p>
           <p className={`text-[14px] font-medium ${estado === 'pago' ? 'text-ink-2' : estado === 'atrasado' ? 'text-danger' : 'text-[#e8640c]'}`}>
             Vence dia {parametroDoAno(Number(mes.slice(0, 4))).dasDiaVencimento} de {nomeMes(mes)} · <span className="num">{brl(valor, { centavos: true })}</span>
           </p>

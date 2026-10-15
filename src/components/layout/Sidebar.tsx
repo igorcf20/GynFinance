@@ -15,13 +15,13 @@ function Item({ item, caminho, compacto }: { item: ItemNav; caminho: string; com
       to={item.para}
       title={compacto ? item.rotulo : undefined}
       aria-current={ativo ? 'page' : undefined}
-      className={`flex h-11 items-center gap-3 rounded-[12px] px-2.5 text-[14px] transition-all duration-150 ${
+      className={`group flex h-11 items-center gap-3 rounded-[12px] px-2.5 text-[14px] transition-all duration-200 ${
         compacto ? 'justify-center px-0' : ''
       } ${ativo ? 'bg-gradient-to-r from-[#dbe7fc] to-[#e9f1fe] font-bold text-navy shadow-[inset_0_0_0_1px_rgba(52,120,246,0.08)]' : 'font-medium text-[#3d5170] hover:bg-hover hover:text-ink'}`}
     >
       {/* Ativo: ícone branco num quadrado azul-marinho, como na imagem de referência. */}
       <span
-        className={`inline-flex size-[28px] shrink-0 items-center justify-center rounded-[8px] transition-colors ${ativo ? 'grad-navy text-white' : 'text-[#2f4a72]'}`}
+        className={`inline-flex size-[28px] shrink-0 items-center justify-center rounded-[8px] transition-all duration-300 ${ativo ? 'grad-navy text-white' : 'text-[#2f4a72] group-hover:scale-110'}`}
       >
         <Icone size={ativo ? 16 : 20} strokeWidth={ativo ? 2.2 : 1.8} aria-hidden />
       </span>

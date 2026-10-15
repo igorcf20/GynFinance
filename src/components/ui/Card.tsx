@@ -3,7 +3,7 @@ import type { HTMLAttributes, ReactNode } from 'react'
 export function Card({ className = '', interativo, children, ...rest }: HTMLAttributes<HTMLDivElement> & { interativo?: boolean }) {
   return (
     <div
-      className={`card p-5 md:p-6 ${interativo ? 'hover:-translate-y-0.5 hover:shadow-[var(--shadow-card-hover)]' : ''} ${className}`}
+      className={`card p-5 has-[[role=tooltip]]:relative has-[[role=tooltip]]:z-30 md:p-6 ${interativo ? 'group hover:-translate-y-0.5 hover:shadow-[var(--shadow-card-hover)]' : ''} ${className}`}
       {...rest}
     >
       {children}
@@ -11,10 +11,13 @@ export function Card({ className = '', interativo, children, ...rest }: HTMLAttr
   )
 }
 
-export function CardTitulo({ children, acao, className = '' }: { children: ReactNode; acao?: ReactNode; className?: string }) {
+export function CardTitulo({ children, acao, explica, className = '' }: { children: ReactNode; acao?: ReactNode; explica?: ReactNode; className?: string }) {
   return (
     <div className={`mb-4 flex items-center justify-between gap-3 ${className}`}>
-      <h2 className="text-[17px] font-bold tracking-[-0.01em] text-ink">{children}</h2>
+      <h2 className="flex items-center gap-1 text-[17px] font-bold tracking-[-0.01em] text-ink">
+        {children}
+        {explica}
+      </h2>
       {acao}
     </div>
   )

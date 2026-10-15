@@ -62,10 +62,17 @@
     border-color 180ms ease;
 }
 
+/* ---------- Movimento ----------
+   Uma curva só para tudo: começa rápido e assenta devagar, como objeto físico. */
+:root {
+  --curva: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --curva-mola: cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
 @keyframes subir {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
@@ -80,6 +87,72 @@
     opacity: 1;
   }
 }
+/* Entrada dos cartões ao abrir uma tela (em cascata, ver MainLayout). */
+@keyframes entrar {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+/* Barras que se enchem da esquerda (limite do MEI, onde mais gastou). */
+@keyframes encher {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@keyframes janela {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes toast {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+/* Linha que some para a direita quando a conta é paga. */
+@keyframes sair {
+  to {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+}
+@keyframes pulso {
+  0% {
+    box-shadow: 0 0 0 0 rgba(224, 50, 74, 0.55);
+  }
+  70% {
+    box-shadow: 0 0 0 7px rgba(224, 50, 74, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(224, 50, 74, 0);
+  }
+}
+@keyframes check {
+  from {
+    stroke-dashoffset: 24;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
 @keyframes brilho {
   0% {
     background-position: -200px 0;
@@ -88,11 +161,71 @@
     background-position: 200px 0;
   }
 }
+@keyframes reflexo {
+  from {
+    transform: translateX(-120%) skewX(-18deg);
+  }
+  to {
+    transform: translateX(220%) skewX(-18deg);
+  }
+}
+
 .anim-subir {
-  animation: subir 200ms ease both;
+  animation: subir 260ms var(--curva) both;
 }
 .anim-aparecer {
-  animation: aparecer 180ms ease both;
+  animation: aparecer 200ms ease both;
+}
+.anim-entrar {
+  /* backwards: depois de entrar não sobra transform, que criaria camadas e esconderia as explicações. */
+  animation: entrar 560ms var(--curva) backwards;
+}
+.anim-encher {
+  transform-origin: left center;
+  animation: encher 1100ms var(--curva) both;
+  animation-delay: 180ms;
+}
+.anim-janela {
+  animation: janela 320ms var(--curva-mola) both;
+}
+.anim-toast {
+  animation: toast 380ms var(--curva-mola) both;
+}
+.anim-sair {
+  animation: sair 320ms var(--curva) forwards;
+  pointer-events: none;
+}
+.anim-pulso {
+  animation: pulso 2.2s ease-out infinite;
+}
+.anim-check {
+  stroke-dasharray: 24;
+  animation: check 420ms var(--curva) 120ms both;
+}
+
+/* Reflexo de luz que atravessa o botão azul ao passar o mouse. */
+.reflexo {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.reflexo::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.28), transparent);
+  transform: translateX(-120%) skewX(-18deg);
+  pointer-events: none;
+}
+@media (hover: hover) {
+  .reflexo:hover::after {
+    animation: reflexo 750ms var(--curva);
+  }
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -100,6 +233,7 @@
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
     transition-duration: 0.01ms !important;
   }
 }

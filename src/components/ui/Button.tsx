@@ -6,9 +6,9 @@ type Variante = 'primario' | 'secundario' | 'contorno' | 'discreto' | 'perigo'
 type Tamanho = 'md' | 'sm' | 'lg'
 
 const base =
-  'inline-flex items-center justify-center gap-2 whitespace-nowrap font-semibold text-[14px] rounded-[12px] transition-all duration-150 disabled:opacity-60 select-none active:translate-y-px'
+  'inline-flex items-center justify-center gap-2 whitespace-nowrap font-semibold text-[14px] rounded-[12px] transition-all duration-200 disabled:opacity-60 select-none active:scale-[0.97]'
 const variantes: Record<Variante, string> = {
-  primario: 'grad-primario text-white hover:brightness-[1.06]',
+  primario: 'reflexo grad-primario text-white hover:-translate-y-px hover:brightness-[1.06]',
   secundario: 'bg-surface text-ink border border-line shadow-[0_1px_2px_rgba(16,32,64,0.04)] hover:border-[#d3dce8] hover:bg-[#fbfcfe]',
   // Botão branco com borda azul ("Paguei", "Marcar como pago").
   contorno: 'bg-surface text-primary border-[1.5px] border-primary-line hover:border-primary hover:bg-primary-soft/60',

@@ -53,9 +53,14 @@ export function ContaItem({ conta, compacto, mostrarCobrar }: { conta: Lancament
   // Cores como na imagem: atrasada em vermelho, a receber em verde, a pagar em laranja.
   const tom: TomIcone = atrasada ? 'vermelho' : receber ? 'verde' : 'laranja'
   const corLinha = atrasada ? 'text-danger' : prazo === 'semana' ? 'text-[#e8640c]' : 'text-ink-2'
+  const [saindo, setSaindo] = useState(false)
+  // A linha desliza para fora antes de sumir, para a pessoa ver que a conta saiu da lista.
   const baixar = (valorReal = conta.valor) => {
-    marcarComoPago(conta.id, valorReal)
-    toast(receber ? `Recebimento de ${brl(valorReal)} registrado.` : `Pagamento de ${brl(valorReal)} registrado.`)
+    setSaindo(true)
+    setTimeout(() => {
+      marcarComoPago(conta.id, valorReal)
+      toast(receber ? `Recebimento de ${brl(valorReal)} registrado.` : `Pagamento de ${brl(valorReal)} registrado.`)
+    }, 300)
   }
   // Conta de valor variável: confirma o valor real antes de baixar.
   const aoTocar = () => {
@@ -67,8 +72,8 @@ export function ContaItem({ conta, compacto, mostrarCobrar }: { conta: Lancament
   const nome = receber ? conta.contraparte || conta.descricao : conta.descricao || conta.contraparte
 
   return (
-    <li className={`flex items-center gap-3 md:gap-4 ${compacto ? 'py-4' : 'py-4'}`}>
-      <IconeBox tom={tom}>
+    <li className={`group flex items-center gap-3 md:gap-4 ${compacto ? 'py-3.5' : 'py-4'} ${saindo ? 'anim-sair' : ''}`}>
+      <IconeBox tom={tom} className="transition-transform duration-300 group-hover:scale-105">
         <Icone size={20} strokeWidth={2} aria-hidden />
       </IconeBox>
       <div className="min-w-0 flex-1">
