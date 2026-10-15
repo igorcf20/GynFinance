@@ -8,9 +8,9 @@ import { Input, Label, Select, Toggle } from '../components/ui/Field'
 import { Modal, useToast } from '../components/ui/Modal'
 import { Chips, Segmentado } from '../components/ui/Tabs'
 import { LINKS } from '../domain/parametros'
-import type { FormaPagamento, Lancamento, NotaEmitida } from '../domain/types'
+import type { FormaPagamento, Lancamento, NotaEmitida, SeFimDeSemana } from '../domain/types'
 import { useStore, type NovoLancamento } from '../data/store'
-import { addDias, brl, lerValor } from '../lib/format'
+import { addDias, brl, centavosParaTexto, diasEntre, lerValor } from '../lib/format'
 
 export const FORMAS: { valor: FormaPagamento; rotulo: string }[] = [
   { valor: 'pix', rotulo: 'Pix' },
@@ -24,19 +24,43 @@ export const FORMAS: { valor: FormaPagamento; rotulo: string }[] = [
 type Tipo = 'entrada' | 'saida'
 type Modo = 'normal' | 'retirada'
 
-// Categorias mais usadas no topo; o resto fica em "Outra categoria".
-const RAPIDAS: Record<Tipo, string[]> = {
+// Ordem padrão das categorias rápidas, usada quando ainda não há histórico.
+const PADRAO_RAPIDAS: Record<Tipo, string[]> = {
   entrada: ['vendas', 'servicos', 'outras-entradas'],
   saida: ['mercadoria', 'aluguel', 'embalagem', 'transporte'],
 }
 
-function valorInicial(l?: Lancamento) {
-  if (!l) return ''
-  return l.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+/** As categorias mais usadas nos últimos 90 dias vão para o topo. */
+export function categoriasMaisUsadas(lancamentos: Lancamento[], tipo: Tipo, hoje: string, quantas: number): string[] {
+  const uso = new Map<string, number>()
+  for (const l of lancamentos) {
+    if (l.natureza !== tipo || !l.categoriaId || l.recorrenciaId) continue
+    const d = diasEntre(l.dataCompetencia, hoje)
+    if (d < 0 || d > 90) continue
+    uso.set(l.categoriaId, (uso.get(l.categoriaId) ?? 0) + 1)
+  }
+  const porUso = [...uso.entries()].sort((a, b) => b[1] - a[1]).map(([id]) => id)
+  return [...new Set([...porUso, ...PADRAO_RAPIDAS[tipo]])].slice(0, quantas)
+}
+
+/** Último lançamento do mesmo tipo com a mesma descrição ou contraparte. */
+function ultimoParecido(lancamentos: Lancamento[], tipo: Tipo, campo: 'descricao' | 'contraparte', texto: string): Lancamento | undefined {
+  const alvo = texto.trim().toLowerCase()
+  if (!alvo) return undefined
+  let melhor: Lancamento | undefined
+  for (const l of lancamentos) {
+    if (l.natureza !== tipo || l.espelhoDe || (l[campo] ?? '').toLowerCase() !== alvo) continue
+    if (!melhor || l.dataCompetencia > melhor.dataCompetencia) melhor = l
+  }
+  return melhor
+}
+
+function valorInicial(l?: Pick<Lancamento, 'valor'>) {
+  return l ? centavosParaTexto(l.valor) : ''
 }
 
 export function NewTransaction() {
-  const { dados, hoje, salvarLancamento, excluirLancamento } = useStore()
+  const { dados, hoje, salvarLancamento, excluirLancamento, recorrenciaDe } = useStore()
   const [confirmarExclusao, setConfirmarExclusao] = useState(false)
   const toast = useToast()
   const navigate = useNavigate()
@@ -53,7 +77,11 @@ export function NewTransaction() {
   const [forma, setForma] = useState<FormaPagamento>(editando?.formaPagamento ?? 'pix')
   const [aPrazo, setAPrazo] = useState(editando ? editando.situacao === 'previsto' : !!contaNova)
   const [vencimento, setVencimento] = useState(editando?.dataVencimento ?? addDias(hoje, 7))
-  const [repetir, setRepetir] = useState(!!editando?.recorrente)
+  const recEditando = editando ? recorrenciaDe(editando) : undefined
+  const [repetir, setRepetir] = useState(!!recEditando?.ativa)
+  const [seFimDeSemana, setSeFimDeSemana] = useState<SeFimDeSemana>(recEditando?.seFimDeSemana ?? 'manter')
+  const [valorVaria, setValorVaria] = useState(!!recEditando?.valorVaria)
+  const [sugerido, setSugerido] = useState('')
   const [descricao, setDescricao] = useState(editando?.descricao ?? '')
   const [contraparte, setContraparte] = useState(editando?.contraparte ?? '')
   const [nota, setNota] = useState<NotaEmitida>(editando?.notaEmitida === 'sim' ? 'sim' : 'nao')
@@ -73,8 +101,28 @@ export function NewTransaction() {
     () => dados.categorias.filter((c) => c.ativa && (tipo === 'entrada' ? c.grupo === 'receita' : c.grupo !== 'receita' && c.grupo !== 'retirada')),
     [dados.categorias, tipo],
   )
-  const rapidas = RAPIDAS[tipo].map((id) => categoriasDoTipo.find((c) => c.id === id)).filter((c) => !!c)
-  const outras = categoriasDoTipo.filter((c) => !RAPIDAS[tipo].includes(c.id))
+  const idsRapidas = useMemo(() => categoriasMaisUsadas(dados.lancamentos, tipo, hoje, tipo === 'entrada' ? 3 : 4), [dados.lancamentos, tipo, hoje])
+  const rapidas = idsRapidas.map((id) => categoriasDoTipo.find((c) => c.id === id)).filter((c) => !!c)
+  const outras = categoriasDoTipo.filter((c) => !idsRapidas.includes(c.id))
+
+  // Textos já usados pela empresa, do mais recente para o mais antigo (sugestões do autocompletar).
+  const historico = useMemo(() => {
+    const ordenados = dados.lancamentos.filter((l) => l.natureza === tipo && !l.espelhoDe).sort((a, b) => b.dataCompetencia.localeCompare(a.dataCompetencia))
+    const unicos = (campo: 'descricao' | 'contraparte') => [...new Set(ordenados.map((l) => l[campo]?.trim()).filter((t): t is string => !!t))].slice(0, 30)
+    return { descricoes: unicos('descricao'), contrapartes: unicos('contraparte') }
+  }, [dados.lancamentos, tipo])
+
+  /** Ao escolher um texto já usado, traz a categoria e a forma de pagamento da última vez. */
+  const aplicarHistorico = (campo: 'descricao' | 'contraparte', texto: string) => {
+    if (editando || modo !== 'normal') return
+    const ultimo = ultimoParecido(dados.lancamentos, tipo, campo, texto)
+    if (!ultimo?.categoriaId) return
+    setCategoriaId(ultimo.categoriaId)
+    setForma(ultimo.formaPagamento)
+    setErro((x) => ({ ...x, categoria: undefined }))
+    const nome = dados.categorias.find((c) => c.id === ultimo.categoriaId)?.nome
+    setSugerido(nome ? `Categoria e forma de pagamento da última vez: ${nome}, ${FORMAS.find((f) => f.valor === ultimo.formaPagamento)?.rotulo}.` : '')
+  }
   const categoriaEhOutra = outras.some((c) => c.id === categoriaId)
 
   const mudarTipo = (t: Tipo) => {
@@ -113,13 +161,12 @@ export function NewTransaction() {
       descricao: descricao.trim() || (modo === 'retirada' ? 'Pró-labore' : undefined),
       contraparte: contraparte.trim() || undefined,
       notaEmitida: natureza === 'entrada' ? nota : 'nao_se_aplica',
-      recorrente: previsto && repetir,
       pagoComDinheiroPessoal: natureza === 'saida' && !previsto && pessoal,
     }
     setSalvando(true)
     // Feedback de processamento antes de confirmar (DESIGN.md, seção 10).
     setTimeout(() => {
-      salvarLancamento(l, editando?.id)
+      salvarLancamento(l, editando?.id, previsto ? { repetir, seFimDeSemana, valorVaria } : undefined)
       setSalvando(false)
       const oque = modo === 'retirada' ? 'Retirada' : previsto ? (tipo === 'entrada' ? 'Conta a receber' : 'Conta a pagar') : 'Lançamento'
       toast(`${oque} de ${brl(valor)} ${oque === 'Lançamento' ? 'salvo' : 'salva'}.`)
@@ -132,6 +179,7 @@ export function NewTransaction() {
       setContraparte('')
       setComprovante('')
       setPessoal(false)
+      setSugerido('')
       refValor.current?.focus()
     }, 450)
   }
@@ -269,10 +317,28 @@ export function NewTransaction() {
             <div className="anim-subir grid grid-cols-1 items-end gap-4 rounded-[12px] bg-[#f8fafc] p-4 sm:grid-cols-2">
               <Input label="Vencimento" type="date" value={vencimento} onChange={(e) => setVencimento(e.target.value || hoje)} />
               <label className="flex h-[42px] cursor-pointer items-center gap-2.5 text-[13px] font-medium text-ink">
-                <input type="checkbox" checked={repetir} onChange={(e) => setRepetir(e.target.checked)} className="size-4 accent-[#3478F6]" />
+                <input id="repetir" type="checkbox" checked={repetir} onChange={(e) => setRepetir(e.target.checked)} className="size-4 accent-[#3478F6]" />
                 <Repeat size={15} className="text-slate" aria-hidden />
                 Repetir todo mês
               </label>
+              {repetir && (
+                <>
+                  <Select
+                    label="Se vencer no sábado ou domingo"
+                    value={seFimDeSemana}
+                    onChange={(e) => setSeFimDeSemana(e.target.value as SeFimDeSemana)}
+                    opcoes={[
+                      { valor: 'manter', rotulo: 'Manter a data' },
+                      { valor: 'antecipar', rotulo: 'Antecipar para sexta' },
+                      { valor: 'adiar', rotulo: 'Adiar para segunda' },
+                    ]}
+                  />
+                  <label className="flex h-[42px] cursor-pointer items-center gap-2.5 text-[13px] font-medium text-ink">
+                    <input id="valor-varia" type="checkbox" checked={valorVaria} onChange={(e) => setValorVaria(e.target.checked)} className="size-4 accent-[#3478F6]" />
+                    O valor muda todo mês (luz, água)
+                  </label>
+                </>
+              )}
             </div>
           )}
 
@@ -287,13 +353,39 @@ export function NewTransaction() {
             </button>
             {detalhes && (
               <div className="anim-subir mt-4 grid grid-cols-1 gap-4">
-                <Input label="Descrição (opcional)" placeholder="Ex.: Pedido de bolos" value={descricao} onChange={(e) => setDescricao(e.target.value)} />
+                <Input
+                  label="Descrição (opcional)"
+                  placeholder="Ex.: Pedido de bolos"
+                  list="hist-descricao"
+                  autoComplete="off"
+                  value={descricao}
+                  onChange={(e) => {
+                    setDescricao(e.target.value)
+                    if (historico.descricoes.some((t) => t.toLowerCase() === e.target.value.toLowerCase())) aplicarHistorico('descricao', e.target.value)
+                  }}
+                />
+                <datalist id="hist-descricao">
+                  {historico.descricoes.map((t) => (
+                    <option key={t} value={t} />
+                  ))}
+                </datalist>
                 <Input
                   label={tipo === 'entrada' ? 'Cliente (opcional)' : 'Fornecedor (opcional)'}
                   placeholder={tipo === 'entrada' ? 'Ex.: João Silva' : 'Ex.: Atacadão'}
+                  list="hist-contraparte"
+                  autoComplete="off"
                   value={contraparte}
-                  onChange={(e) => setContraparte(e.target.value)}
+                  onChange={(e) => {
+                    setContraparte(e.target.value)
+                    if (historico.contrapartes.some((t) => t.toLowerCase() === e.target.value.toLowerCase())) aplicarHistorico('contraparte', e.target.value)
+                  }}
                 />
+                <datalist id="hist-contraparte">
+                  {historico.contrapartes.map((t) => (
+                    <option key={t} value={t} />
+                  ))}
+                </datalist>
+                {sugerido && <p className="anim-aparecer -mt-1 text-[12px] text-primary">{sugerido}</p>}
               </div>
             )}
           </div>

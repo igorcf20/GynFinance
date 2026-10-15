@@ -8,7 +8,8 @@ import { Card, EstadoVazio } from '../components/ui/Card'
 import { Select } from '../components/ui/Field'
 import { Modal, useToast } from '../components/ui/Modal'
 import { Segmentado } from '../components/ui/Tabs'
-import type { Lancamento, Natureza } from '../domain/types'
+import Papa from 'papaparse'
+import type { Categoria, Lancamento, Natureza } from '../domain/types'
 import { useStore } from '../data/store'
 import { brl, dataBR, diaMes, mesDe } from '../lib/format'
 import { FORMAS } from './NewTransaction'
@@ -31,25 +32,38 @@ export function situacaoBadge(l: Lancamento): { texto: string; tom: TomBadge } {
 const dataRef = (l: Lancamento) => l.dataPagamento ?? l.dataVencimento ?? l.dataCompetencia
 const sinal = (l: Lancamento) => (l.natureza === 'entrada' || l.natureza === 'aporte' ? 1 : l.natureza === 'transferencia' ? 0 : -1)
 
-function exportarCsv(linhas: Lancamento[], nomeCategoria: (id?: string) => string, mes: string) {
-  const cab = ['Data', 'Tipo', 'Descrição', 'Cliente ou fornecedor', 'Categoria', 'Forma', 'Valor', 'Situação', 'Nota emitida']
-  const esc = (s: string) => `"${s.replace(/"/g, '""')}"`
-  const corpo = linhas.map((l) =>
-    [
-      dataBR(dataRef(l)),
-      NATUREZA[l.natureza],
-      l.descricao ?? '',
-      l.contraparte ?? '',
-      nomeCategoria(l.categoriaId),
-      FORMAS.find((f) => f.valor === l.formaPagamento)?.rotulo ?? '',
-      (sinal(l) * l.valor).toFixed(2).replace('.', ','),
-      situacaoBadge(l).texto,
-      l.notaEmitida === 'sim' ? 'Sim' : l.notaEmitida === 'nao' ? 'Não' : '',
-    ]
-      .map(esc)
-      .join(';'),
-  )
-  const blob = new Blob(['﻿' + [cab.map(esc).join(';'), ...corpo].join('\n')], { type: 'text/csv;charset=utf-8' })
+const NOMES_GRUPO_CSV: Record<string, string> = {
+  receita: 'Receita',
+  custo: 'Custo',
+  despesa_fixa: 'Despesa fixa',
+  despesa_variavel: 'Despesa variável',
+  imposto: 'Imposto',
+  retirada: 'Retirada',
+}
+
+/** Planilha do mês para o contador: todas as colunas úteis, `;` como separador e BOM para o Excel em português. */
+export function csvDoMes(linhas: Lancamento[], categorias: Categoria[]): string {
+  const cat = (id?: string) => categorias.find((c) => c.id === id)
+  const dados = linhas.map((l) => ({
+    'Data de pagamento': l.dataPagamento ? dataBR(l.dataPagamento) : '',
+    'Data de competência': dataBR(l.dataCompetencia),
+    Vencimento: l.dataVencimento ? dataBR(l.dataVencimento) : '',
+    Tipo: NATUREZA[l.natureza],
+    Categoria: cat(l.categoriaId)?.nome ?? '',
+    'Grupo da categoria': NOMES_GRUPO_CSV[cat(l.categoriaId)?.grupo ?? ''] ?? '',
+    Descrição: l.descricao ?? '',
+    'Cliente ou fornecedor': l.contraparte ?? '',
+    'Forma de pagamento': FORMAS.find((f) => f.valor === l.formaPagamento)?.rotulo ?? '',
+    Valor: ((sinal(l) * l.valor) / 100).toFixed(2).replace('.', ','),
+    Situação: situacaoBadge(l).texto,
+    'Nota emitida': l.notaEmitida === 'sim' ? 'Sim' : l.notaEmitida === 'nao' ? 'Não' : '',
+    'Número da nota': '',
+  }))
+  return '\ufeff' + Papa.unparse(dados, { delimiter: ';', newline: '\r\n' })
+}
+
+function exportarCsv(linhas: Lancamento[], categorias: Categoria[], mes: string) {
+  const blob = new Blob([csvDoMes(linhas, categorias)], { type: 'text/csv;charset=utf-8' })
   const a = document.createElement('a')
   a.href = URL.createObjectURL(blob)
   a.download = `lancamentos-${mes}.csv`
@@ -111,7 +125,7 @@ export function Transactions() {
         subtitulo="Tudo o que entrou e saiu, mês a mês."
         acoes={
           <>
-            <Button variante="discreto" icone={<Download size={16} />} onClick={() => exportarCsv(linhas, nomeCategoria, mes)} className="hidden lg:inline-flex" title="Planilha para o contador">
+            <Button variante="discreto" icone={<Download size={16} />} onClick={() => exportarCsv([...linhas].sort((a, b) => dataRef(a).localeCompare(dataRef(b))), dados.categorias, mes)} className="hidden lg:inline-flex" title="Planilha para o contador">
               Exportar CSV
             </Button>
             <span className="hidden sm:inline-flex">

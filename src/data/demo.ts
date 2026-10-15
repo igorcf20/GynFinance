@@ -4,10 +4,12 @@
 import { CATEGORIAS_PADRAO } from './categorias'
 import { saldoCaixa } from '../domain/calc'
 import { parametroDoAno } from '../domain/parametros'
-import type { Dados, Lancamento, PagamentoDas } from '../domain/types'
+import { gerarPrevistos } from '../domain/recorrencia'
+import type { Dados, Lancamento, PagamentoDas, Recorrencia } from '../domain/types'
 
 export const DEMO_HOJE = '2026-10-15'
 
+const EMPRESA = 'doces-da-ana'
 const BANCO = 'conta-pj'
 const CAIXA = 'caixa'
 const RESERVA = 'reserva'
@@ -33,9 +35,11 @@ let seq = 0
 const id = (p: string) => `${p}-${++seq}`
 const r2 = (n: number) => Math.round(n * 100) / 100
 
+// Os valores abaixo são escritos em reais para facilitar a leitura e convertidos para centavos no fim.
 function realizado(p: Partial<Lancamento> & Pick<Lancamento, 'natureza' | 'valor' | 'dataCompetencia'>): Lancamento {
   return {
     id: id('l'),
+    empresaId: EMPRESA,
     contaFinanceiraId: BANCO,
     situacao: 'realizado',
     dataPagamento: p.dataCompetencia,
@@ -48,12 +52,51 @@ function realizado(p: Partial<Lancamento> & Pick<Lancamento, 'natureza' | 'valor
 function previsto(p: Partial<Lancamento> & Pick<Lancamento, 'natureza' | 'valor' | 'dataCompetencia' | 'dataVencimento'>): Lancamento {
   return {
     id: id('l'),
+    empresaId: EMPRESA,
     contaFinanceiraId: BANCO,
     situacao: 'previsto',
     formaPagamento: p.natureza === 'entrada' ? 'pix' : 'boleto',
     notaEmitida: p.natureza === 'entrada' ? 'nao' : 'nao_se_aplica',
     ...p,
   }
+}
+
+// Contas fixas. Aluguel e internet vêm de janeiro; a luz entrou em outubro e tem valor que varia.
+// Valores do modelo em centavos (já no formato final).
+const REC_ALUGUEL: Recorrencia = {
+  id: 'rec-aluguel',
+  empresaId: EMPRESA,
+  modelo: { natureza: 'saida', valor: 120000, categoriaId: 'aluguel', contaFinanceiraId: BANCO, formaPagamento: 'boleto', descricao: 'Aluguel', contraparte: 'Imobiliária Lar' },
+  frequencia: 'mensal',
+  diaVencimento: 16,
+  inicio: '2026-01-16',
+  seFimDeSemana: 'antecipar',
+  valorVaria: false,
+  ativa: true,
+  ultimaGeracao: '2026-09-16',
+}
+const REC_INTERNET: Recorrencia = {
+  id: 'rec-internet',
+  empresaId: EMPRESA,
+  modelo: { natureza: 'saida', valor: 9990, categoriaId: 'internet', contaFinanceiraId: BANCO, formaPagamento: 'debito', descricao: 'Internet', contraparte: 'NetGoiás' },
+  frequencia: 'mensal',
+  diaVencimento: 12,
+  inicio: '2026-01-12',
+  seFimDeSemana: 'adiar',
+  valorVaria: false,
+  ativa: true,
+  ultimaGeracao: '2026-09-12',
+}
+const REC_LUZ: Recorrencia = {
+  id: 'rec-luz',
+  empresaId: EMPRESA,
+  modelo: { natureza: 'saida', valor: 18000, categoriaId: 'luz', contaFinanceiraId: BANCO, formaPagamento: 'boleto', descricao: 'Conta de luz', contraparte: 'Equatorial Goiás' },
+  frequencia: 'mensal',
+  diaVencimento: 20,
+  inicio: '2026-10-20',
+  seFimDeSemana: 'adiar',
+  valorVaria: true,
+  ativa: true,
 }
 
 function mesPadrao(mes: string, entrou: number, saiu: number, das: PagamentoDas[]): Lancamento[] {
@@ -79,7 +122,7 @@ function mesPadrao(mes: string, entrou: number, saiu: number, das: PagamentoDas[
   })
 
   const p = parametroDoAno(Number(mes.slice(0, 4)))
-  const valorDas = p.dasValorPorAtividade.comercio
+  const valorDas = p.dasValorPorAtividade.comercio / 100
   const fixos = 1200 + 99.9 + valorDas
   const resto = r2(saiu - fixos)
   const mercadoria = mes === '2026-09' ? 1450 : Math.round(resto * 0.6)
@@ -89,8 +132,8 @@ function mesPadrao(mes: string, entrou: number, saiu: number, das: PagamentoDas[
 
   ls.push(
     realizado({ natureza: 'saida', valor: mercadoria, categoriaId: 'mercadoria', dataCompetencia: `${mes}-02`, descricao: 'Ingredientes', contraparte: 'Atacadão' }),
-    realizado({ natureza: 'saida', valor: 1200, categoriaId: 'aluguel', dataCompetencia: `${mes}-10`, descricao: 'Aluguel', formaPagamento: 'boleto', recorrente: true }),
-    realizado({ natureza: 'saida', valor: 99.9, categoriaId: 'internet', dataCompetencia: `${mes}-12`, descricao: 'Internet', formaPagamento: 'debito', recorrente: true }),
+    realizado({ ...REC_ALUGUEL.modelo, valor: 1200, dataCompetencia: `${mes}-16`, dataVencimento: `${mes}-16`, recorrenciaId: REC_ALUGUEL.id }),
+    realizado({ ...REC_INTERNET.modelo, valor: 99.9, dataCompetencia: `${mes}-12`, dataVencimento: `${mes}-12`, recorrenciaId: REC_INTERNET.id }),
     realizado({ natureza: 'saida', valor: embalagem, categoriaId: 'embalagem', dataCompetencia: `${mes}-08`, descricao: 'Embalagens', contraparte: 'Embala Fácil' }),
     realizado({ natureza: 'saida', valor: maquininha, categoriaId: 'maquininha', dataCompetencia: `${mes}-28`, descricao: 'Taxas da maquininha', formaPagamento: 'debito' }),
     realizado({ natureza: 'saida', valor: transporte, categoriaId: 'transporte', dataCompetencia: `${mes}-18`, descricao: 'Entregas e combustível' }),
@@ -98,7 +141,7 @@ function mesPadrao(mes: string, entrou: number, saiu: number, das: PagamentoDas[
   )
   const lancDas = realizado({ natureza: 'saida', valor: valorDas, categoriaId: 'das', dataCompetencia: `${mes}-19`, descricao: `DAS de ${mes.slice(5, 7)}/${mes.slice(0, 4)}`, formaPagamento: 'boleto' })
   ls.push(lancDas)
-  das.push({ competencia: mes, valor: valorDas, vencimento: `${mes}-20`, lancamentoId: lancDas.id })
+  das.push({ empresaId: EMPRESA, competencia: mes, valor: valorDas, vencimento: `${mes}-20`, lancamentoId: lancDas.id })
   return ls
 }
 
@@ -126,8 +169,6 @@ function outubro(): Lancamento[] {
     saida('11', 300, 'marketing', 'Anúncio no Instagram', { formaPagamento: 'credito' }),
     saida('12', 400, 'manutencao', 'Conserto da batedeira', { formaPagamento: 'dinheiro', contaFinanceiraId: CAIXA }),
     realizado({ natureza: 'retirada', valor: 1500, categoriaId: 'prolabore', dataCompetencia: `${m}-05`, descricao: 'Pró-labore' }),
-    previsto({ natureza: 'saida', valor: 1200, categoriaId: 'aluguel', dataCompetencia: `${m}-16`, dataVencimento: `${m}-16`, descricao: 'Aluguel', contraparte: 'Imobiliária Lar', recorrente: true }),
-    previsto({ natureza: 'saida', valor: 99.9, categoriaId: 'internet', dataCompetencia: `${m}-12`, dataVencimento: `${m}-12`, descricao: 'Internet', contraparte: 'NetGoiás', formaPagamento: 'debito', recorrente: true }),
     previsto({ natureza: 'saida', valor: 380, categoriaId: 'embalagem', dataCompetencia: `${m}-24`, dataVencimento: `${m}-24`, descricao: 'Fornecedor de embalagens', contraparte: 'Embala Fácil' }),
     previsto({ natureza: 'entrada', valor: 350, categoriaId: 'vendas', dataCompetencia: `${m}-02`, dataVencimento: `${m}-02`, descricao: 'Encomenda de doces', contraparte: 'João Silva' }),
     previsto({ natureza: 'entrada', valor: 900, categoriaId: 'vendas', dataCompetencia: `${m}-14`, dataVencimento: `${m}-28`, descricao: 'Doces para casamento', contraparte: 'Buffet Estrela' }),
@@ -140,20 +181,27 @@ const SALDO_HOJE = 4150
 export function dadosDemo(): Dados {
   seq = 0
   const pagamentosDas: PagamentoDas[] = []
-  const lancamentos = [...MESES.flatMap((m) => mesPadrao(m.mes, m.entrou, m.saiu, pagamentosDas)), ...outubro()]
-  pagamentosDas.push({ competencia: '2026-10', valor: parametroDoAno(2026).dasValorPorAtividade.comercio, vencimento: '2026-10-20' })
+  let lancamentos = [...MESES.flatMap((m) => mesPadrao(m.mes, m.entrou, m.saiu, pagamentosDas)), ...outubro()]
+  pagamentosDas.push({ empresaId: EMPRESA, competencia: '2026-10', valor: parametroDoAno(2026).dasValorPorAtividade.comercio / 100, vencimento: '2026-10-20' })
+
+  // Reais para centavos.
+  const c = (v: number) => Math.round(v * 100)
+  lancamentos = lancamentos.map((l) => ({ ...l, valor: c(l.valor) }))
+  for (const p of pagamentosDas) p.valor = c(p.valor)
 
   const contas = [
-    { id: BANCO, nome: 'Conta PJ', tipo: 'banco' as const, saldoInicial: 0, ativa: true },
-    { id: CAIXA, nome: 'Caixa (dinheiro)', tipo: 'caixa' as const, saldoInicial: 0, ativa: true },
-    { id: RESERVA, nome: 'Reserva', tipo: 'reserva' as const, saldoInicial: 0, ativa: true },
+    { id: BANCO, empresaId: EMPRESA, nome: 'Conta PJ', tipo: 'banco' as const, saldoInicial: 0, ativa: true },
+    { id: CAIXA, empresaId: EMPRESA, nome: 'Caixa (dinheiro)', tipo: 'caixa' as const, saldoInicial: 0, ativa: true },
+    { id: RESERVA, empresaId: EMPRESA, nome: 'Reserva', tipo: 'reserva' as const, saldoInicial: 0, ativa: true },
   ]
   // Saldo inicial de janeiro calculado para o saldo de hoje fechar em R$ 4.150.
-  contas[0].saldoInicial = r2(SALDO_HOJE - saldoCaixa({ contas, lancamentos }))
+  contas[0].saldoInicial = c(SALDO_HOJE) - saldoCaixa({ contas, lancamentos })
+
+  const gerado = gerarPrevistos([REC_ALUGUEL, REC_INTERNET, REC_LUZ], lancamentos, DEMO_HOJE, () => id('l'))
 
   return {
     empresa: {
-      id: 'doces-da-ana',
+      id: EMPRESA,
       nomeDono: 'Ana',
       nomeFantasia: 'Doces da Ana',
       cnpj: '12.345.678/0001-90',
@@ -162,12 +210,13 @@ export function dadosDemo(): Dados {
       atividade: 'comercio',
       uf: 'GO',
       municipio: 'Goiânia',
-      prolaboreDesejado: 1500,
+      prolaboreDesejado: 150000,
       modulosAtivos: ['financeiro'],
     },
     contas,
     categorias: CATEGORIAS_PADRAO,
-    lancamentos,
+    lancamentos: [...lancamentos, ...gerado.novos],
+    recorrencias: gerado.recorrencias,
     pagamentosDas,
     preferencias: { lembreteDias: 1, lembreteEmail: true, resumoMensal: true },
   }

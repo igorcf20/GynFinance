@@ -4,17 +4,21 @@ import { CheckCircle2 } from 'lucide-react'
 
 export function Modal({ aberto, onFechar, titulo, children, rodape }: { aberto: boolean; onFechar: () => void; titulo: string; children: ReactNode; rodape?: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null)
+  // Guarda o onFechar num ref para o foco não voltar ao primeiro botão a cada renderização.
+  const fechar = useRef(onFechar)
+  fechar.current = onFechar
   useEffect(() => {
     if (!aberto) return
     const anterior = document.activeElement as HTMLElement | null
-    ref.current?.querySelector<HTMLElement>('button, [href], input, select')?.focus()
-    const tecla = (e: KeyboardEvent) => e.key === 'Escape' && onFechar()
+    const caixa = ref.current
+    ;(caixa?.querySelector<HTMLElement>('input, select') ?? caixa?.querySelector<HTMLElement>('button, [href]'))?.focus()
+    const tecla = (e: KeyboardEvent) => e.key === 'Escape' && fechar.current()
     window.addEventListener('keydown', tecla)
     return () => {
       window.removeEventListener('keydown', tecla)
       anterior?.focus()
     }
-  }, [aberto, onFechar])
+  }, [aberto])
   if (!aberto) return null
   return (
     <div className="anim-aparecer fixed inset-0 z-50 flex items-end justify-center bg-[#172b4d]/30 p-0 backdrop-blur-[2px] md:items-center md:p-6" onMouseDown={onFechar}>

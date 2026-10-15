@@ -3,10 +3,11 @@ import type { DataISO, MesISO } from '../domain/types'
 const brl0 = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0, minimumFractionDigits: 0 })
 const brl2 = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
-/** R$ 2.480 para valores inteiros, R$ 99,90 quando há centavos. */
-export function brl(valor: number, opts: { centavos?: boolean } = {}): string {
-  const temCentavos = Math.round(valor * 100) % 100 !== 0
-  const s = (opts.centavos ?? temCentavos) ? brl2.format(valor) : brl0.format(valor)
+/** Recebe centavos. R$ 2.480 para valores redondos, R$ 99,90 quando há centavos. */
+export function brl(centavos: number, opts: { centavos?: boolean } = {}): string {
+  const temCentavos = centavos % 100 !== 0
+  const reais = centavos / 100
+  const s = (opts.centavos ?? temCentavos) ? brl2.format(reais) : brl0.format(reais)
   return s.replace(/ /g, ' ')
 }
 
@@ -70,13 +71,24 @@ export function hojeReal(): DataISO {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-/** Lê "1.234,56", "1234,5" ou "1234.56" e devolve número. */
+/** Valor para um campo de edição: 1234 vira "12,34". */
+export function centavosParaTexto(centavos: number): string {
+  return (centavos / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+/**
+ * Lê o que a pessoa digitou ("1.234,56", "1234,5", "R$ 50", "1.500") e devolve centavos.
+ * Vírgula é sempre decimal. Ponto é decimal só quando é o único separador e tem 1 ou 2 casas depois.
+ */
 export function lerValor(texto: string): number {
-  const limpo = texto.replace(/[^\d,.-]/g, '')
+  const limpo = texto.replace(/[^\d,.]/g, '')
   if (!limpo) return 0
-  const normalizado = limpo.includes(',') ? limpo.replace(/\./g, '').replace(',', '.') : limpo
+  let normalizado: string
+  if (limpo.includes(',')) normalizado = limpo.replace(/\./g, '').replace(',', '.')
+  else if (/^\d+\.\d{1,2}$/.test(limpo)) normalizado = limpo
+  else normalizado = limpo.replace(/\./g, '')
   const n = Number(normalizado)
-  return Number.isFinite(n) ? n : 0
+  return Number.isFinite(n) ? Math.round(n * 100) : 0
 }
 
 /** Prazo em linguagem simples: "vence amanhã", "atrasada há 3 dias". */

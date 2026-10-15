@@ -5,11 +5,12 @@ import type { ParametroMei } from './types'
 export const PARAMETROS_MEI: ParametroMei[] = [
   {
     ano: 2026,
-    limiteAnual: 81000,
-    limiteMensalProporcional: 6750,
-    salarioMinimo: 1621,
+    // Valores em centavos.
+    limiteAnual: 8_100_000,
+    limiteMensalProporcional: 675_000,
+    salarioMinimo: 162_100,
     // 5% do salário mínimo (INSS) + R$ 1 de ICMS (comércio/indústria) e/ou R$ 5 de ISS (serviço)
-    dasValorPorAtividade: { comercio: 82.05, industria: 82.05, servico: 86.05, misto: 87.05 },
+    dasValorPorAtividade: { comercio: 8205, industria: 8205, servico: 8605, misto: 8705 },
     dasDiaVencimento: 20,
   },
 ]

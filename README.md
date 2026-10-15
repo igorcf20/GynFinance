@@ -47,6 +47,14 @@ src/
 - Visual: segue o [DESIGN.md](docs/DESIGN.md). Cores só pelos tokens de `src/styles/tokens.css`.
 - Regras: o painel usa regime de caixa (data de pagamento); o faturamento do MEI usa a data da venda.
 - Limite do MEI e valor do DAS ficam em `src/domain/parametros.ts`, por ano. **Confirmar os valores de 2026 e 2027.**
+- Dinheiro sempre em **centavos inteiros** (`Centavos`). `brl()` formata e `lerValor()` lê o que a pessoa digitou.
+- Todo registro tem `empresaId`, para o banco separar os negócios quando vier o login.
+- Contas fixas: a regra fica em `Recorrencia` e `src/domain/recorrencia.ts` gera as contas previstas até o fim do
+  mês seguinte, sem duplicar (uma por regra e mês). A regra diz o que fazer se vencer no sábado ou domingo
+  (manter, antecipar para sexta ou adiar para segunda; feriados ainda não entram) e se o valor varia (luz, água):
+  nesse caso a tela mostra "cerca de" e pede o valor real ao pagar.
+- O CSV do extrato sai no formato do Excel brasileiro (separador `;`, vírgula decimal, UTF-8 com BOM), via papaparse.
+- Ideias vindas do Firefly III foram reescritas do zero: o código do Firefly é AGPL e não é copiado aqui.
 
 ## Próximos passos
 

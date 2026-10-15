@@ -63,7 +63,11 @@ export function SaldoSparkline({ pontos }: { pontos: { dia: string; saldo: numbe
 /** Entradas e saídas por mês (Fluxo de caixa). */
 export function FluxoChart({ serie }: { serie: ResumoMes[] }) {
   const dados = serie.map((r) => ({ mes: nomeMesCurto(r.mes), Entradas: r.entrou, Saídas: r.saiu }))
-  const k = (v: number) => (v >= 1000 ? `R$ ${(v / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} mil` : `R$ ${v}`)
+  // Eixo em reais (os valores chegam em centavos).
+  const k = (centavos: number) => {
+    const v = centavos / 100
+    return v >= 1000 ? `R$ ${(v / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} mil` : `R$ ${v}`
+  }
   return (
     <div className="h-[300px]" role="img" aria-label="Entradas e saídas por mês">
       <ResponsiveContainer width="100%" height="100%">

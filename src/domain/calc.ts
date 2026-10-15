@@ -7,7 +7,8 @@ import type { Categoria, ContaFinanceira, Dados, DataISO, Lancamento, MesISO, Pa
 const realizadoNoMes = (l: Lancamento, mes: MesISO) =>
   l.situacao === 'realizado' && !!l.dataPagamento && mesDe(l.dataPagamento) === mes
 
-const soma = (ls: Lancamento[]) => Math.round(ls.reduce((t, l) => t + l.valor, 0) * 100) / 100
+// Valores em centavos inteiros: somas exatas, sem arredondamento.
+const soma = (ls: Lancamento[]) => ls.reduce((t, l) => t + l.valor, 0)
 
 export interface ResumoMes {
   mes: MesISO
@@ -23,8 +24,8 @@ export function resumoMes(lancamentos: Lancamento[], mes: MesISO): ResumoMes {
   const entrou = soma(doMes.filter((l) => l.natureza === 'entrada'))
   const saiu = soma(doMes.filter((l) => l.natureza === 'saida'))
   const retirei = soma(doMes.filter((l) => l.natureza === 'retirada'))
-  const sobrou = Math.round((entrou - saiu) * 100) / 100
-  return { mes, entrou, saiu, sobrou, retirei, ficou: Math.round((sobrou - retirei) * 100) / 100 }
+  const sobrou = entrou - saiu
+  return { mes, entrou, saiu, sobrou, retirei, ficou: sobrou - retirei }
 }
 
 /** Variação do "sobrou" contra o mês anterior, ou null quando não dá para comparar. */
@@ -33,10 +34,10 @@ export function variacao(atual: number, anterior: number): number | null {
   return (atual - anterior) / anterior
 }
 
-/** Metade do que ficou na empresa, arredondada para R$ 50. */
+/** Metade do que ficou na empresa, arredondada para R$ 50 (5.000 centavos). */
 export function reservaSugerida(r: ResumoMes): number {
   if (r.ficou <= 0) return 0
-  return Math.round((r.ficou * 0.5) / 50) * 50
+  return Math.round(r.ficou / 2 / 5000) * 5000
 }
 
 export function fraseSobrou(r: ResumoMes, maiores: string[]): string {
@@ -65,16 +66,13 @@ export function saldoPorConta(dados: Pick<Dados, 'contas' | 'lancamentos'>, ate?
       saldos.set(l.contaDestinoId, (saldos.get(l.contaDestinoId) ?? 0) + l.valor)
     }
   }
-  for (const [k, v] of saldos) saldos.set(k, Math.round(v * 100) / 100)
   return saldos
 }
 
 /** Saldo do caixa da empresa: caixa e bancos, sem a reserva. */
 export function saldoCaixa(dados: Pick<Dados, 'contas' | 'lancamentos'>, ate?: DataISO): number {
   const saldos = saldoPorConta(dados, ate)
-  return Math.round(
-    dados.contas.filter((c: ContaFinanceira) => c.tipo !== 'reserva').reduce((t, c) => t + (saldos.get(c.id) ?? 0), 0) * 100,
-  ) / 100
+  return dados.contas.filter((c: ContaFinanceira) => c.tipo !== 'reserva').reduce((t, c) => t + (saldos.get(c.id) ?? 0), 0)
 }
 
 export function saldoReserva(dados: Pick<Dados, 'contas' | 'lancamentos'>): number {
@@ -98,7 +96,7 @@ export function gastosPorCategoria(lancamentos: Lancamento[], categorias: Catego
     .map(([categoriaId, valor]) => ({
       categoriaId,
       nome: categorias.find((c) => c.id === categoriaId)?.nome ?? 'Sem categoria',
-      valor: Math.round(valor * 100) / 100,
+      valor,
     }))
     .sort((a, b) => b.valor - a.valor)
 }
@@ -154,19 +152,17 @@ export function proximos7Dias(lancamentos: Lancamento[], hoje: DataISO): Lancame
 
 export function faturadoNoAno(lancamentos: Lancamento[], categorias: Categoria[], ano: number, ate?: DataISO): number {
   const contam = new Set(categorias.filter((c) => c.contaNoFaturamento).map((c) => c.id))
-  return Math.round(
-    lancamentos
-      .filter(
-        (l) =>
-          l.natureza === 'entrada' &&
-          l.situacao !== 'cancelado' &&
-          l.categoriaId &&
-          contam.has(l.categoriaId) &&
-          l.dataCompetencia.startsWith(String(ano)) &&
-          (!ate || l.dataCompetencia <= ate),
-      )
-      .reduce((t, l) => t + l.valor, 0) * 100,
-  ) / 100
+  return soma(
+    lancamentos.filter(
+      (l) =>
+        l.natureza === 'entrada' &&
+        l.situacao !== 'cancelado' &&
+        !!l.categoriaId &&
+        contam.has(l.categoriaId) &&
+        l.dataCompetencia.startsWith(String(ano)) &&
+        (!ate || l.dataCompetencia <= ate),
+    ),
+  )
 }
 
 /** Limite do ano; no ano de abertura é proporcional aos meses de atividade. */

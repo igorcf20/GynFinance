@@ -15,6 +15,7 @@ export const CATEGORIAS_PADRAO: Categoria[] = [
   c('mercadoria', 'Mercadoria e matéria-prima', 'custo'),
   c('aluguel', 'Aluguel', 'despesa_fixa'),
   c('internet', 'Internet e telefone', 'despesa_fixa'),
+  c('luz', 'Luz e água', 'despesa_fixa'),
   c('contador', 'Contador', 'despesa_fixa'),
   c('sistema', 'Sistema e apps', 'despesa_fixa'),
   c('transporte', 'Transporte', 'despesa_variavel'),

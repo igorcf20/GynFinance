@@ -5,6 +5,8 @@
 export type DataISO = string
 /** Mês no formato AAAA-MM. */
 export type MesISO = string
+/** Dinheiro sempre em centavos inteiros (R$ 12,34 = 1234); só a tela formata. */
+export type Centavos = number
 
 export type Atividade = 'servico' | 'comercio' | 'industria' | 'misto'
 
@@ -18,7 +20,7 @@ export interface Empresa {
   atividade: Atividade
   uf: string
   municipio?: string
-  prolaboreDesejado?: number
+  prolaboreDesejado?: Centavos
   modulosAtivos: string[]
 }
 
@@ -26,9 +28,10 @@ export type TipoConta = 'caixa' | 'banco' | 'reserva'
 
 export interface ContaFinanceira {
   id: string
+  empresaId: string
   nome: string
   tipo: TipoConta
-  saldoInicial: number
+  saldoInicial: Centavos
   ativa: boolean
 }
 
@@ -36,6 +39,8 @@ export type GrupoCategoria = 'receita' | 'custo' | 'despesa_fixa' | 'despesa_var
 
 export interface Categoria {
   id: string
+  /** Vazio = categoria padrão do sistema. */
+  empresaId?: string
   nome: string
   grupo: GrupoCategoria
   /** Entra no faturamento do MEI (vendas e serviços). */
@@ -50,9 +55,10 @@ export type NotaEmitida = 'sim' | 'nao' | 'nao_se_aplica'
 
 export interface Lancamento {
   id: string
+  empresaId: string
   natureza: Natureza
   /** Sempre positivo; a natureza dá o sinal. */
-  valor: number
+  valor: Centavos
   categoriaId?: string
   contaFinanceiraId: string
   /** Só em transferência. */
@@ -68,25 +74,47 @@ export interface Lancamento {
   descricao?: string
   contraparte?: string
   notaEmitida: NotaEmitida
-  recorrente?: boolean
+  /** Quando nasceu de uma conta fixa. */
+  recorrenciaId?: string
   pagoComDinheiroPessoal?: boolean
   /** Liga a despesa ao aporte espelho criado por "paguei com dinheiro pessoal". */
   espelhoDe?: string
 }
 
+export type SeFimDeSemana = 'manter' | 'antecipar' | 'adiar'
+
+/** Conta fixa: a regra fica aqui; cada mês vira um Lancamento previsto. */
+export interface Recorrencia {
+  id: string
+  empresaId: string
+  /** Cópia dos campos do lançamento que se repetem. */
+  modelo: Pick<Lancamento, 'natureza' | 'valor' | 'categoriaId' | 'contaFinanceiraId' | 'formaPagamento' | 'descricao' | 'contraparte'>
+  frequencia: 'mensal'
+  diaVencimento: number
+  inicio: DataISO
+  fim?: DataISO
+  seFimDeSemana: SeFimDeSemana
+  /** O valor do modelo é aproximado (luz, água, maquininha). */
+  valorVaria: boolean
+  ativa: boolean
+  /** Último vencimento já gerado (controle do gerador). */
+  ultimaGeracao?: DataISO
+}
+
 /** Tabela do sistema, por ano: muda por lei e salário mínimo. */
 export interface ParametroMei {
   ano: number
-  limiteAnual: number
-  limiteMensalProporcional: number
-  salarioMinimo: number
-  dasValorPorAtividade: Record<Atividade, number>
+  limiteAnual: Centavos
+  limiteMensalProporcional: Centavos
+  salarioMinimo: Centavos
+  dasValorPorAtividade: Record<Atividade, Centavos>
   dasDiaVencimento: number
 }
 
 export interface PagamentoDas {
+  empresaId: string
   competencia: MesISO
-  valor: number
+  valor: Centavos
   vencimento: DataISO
   lancamentoId?: string
 }
@@ -102,6 +130,7 @@ export interface Dados {
   contas: ContaFinanceira[]
   categorias: Categoria[]
   lancamentos: Lancamento[]
+  recorrencias: Recorrencia[]
   pagamentosDas: PagamentoDas[]
   preferencias: Preferencias
 }
