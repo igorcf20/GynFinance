@@ -6,15 +6,15 @@ import { Card, IconeBox } from '../ui/Card'
 /** Os três números do mês: entrou, saiu e retirei. */
 export function FinancialSummary({ r }: { r: ResumoMes }) {
   const itens = [
-    { rotulo: 'Entrou', valor: r.entrou, texto: 'Total de vendas e outras entradas.', cor: 'text-success', icone: <ArrowUpRight size={19} strokeWidth={2.3} />, tom: 'verde' as const },
-    { rotulo: 'Saiu', valor: r.saiu, texto: 'Total de despesas do mês.', cor: 'text-danger', icone: <ArrowDown size={18} strokeWidth={2.3} />, tom: 'vermelho' as const },
-    { rotulo: 'Retirei', valor: r.retirei, texto: 'Pró-labore para você.', cor: 'text-primary', icone: <UserRound size={18} strokeWidth={2.1} />, tom: 'azul' as const },
+    { rotulo: 'Entrou', valor: r.entrou, texto: 'Total de vendas e outras entradas.', cor: 'text-success', icone: <ArrowUpRight size={21} strokeWidth={2.4} />, tom: 'verde' as const },
+    { rotulo: 'Saiu', valor: r.saiu, texto: 'Total de despesas do mês.', cor: 'text-danger', icone: <ArrowDown size={20} strokeWidth={2.4} />, tom: 'vermelho' as const },
+    { rotulo: 'Retirei', valor: r.retirei, texto: 'Pró-labore para você.', cor: 'text-primary', icone: <UserRound size={20} strokeWidth={2.2} />, tom: 'azul' as const },
   ]
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 md:gap-5">
       {itens.map((i) => (
         <Card key={i.rotulo} interativo className="flex items-center gap-4 !p-4 sm:block md:!p-5">
-          <IconeBox tom={i.tom} tamanho="sm" className="sm:mb-3.5">
+          <IconeBox tom={i.tom} className="sm:mb-3.5">
             {i.icone}
           </IconeBox>
           <div className="min-w-0 flex-1">

@@ -63,7 +63,7 @@ export function Dashboard() {
               )}
               <p className="mt-4 text-[14px] text-ink-2">{fraseSobrou(r, maiores)}</p>
             </div>
-            <div className="w-full sm:w-[260px]">
+            <div className="w-full sm:w-[230px]">
               <SobrouMesesChart serie={serie} />
             </div>
           </Card>
