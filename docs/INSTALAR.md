@@ -3,6 +3,9 @@
 O sistema roda numa VPS com Docker: um banco Postgres, o servidor do Gynfinance (que também
 entrega o site) e o Caddy, que cuida do HTTPS com certificado gratuito.
 
+É uma instalação só para todos os assinantes: cada negócio cria a própria conta no mesmo
+endereço, e o banco mantém os dados de cada empresa separados. Não há uma instalação por cliente.
+
 ## Do que precisa
 
 - Uma VPS Linux (Ubuntu 24.04, por exemplo) com 2 GB de memória e 20 GB de disco.
@@ -28,6 +31,8 @@ ufw allow OpenSSH && ufw allow 80 && ufw allow 443 && ufw enable
 
 ```bash
 git clone https://github.com/igorcf20/GynFinance.git /opt/gynfinance
+# Enquanto o PR #1 não entrar na main, o sistema está no ramo do módulo inicial:
+git -C /opt/gynfinance checkout feat/modulo-inicial
 cd /opt/gynfinance
 cp .env.example .env
 # Gere duas senhas e cole no .env, junto com o domínio:
