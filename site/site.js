@@ -114,6 +114,7 @@
 (function () {
   var MSG_WHATS_PADRAO = 'Olá! Quero saber mais sobre o Gynfinance.';
   var LINK_COMECAR = '/app/#/entrar?depois=comecar';
+  var LISTA_OFERTA_PADRAO = 'Os 10 primeiros assinantes ganham 3 meses grátis.';
   var LISTA_BOTAO_PADRAO = 'Quero ser avisado';
   var LISTA_MSG_PADRAO = 'Olá! Quero entrar na lista de espera do Gynfinance e ser avisado quando abrir.\nNome:\nNegócio:\nCidade:\nComo conheci o Gynfinance:';
   var SVG_NS = 'http://www.w3.org/2000/svg';
@@ -211,7 +212,7 @@
       if (chave && texto(c[chave]) !== null) return;
       e.textContent = e.getAttribute('data-lista-texto');
     });
-    var oferta = (texto(c['lista.oferta']) || '').trim();
+    var oferta = (texto(c['lista.oferta']) || '').trim() || LISTA_OFERTA_PADRAO;
     var caixa = document.querySelector('[data-lista-oferta]');
     if (oferta && caixa) {
       caixa.querySelector('span').textContent = oferta;
