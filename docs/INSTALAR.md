@@ -62,7 +62,8 @@ docker compose up -d --build
 docker compose ps        # banco, app e https "running"; migrar "exited (0)"
 ```
 
-Abra `https://gynfinance.kodemi.pt`. A demonstração aparece primeiro; "Usar com o meu negócio"
+Abra `https://gynfinance.kodemi.pt`: aparece o site de venda (pasta `site/`). O sistema fica em
+`https://gynfinance.kodemi.pt/app/`, onde a demonstração aparece primeiro; "Usar com o meu negócio"
 leva para criar a conta e fazer a configuração inicial.
 
 ## Quando a VPS já tem um site
@@ -81,7 +82,7 @@ Depois aponte o site que já existe para ele. No **nginx**, um arquivo
 ```nginx
 server {
     server_name gynfinance.kodemi.pt;
-    client_max_body_size 5m;
+    client_max_body_size 10m;   # comprovantes de até 5 MB
     location / {
         proxy_pass http://127.0.0.1:3000;
         proxy_set_header Host $host;

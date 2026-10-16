@@ -25,7 +25,13 @@ declare module 'fastify' {
 }
 
 export async function criarApp(pool: pg.Pool, opcoes: { site?: boolean; logger?: boolean } = {}) {
-  const app = Fastify({ logger: opcoes.logger ?? false, bodyLimit: 2 * 1024 * 1024, trustProxy: true })
+  // O sistema abre em /app/ e chama api/... relativo: /app/api/x vira /api/x.
+  const app = Fastify({
+    logger: opcoes.logger ?? false,
+    bodyLimit: 2 * 1024 * 1024,
+    trustProxy: true,
+    rewriteUrl: (req) => (req.url?.startsWith('/app/api/') ? req.url.slice(4) : (req.url ?? '/')),
+  })
   await app.register(cookie)
   await app.register(rateLimit, { global: false })
 
@@ -167,16 +173,29 @@ export async function criarApp(pool: pg.Pool, opcoes: { site?: boolean; logger?:
 
   app.all('/api/*', async (_req, rep) => rep.code(404).send({ erro: 'Endereço não encontrado.' }))
 
+  // Arquivos em assets/ têm o hash no nome: podem ficar no cache por um ano. O resto (index.html,
+  // páginas do site de venda) é conferido a cada visita, para uma atualização chegar na hora.
+  const cabecalhos = (res: { header: (k: string, v: string) => unknown }, caminho: string) => {
+    res.header('cache-control', /[\\/]assets[\\/]/.test(caminho) ? 'public, max-age=31536000, immutable' : 'no-cache')
+  }
   if (opcoes.site !== false && existsSync(config.pastaSite)) {
-    // Arquivos em assets/ têm o hash no nome: podem ficar no cache por um ano. O index.html é
-    // conferido a cada visita, para uma atualização chegar na hora.
+    app.get('/app', async (_req, rep) => rep.redirect('/app/', 301))
     await app.register(fastifyStatic, {
       root: config.pastaSite,
+      prefix: '/app/',
       index: 'index.html',
       cacheControl: false,
-      setHeaders: (res, caminho) => {
-        res.header('cache-control', /[\\/]assets[\\/]/.test(caminho) ? 'public, max-age=31536000, immutable' : 'no-cache')
-      },
+      setHeaders: cabecalhos,
+    })
+  }
+  if (opcoes.site !== false && existsSync(config.pastaVitrine)) {
+    await app.register(fastifyStatic, {
+      root: config.pastaVitrine,
+      prefix: '/',
+      index: 'index.html',
+      cacheControl: false,
+      decorateReply: false,
+      setHeaders: cabecalhos,
     })
   }
   return app

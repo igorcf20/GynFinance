@@ -13,8 +13,10 @@ export const config = {
   bancoApp: () => exigir('APP_DATABASE_URL'),
   /** Conexão de administrador, usada só pelo script de migração. */
   bancoAdmin: () => exigir('DATABASE_URL'),
-  /** Pasta com o site já compilado (npm run build). */
+  /** Pasta com o sistema já compilado (npm run build), aberto em /app/. */
   pastaSite: process.env.PASTA_SITE ?? fileURLToPath(new URL('../../dist', import.meta.url)),
+  /** Pasta do site de venda, aberto na raiz do domínio. */
+  pastaVitrine: process.env.PASTA_VITRINE ?? fileURLToPath(new URL('../../site', import.meta.url)),
   /** Em produção o cookie só anda por HTTPS. */
   cookieSeguro: process.env.COOKIE_SEGURO ? process.env.COOKIE_SEGURO === 'true' : process.env.NODE_ENV === 'production',
   diasSessao: 30,
