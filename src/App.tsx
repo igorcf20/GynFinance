@@ -2,6 +2,8 @@ import { useState, type ReactNode } from 'react'
 import { HashRouter, Navigate, Route, Routes, UNSAFE_createMemoryHistory, unstable_HistoryRouter as HistoryRouter, useLocation } from 'react-router-dom'
 import { LogoMarca } from './components/layout/Logo'
 import { MainLayout } from './components/layout/MainLayout'
+import { ProtecaoDeErro } from './components/layout/ProtecaoDeErro'
+import { Button } from './components/ui/Button'
 import { ToastProvider } from './components/ui/Modal'
 import { StoreProvider, useStore } from './data/store'
 import { dentroDeMoldura, rotaInicial } from './lib/moldura'
@@ -55,6 +57,7 @@ const Roteador = dentroDeMoldura ? RoteadorDaMoldura : HashRouter
 
 export default function App() {
   return (
+    <ProtecaoDeErro acao={<Button onClick={() => window.location.reload()}>Recarregar</Button>}>
     <StoreProvider>
       <ToastProvider>
         <Roteador>
@@ -80,5 +83,6 @@ export default function App() {
         </Roteador>
       </ToastProvider>
     </StoreProvider>
+    </ProtecaoDeErro>
   )
 }

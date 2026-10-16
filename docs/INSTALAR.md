@@ -99,8 +99,7 @@ certbot --nginx -d gynfinance.kodemi.pt   # certificado HTTPS gratuito
 
 O `Host` precisa chegar igual ao endereço do navegador: o servidor recusa gravações vindas de
 outra origem. Num painel (Easypanel, Coolify...), crie um domínio `gynfinance.kodemi.pt` que
-encaminha para `http://127.0.0.1:3000` com HTTPS ligado. Ao atualizar, use também
-`docker compose up -d --build banco migrar app`.
+encaminha para `http://127.0.0.1:3000` com HTTPS ligado.
 
 ## Atualizar para uma versão nova
 
@@ -108,6 +107,13 @@ encaminha para `http://127.0.0.1:3000` com HTTPS ligado. Ao atualizar, use tamb�
 cd /opt/gynfinance
 git pull
 docker compose up -d --build   # roda as migrações novas antes de subir o servidor
+```
+
+Se a VPS já tinha um site (Gynfinance atrás do nginx ou de um painel), atualize sem o Caddy, senão
+ele tenta ocupar as portas 80 e 443:
+
+```bash
+docker compose up -d --build banco migrar app
 ```
 
 ## Backup do banco
