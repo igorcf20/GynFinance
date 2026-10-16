@@ -6,12 +6,12 @@ import { useStore } from '../../data/store'
 import { addMeses, mesAno } from '../../lib/format'
 import { LogoMarca } from './Logo'
 
-export function SeletorMes() {
+export function SeletorMes({ className = '' }: { className?: string }) {
   const { mes, setMes, hoje } = useStore()
   const atual = hoje.slice(0, 7)
   const meses = Array.from({ length: 12 }, (_, i) => addMeses(atual, -i))
   return (
-    <label className="relative inline-flex h-11 items-center gap-2.5 whitespace-nowrap rounded-[12px] border border-[#e3e9f1] bg-surface pr-10 pl-3.5 text-[14px] font-semibold text-ink shadow-[var(--shadow-card)] transition-all hover:-translate-y-px">
+    <label className={`relative inline-flex h-11 min-w-0 items-center gap-2.5 whitespace-nowrap rounded-[12px] border border-[#e3e9f1] bg-surface pr-10 pl-3.5 text-[14px] font-semibold text-ink shadow-[var(--shadow-card)] transition-all hover:-translate-y-px ${className}`}>
       <CalendarDays size={18} strokeWidth={1.9} className="text-navy" aria-hidden />
       <span className="sr-only">Período</span>
       <select value={mes} onChange={(e) => setMes(e.target.value)} className="absolute inset-0 cursor-pointer opacity-0">
@@ -50,7 +50,7 @@ function Notificacoes() {
         {lista.length > 0 && <span className="anim-pulso absolute top-2.5 right-3 size-2 rounded-full bg-danger ring-2 ring-white" aria-hidden />}
       </button>
       {aberto && (
-        <div className="anim-subir absolute right-0 z-30 mt-2 w-80 rounded-[16px] border border-line bg-surface p-2 shadow-[var(--shadow-pop)]">
+        <div className="anim-subir fixed inset-x-4 top-[calc(4.5rem+env(safe-area-inset-top))] z-50 max-h-[70dvh] overflow-y-auto overscroll-contain rounded-[16px] md:absolute md:inset-x-auto md:top-auto md:right-0 md:mt-2 md:w-80 border border-line bg-surface p-2 shadow-[var(--shadow-pop)]">
           <p className="px-3 pt-2 pb-1 text-[12px] font-semibold text-ink-2">Avisos</p>
           {lista.length === 0 && <p className="px-3 py-4 text-[13px] text-ink-2">Nenhum aviso agora. Tudo em dia.</p>}
           {lista.map((a) => (
@@ -142,13 +142,14 @@ function AvisoSalvamento() {
 
 export function Header({ titulo, subtitulo, periodo, acoes }: { titulo: ReactNode; subtitulo?: ReactNode; periodo?: boolean; acoes?: ReactNode }) {
   return (
-    <header className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-3">
+    <header className="mb-6 flex flex-wrap items-center gap-x-3 gap-y-3 md:gap-x-4">
       <Link to="/" className="md:hidden" aria-label="Início">
         <LogoMarca size={32} />
       </Link>
       <div className="min-w-0 flex-1">
-        <h1 className="truncate text-[22px] font-bold tracking-[-0.025em] text-ink md:text-[26px]">{titulo}</h1>
-        {subtitulo && <p className="mt-0.5 truncate text-[13px] text-ink-2 md:text-[15px]">{subtitulo}</p>}
+        {/* No celular o título e a explicação quebram linha em vez de virar reticências. */}
+        <h1 className="text-[21px] leading-tight font-bold tracking-[-0.025em] text-balance text-ink md:truncate md:text-[26px]">{titulo}</h1>
+        {subtitulo && <p className="mt-1 line-clamp-2 text-[13px] leading-snug text-ink-2 md:mt-0.5 md:line-clamp-1 md:text-[15px]">{subtitulo}</p>}
       </div>
       <div className="flex items-center gap-1.5 md:gap-2">
         {acoes}

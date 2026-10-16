@@ -71,9 +71,10 @@ function Painel({ fonte, hoje }: { fonte: FonteAdmin; hoje: DataISO }) {
         titulo="Superadmin"
         subtitulo={fonte.demonstracao ? 'Demonstração com assinantes de exemplo. Nada aqui é gravado.' : 'Assinaturas, planos, site e funcionamento do Gynfinance.'}
       />
-      <div className="-mx-4 mb-5 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0" data-entrar>
+      <div className="relative -mx-4 mb-5 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0" data-entrar>
         <Segmentado
           rotulo="Áreas do painel"
+          rolar
           valor={aba}
           onChange={irPara}
           opcoes={ABAS.map((a) => ({ valor: a.valor, rotulo: a.rotulo, icone: <a.icone size={15} aria-hidden /> }))}

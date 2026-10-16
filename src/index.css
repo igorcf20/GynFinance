@@ -4,6 +4,25 @@
 @layer base {
   html {
     -webkit-text-size-adjust: 100%;
+    /* Toque no celular e no app: sem o retângulo cinza do toque e sem o "puxar" da página inteira. */
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: none;
+  }
+  /* No celular, campo com letra menor que 16px faz o iPhone dar zoom ao tocar e a tela fica torta. */
+  @media (max-width: 767px) {
+    input:not([type='checkbox']):not([type='radio']):not([type='range']),
+    select,
+    textarea {
+      font-size: 16px !important;
+    }
+  }
+  /* Botões, links e menus não ficam com o texto selecionado num toque longo, como num app. */
+  button,
+  a,
+  [role='tab'] {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
   }
   body {
     @apply bg-bg font-sans text-ink antialiased;

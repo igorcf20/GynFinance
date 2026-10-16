@@ -80,7 +80,7 @@ export function AbaSite({ fonte }: { fonte: FonteAdmin }) {
             ))}
           </div>
         </Card>
-        <div className="sticky bottom-20 z-20 flex flex-wrap items-center gap-3 rounded-[16px] border border-line bg-surface/95 p-3 shadow-[var(--shadow-pop)] backdrop-blur md:bottom-4">
+        <div className="sticky bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-20 flex flex-wrap items-center gap-3 rounded-[16px] border border-line bg-surface/95 p-3 shadow-[var(--shadow-pop)] backdrop-blur md:bottom-4">
           <p className="min-w-0 flex-1 text-[13px] text-ink-2">
             {mudancas.length ? `${mudancas.length} mudança${mudancas.length === 1 ? '' : 's'} sem salvar.` : 'Campo em branco usa o texto original do site.'}
           </p>

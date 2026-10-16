@@ -6,7 +6,7 @@ import { Input } from '../components/ui/Field'
 import { Segmentado } from '../components/ui/Tabs'
 import { resumoMes, serieMensal } from '../domain/calc'
 import { useStore } from '../data/store'
-import { addMeses, brl, mesAno } from '../lib/format'
+import { addMeses, brl, capitalizar, mesAno, nomeMesCurto } from '../lib/format'
 
 type Periodo = '3' | '6' | '12' | 'custom'
 
@@ -56,33 +56,36 @@ export function CashFlow() {
       </Card>
 
       <Card className="!p-0">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[480px] text-left text-[14px]">
+        <div className="relative overflow-x-auto">
+          <table className="w-full text-left text-[13px] sm:min-w-[480px] sm:text-[14px]">
             <caption className="sr-only">Resultado por mês</caption>
             <thead>
               <tr className="border-b border-line bg-[#fafbfd] text-[13px] text-[#3d5170]">
-                <th scope="col" className="px-5 py-3 font-medium">Mês</th>
-                <th scope="col" className="px-3 py-3 text-right font-medium">Entradas</th>
-                <th scope="col" className="px-3 py-3 text-right font-medium">Saídas</th>
-                <th scope="col" className="px-5 py-3 text-right font-medium">Resultado</th>
+                <th scope="col" className="px-4 sm:px-5 py-3 font-medium">Mês</th>
+                <th scope="col" className="px-2 sm:px-3 py-3 text-right font-medium">Entradas</th>
+                <th scope="col" className="px-2 sm:px-3 py-3 text-right font-medium">Saídas</th>
+                <th scope="col" className="px-4 sm:px-5 py-3 text-right font-medium">Resultado</th>
               </tr>
             </thead>
             <tbody>
               {[...serie].reverse().map((r) => (
                 <tr key={r.mes} className="border-b border-line transition-colors last:border-0 hover:bg-[#f7faff]">
-                  <th scope="row" className="px-5 py-3.5 font-semibold text-ink">{mesAno(r.mes)}</th>
-                  <td className="num px-3 py-3.5 text-right font-semibold text-success">{brl(r.entrou)}</td>
-                  <td className="num px-3 py-3.5 text-right font-semibold text-danger">{brl(r.saiu)}</td>
-                  <td className={`num px-5 py-3.5 text-right font-bold ${r.sobrou < 0 ? 'text-danger' : 'text-ink'}`}>{brl(r.sobrou)}</td>
+                  <th scope="row" className="px-4 sm:px-5 py-3.5 font-semibold text-ink">
+                    <span className="sm:hidden">{`${capitalizar(nomeMesCurto(r.mes))}/${r.mes.slice(2, 4)}`}</span>
+                    <span className="hidden sm:inline">{mesAno(r.mes)}</span>
+                  </th>
+                  <td className="num px-2 sm:px-3 py-3.5 text-right font-semibold text-success">{brl(r.entrou)}</td>
+                  <td className="num px-2 sm:px-3 py-3.5 text-right font-semibold text-danger">{brl(r.saiu)}</td>
+                  <td className={`num px-4 sm:px-5 py-3.5 text-right font-bold ${r.sobrou < 0 ? 'text-danger' : 'text-ink'}`}>{brl(r.sobrou)}</td>
                 </tr>
               ))}
             </tbody>
             <tfoot>
               <tr className="border-t border-line bg-gradient-to-r from-[#f1f6fe] to-[#f8fafd]">
-                <th scope="row" className="px-5 py-3 font-semibold text-ink">Total</th>
-                <td className="num px-3 py-3 text-right font-semibold text-success">{brl(totalE)}</td>
-                <td className="num px-3 py-3 text-right font-semibold text-danger">{brl(totalS)}</td>
-                <td className="num px-5 py-3 text-right font-bold text-ink">{brl(totalE - totalS)}</td>
+                <th scope="row" className="px-4 sm:px-5 py-3 font-semibold text-ink">Total</th>
+                <td className="num px-2 sm:px-3 py-3 text-right font-semibold text-success">{brl(totalE)}</td>
+                <td className="num px-2 sm:px-3 py-3 text-right font-semibold text-danger">{brl(totalS)}</td>
+                <td className="num px-4 sm:px-5 py-3 text-right font-bold text-ink">{brl(totalE - totalS)}</td>
               </tr>
             </tfoot>
           </table>

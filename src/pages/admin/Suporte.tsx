@@ -433,6 +433,7 @@ export function AbaErros({ fonte }: { fonte: FonteSuporteAdmin }) {
         </div>
         <Segmentado
           rotulo="Mostrar"
+          className="w-full sm:w-auto"
           valor={resolvidos}
           onChange={setResolvidos}
           opcoes={[
@@ -477,23 +478,26 @@ export function AbaErros({ fonte }: { fonte: FonteSuporteAdmin }) {
                     </div>
                   )}
                 </div>
+                {/* No celular o botão desce para baixo do texto, que fica com a largura toda. */}
                 {!g.resolvido && (
-                  <Button
-                    variante="secundario"
-                    tamanho="sm"
-                    icone={<CheckCheck size={15} aria-hidden />}
-                    onClick={async () => {
-                      try {
-                        await fonte.resolverErro(g.chave)
-                        avisar('Marcado como resolvido. Se acontecer de novo, volta para a lista.')
-                        await carregar()
-                      } catch (e) {
-                        avisar((e as Error).message)
-                      }
-                    }}
-                  >
-                    Resolvido
-                  </Button>
+                  <div className="flex basis-full justify-end sm:basis-auto">
+                    <Button
+                      variante="secundario"
+                      tamanho="sm"
+                      icone={<CheckCheck size={15} aria-hidden />}
+                      onClick={async () => {
+                        try {
+                          await fonte.resolverErro(g.chave)
+                          avisar('Marcado como resolvido. Se acontecer de novo, volta para a lista.')
+                          await carregar()
+                        } catch (e) {
+                          avisar((e as Error).message)
+                        }
+                      }}
+                    >
+                      Resolvido
+                    </Button>
+                  </div>
                 )}
               </div>
             </Card>

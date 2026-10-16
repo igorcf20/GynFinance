@@ -16,6 +16,7 @@ export function Segmentado<T extends string>({
   rotulo,
   grande,
   estilo = 'claro',
+  rolar,
   className = '',
 }: {
   opcoes: OpcaoAba<T>[]
@@ -25,6 +26,8 @@ export function Segmentado<T extends string>({
   grande?: boolean
   /** claro: selecionado branco; azul e navy: selecionado preenchido, como na imagem. */
   estilo?: 'claro' | 'azul' | 'navy'
+  /** Muitas opções: cada uma fica do seu tamanho e a barra rola de lado (pôr dentro de um overflow-x-auto). */
+  rolar?: boolean
   className?: string
 }) {
   const fundo = { claro: 'bg-surface shadow-[0_1px_3px_rgba(16,32,64,0.12)]', azul: 'grad-primario', navy: 'grad-navy' }[estilo]
@@ -43,7 +46,7 @@ export function Segmentado<T extends string>({
     return () => obs.disconnect()
   }, [valor, opcoes.length])
   return (
-    <div ref={caixa} role="tablist" aria-label={rotulo} className={`relative inline-flex gap-1 rounded-[14px] bg-[#e9eef5] p-1 ${className}`}>
+    <div ref={caixa} role="tablist" aria-label={rotulo} className={`relative inline-flex gap-1 rounded-[14px] bg-[#e9eef5] p-1 ${rolar ? 'min-w-max' : ''} ${className}`}>
       {pilula && (
         <span
           aria-hidden
@@ -60,12 +63,13 @@ export function Segmentado<T extends string>({
             role="tab"
             aria-selected={ativo}
             onClick={() => onChange(o.valor)}
-            className={`relative z-10 inline-flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-[11px] font-semibold transition-colors duration-300 active:scale-[0.97] ${
-              grande ? 'h-12 px-4 text-[14px] sm:px-7' : 'h-9 px-4 text-[13px]'
+            className={`relative z-10 inline-flex ${rolar ? 'shrink-0' : 'min-w-0 flex-1'} items-center justify-center gap-1.5 whitespace-nowrap rounded-[11px] font-semibold transition-colors duration-300 active:scale-[0.97] sm:gap-2 ${
+              grande ? 'h-12 px-2 text-[13px] min-[400px]:px-3 min-[400px]:text-[14px] sm:px-7' : 'h-10 px-2 text-[13px] min-[400px]:px-3 sm:h-9 sm:px-4'
             } ${ativo ? `${corAtiva} ${pilula ? '' : fundo}` : 'text-[#3d5170] hover:text-ink'}`}
           >
-            {o.icone}
-            {o.rotulo}
+            {/* Em celular estreito o ícone sai para o texto caber sem a barra vazar da tela. */}
+            {o.icone && <span className="hidden shrink-0 items-center min-[420px]:inline-flex">{o.icone}</span>}
+            <span className="truncate">{o.rotulo}</span>
             {o.contagem !== undefined && (
               <span className={`num rounded-full px-1.5 text-[11px] transition-colors duration-300 ${ativo ? (estilo === 'claro' ? 'bg-primary-soft text-primary' : 'bg-white/20 text-white') : 'bg-white/80 text-ink-2'}`}>{o.contagem}</span>
             )}
