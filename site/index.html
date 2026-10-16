@@ -3,6 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script>
+    // Links antigos do sistema (gynfinance.kodemi.pt/#/lancamentos) agora abrem em /app/.
+    if (location.hash.indexOf('#/') === 0) location.replace('/app/' + location.hash)
+  </script>
   <title>Gynfinance | Controle financeiro simples para MEI e pequenas empresas</title>
   <meta name="description" content="Saiba quanto sobrou no mês, separe o dinheiro da casa do da empresa, não esqueça contas e acompanhe o limite do MEI e o DAS. Funciona no celular e no computador. A partir de R$ 25/mês.">
   <link rel="canonical" href="https://gynfinance.kodemi.pt/">
@@ -246,7 +250,7 @@
               <li><span class="ck"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span>Aviso de vencimento das suas contas</li>
               <li><span class="ck"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span>Botão "Cobrar" com a mensagem pronta no WhatsApp</li>
               <li><span class="ck"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span>Contas fixas (aluguel, internet, luz) se repetem todo mês sozinhas</li>
-              <li><span class="ck"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span><span>Registrar o pagamento com comprovante, pagamento parcial ou parcelado, e desfazer <span class="badge-novo">Chegando agora</span></span></li>
+              <li><span class="ck"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span><span>Registrar o pagamento com comprovante, pagamento parcial ou parcelado, e desfazer <span class="badge-novo">Novo</span></span></li>
             </ul>
           </div>
           <div class="feature-media revela revela-d1">
