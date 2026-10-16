@@ -64,6 +64,21 @@ export const lancamento = z.object({
   observacao: texto(300).optional(),
   parcelaDe: id.optional(),
   parcela: z.object({ numero: z.number().int().min(1).max(60), total: z.number().int().min(2).max(60) }).optional(),
+  refExtrato: texto(200).optional(),
+})
+
+export const atendimento = z.object({
+  id,
+  cliente: texto(120).min(1),
+  telefone: texto(40).optional(),
+  servico: texto(200).optional(),
+  data,
+  inicio: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
+  duracaoMin: z.number().int().min(5).max(1440),
+  valor: positivo.optional(),
+  situacao: z.enum(['agendado', 'confirmado', 'concluido', 'faltou', 'cancelado']),
+  observacao: texto(300).optional(),
+  lancamentoId: id.optional(),
 })
 
 export const TIPOS_COMPROVANTE = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'] as const
@@ -110,6 +125,7 @@ export const mudancas = z.object({
   lancamentos: z.object({ salvar: z.array(lancamento).max(2000), excluir: z.array(id).max(2000) }).optional(),
   recorrencias: z.object({ salvar: z.array(recorrencia).max(500) }).optional(),
   pagamentosDas: z.object({ salvar: z.array(pagamentoDas).max(200) }).optional(),
+  atendimentos: z.object({ salvar: z.array(atendimento).max(2000), excluir: z.array(id).max(2000) }).optional(),
   avisosDispensados: z.array(texto(300)).max(200).optional(),
 })
 

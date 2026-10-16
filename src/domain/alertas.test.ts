@@ -43,7 +43,7 @@ describe('configuração inicial', () => {
     expect(ativas('servico')).not.toContain('mercadoria')
     expect(ativas('servico')).toContain('servicos')
     expect(ativas('comercio')).not.toContain('servicos')
-    expect(ativas('misto')).toHaveLength(16)
+    expect(ativas('misto')).toHaveLength(18)
   })
 })
 

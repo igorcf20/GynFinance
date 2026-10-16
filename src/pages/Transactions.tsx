@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Download, Pencil, Plus, ReceiptText, Search, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Download, FileUp, Pencil, Plus, ReceiptText, Search, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Header, SeletorMes } from '../components/layout/Header'
@@ -132,6 +132,11 @@ export function Transactions() {
         subtitulo="Tudo o que entrou e saiu, mês a mês."
         acoes={
           <>
+            <span className="hidden lg:inline-flex">
+              <ButtonLink to="/importar" variante="secundario" icone={<FileUp size={16} />}>
+                Importar extrato
+              </ButtonLink>
+            </span>
             <span className="hidden lg:inline-flex">
               <Button variante="secundario" icone={<Download size={16} />} onClick={() => exportarCsv([...linhas].sort((a, b) => dataRef(a).localeCompare(dataRef(b))), dados.categorias, mes)} title="Planilha para o contador">
                 Exportar CSV

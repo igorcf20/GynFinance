@@ -7,6 +7,8 @@ import { dadosIniciais, type ConfigInicial } from '../../src/data/store'
 import { diferencas, paraNovoNegocio } from '../../src/data/sincronizar'
 import type { Dados, Lancamento } from '../../src/domain/types'
 import { gerarPrevistos } from '../../src/domain/recorrencia'
+import { salvarAtendimento } from '../../src/domain/agenda'
+import { aplicarImportacao, prepararImportacao } from '../../src/domain/extrato'
 import { uid } from '../../src/lib/format'
 import { criarApp } from './app.ts'
 import { criarPool } from './db.ts'
@@ -180,6 +182,41 @@ describe.skipIf(!URL_ADMIN)('servidor', () => {
     const contaBia = outro.contas[0].id
     const pegar = await pedir(bia, 'POST', '/api/sincronizar', { lancamentos: { salvar: [{ ...pago, id: uid(), empresaId: outro.empresa.id, contaFinanceiraId: contaBia }], excluir: [] } })
     expect(pegar.statusCode).toBe(400)
+  })
+
+  it('agenda e extrato: atendimento com conta a receber, cancelamento e importação', async () => {
+    const ana = await criarConta('ana6@exemplo.com')
+    const inicial: Dados = (await pedir(ana, 'POST', '/api/negocio', paraNovoNegocio(dadosIniciais(config, '2026-10-16')))).json().dados
+    expect(inicial.atendimentos).toEqual([])
+    const sync = async (antes: Dados, depois: Dados) => {
+      const r = await pedir(ana, 'POST', '/api/sincronizar', diferencas(antes, depois))
+      expect(r.statusCode).toBe(200)
+      const lido: Dados = (await pedir(ana, 'GET', '/api/dados')).json().dados
+      expect(lido).toEqual(depois)
+      return lido
+    }
+    const at = { cliente: 'Lia', telefone: '(62) 99999-0000', servico: 'Corte', data: '2026-10-20', inicio: '14:30', duracaoMin: 45, situacao: 'agendado' as const, valor: 8000 }
+    const id = uid()
+    const marcado = await sync(inicial, salvarAtendimento(inicial, at, id, true, uid))
+    const contaId = marcado.atendimentos[0].lancamentoId!
+    expect(marcado.lancamentos.find((l) => l.id === contaId)).toMatchObject({ situacao: 'previsto', valor: 8000, contraparte: 'Lia' })
+
+    // Cancelar tira a conta a receber e o atendimento fica sem ela, num envio só.
+    const cancelado = await sync(marcado, salvarAtendimento(marcado, { ...at, situacao: 'cancelado' }, id, true, uid))
+    expect(cancelado.lancamentos).toEqual([])
+
+    // Extrato: dois movimentos novos; importar de novo não duplica.
+    const banco = inicial.contas.find((c) => c.tipo === 'banco')!.id
+    const movs = [
+      { ref: 'ofx-1', data: '2026-10-16', valor: 48050, descricao: 'PIX RECEBIDO MARIA' },
+      { ref: 'ofx-2', data: '2026-10-17', valor: -1290, descricao: 'TARIFA PACOTE' },
+    ]
+    const importado = await sync(cancelado, aplicarImportacao(cancelado, banco, prepararImportacao(cancelado, banco, movs), uid))
+    expect(importado.lancamentos.map((l) => [l.refExtrato, l.categoriaId])).toEqual([
+      ['ofx-1', 'vendas'],
+      ['ofx-2', 'tarifas'],
+    ])
+    expect(prepararImportacao(importado, banco, movs).every((l) => l.acao === 'repetido')).toBe(true)
   })
 
   it('recusa pedido de outro site e dados inválidos', async () => {

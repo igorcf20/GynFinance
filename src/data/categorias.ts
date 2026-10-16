@@ -23,6 +23,8 @@ export const CATEGORIAS_PADRAO: Categoria[] = [
   c('maquininha', 'Taxa de maquininha', 'despesa_variavel'),
   c('marketing', 'Marketing', 'despesa_variavel'),
   c('manutencao', 'Manutenção', 'despesa_variavel'),
+  c('tarifas', 'Tarifas do banco', 'despesa_variavel'),
+  c('outras-saidas', 'Outras saídas', 'despesa_variavel'),
   c('das', 'DAS e impostos', 'imposto'),
   c('prolabore', 'Pró-labore', 'retirada'),
 ]

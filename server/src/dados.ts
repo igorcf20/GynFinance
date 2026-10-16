@@ -1,6 +1,6 @@
 // Tradução entre as tabelas do banco e o formato Dados que o app usa (src/domain/types.ts).
 import type { z } from 'zod'
-import type { Categoria, Dados, Lancamento, PagamentoDas, Recorrencia } from '../../src/domain/types.ts'
+import type { Atendimento, Categoria, Dados, Lancamento, PagamentoDas, Recorrencia } from '../../src/domain/types.ts'
 import type { Cliente } from './db.ts'
 import type { mudancas as esquemaMudancas, novoNegocio as esquemaNovoNegocio } from './esquemas.ts'
 
@@ -20,7 +20,7 @@ export async function lerDados(c: Cliente): Promise<Dados | null> {
   const e = (await c.query<Linha>('select * from empresa order by criado_em limit 1')).rows[0]
   if (!e) return null
   const empresaId = e.id as string
-  const [contas, categorias, desligadas, lancamentos, recorrencias, das, avisos] = await Promise.all([
+  const [contas, categorias, desligadas, lancamentos, recorrencias, das, avisos, atendimentos] = await Promise.all([
     c.query<Linha>('select * from conta_financeira where empresa_id = $1 order by criado_em', [empresaId]),
     c.query<Linha>('select * from categoria where empresa_id is null or empresa_id = $1', [empresaId]),
     c.query<{ categoria_id: string }>('select categoria_id from categoria_desativada where empresa_id = $1', [empresaId]),
@@ -33,10 +33,11 @@ export async function lerDados(c: Cliente): Promise<Dados | null> {
     c.query<Linha>('select * from recorrencia where empresa_id = $1 order by ordem', [empresaId]),
     c.query<Linha>("select *, to_char(competencia, 'YYYY-MM') as mes from pagamento_das where empresa_id = $1 order by competencia", [empresaId]),
     c.query<{ aviso_id: string }>('select aviso_id from aviso_dispensado where empresa_id = $1', [empresaId]),
+    c.query<Linha>("select *, to_char(inicio, 'HH24:MI') as hora from atendimento where empresa_id = $1 order by data, inicio", [empresaId]),
   ])
   const fora = new Set(desligadas.rows.map((r) => r.categoria_id))
   // Ordem das categorias padrão igual à do app.
-  const ordem = ['vendas', 'servicos', 'outras-entradas', 'mercadoria', 'aluguel', 'internet', 'luz', 'contador', 'sistema', 'transporte', 'embalagem', 'maquininha', 'marketing', 'manutencao', 'das', 'prolabore']
+  const ordem = ['vendas', 'servicos', 'outras-entradas', 'mercadoria', 'aluguel', 'internet', 'luz', 'contador', 'sistema', 'transporte', 'embalagem', 'maquininha', 'marketing', 'manutencao', 'tarifas', 'outras-saidas', 'das', 'prolabore']
   const pos = (id: string) => (ordem.includes(id) ? ordem.indexOf(id) : 999)
 
   return {
@@ -100,6 +101,7 @@ export async function lerDados(c: Cliente): Promise<Dados | null> {
         observacao: opc(r.observacao as string | null),
         parcelaDe: opc(r.parcela_de as string | null),
         parcela: r.parcela_total ? { numero: r.parcela_numero as number, total: r.parcela_total as number } : undefined,
+        refExtrato: opc(r.ref_extrato as string | null),
       }),
     ),
     recorrencias: recorrencias.rows.map(
@@ -133,6 +135,22 @@ export async function lerDados(c: Cliente): Promise<Dados | null> {
         vencimento: r.vencimento as string,
         lancamentoId: opc(r.lancamento_id as string | null),
         pagoForaDoSistema: (r.pago_fora_do_sistema as boolean) || undefined,
+      }),
+    ),
+    atendimentos: atendimentos.rows.map(
+      (r): Atendimento => ({
+        id: r.id as string,
+        empresaId,
+        cliente: r.cliente as string,
+        telefone: opc(r.telefone as string | null),
+        servico: opc(r.servico as string | null),
+        data: r.data as string,
+        inicio: r.hora as string,
+        duracaoMin: r.duracao_min as number,
+        valor: opc(r.valor as number | null),
+        situacao: r.situacao as Atendimento['situacao'],
+        observacao: opc(r.observacao as string | null),
+        lancamentoId: opc(r.lancamento_id as string | null),
       }),
     ),
     preferencias: { lembreteDias: e.lembrete_dias as 0 | 1 | 3, lembreteEmail: e.lembrete_email as boolean, resumoMensal: e.resumo_mensal as boolean },
@@ -227,8 +245,8 @@ export async function aplicarMudancas(c: Cliente, empresaId: string, m: z.infer<
     await c.query(
       `insert into lancamento (id, empresa_id, natureza, valor, categoria_id, conta_financeira_id, conta_destino_id, situacao, data_competencia,
          data_vencimento, data_pagamento, forma_pagamento, descricao, contraparte, nota_emitida, recorrencia_id, pago_com_dinheiro_pessoal, espelho_de,
-         comprovante_id, observacao, parcela_de, parcela_numero, parcela_total)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
+         comprovante_id, observacao, parcela_de, parcela_numero, parcela_total, ref_extrato)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
        on conflict (id) do update set natureza = excluded.natureza, valor = excluded.valor, categoria_id = excluded.categoria_id,
          conta_financeira_id = excluded.conta_financeira_id, conta_destino_id = excluded.conta_destino_id, situacao = excluded.situacao,
          data_competencia = excluded.data_competencia, data_vencimento = excluded.data_vencimento, data_pagamento = excluded.data_pagamento,
@@ -236,8 +254,26 @@ export async function aplicarMudancas(c: Cliente, empresaId: string, m: z.infer<
          nota_emitida = excluded.nota_emitida, recorrencia_id = excluded.recorrencia_id,
          pago_com_dinheiro_pessoal = excluded.pago_com_dinheiro_pessoal, espelho_de = excluded.espelho_de,
          comprovante_id = excluded.comprovante_id, observacao = excluded.observacao, parcela_de = excluded.parcela_de,
-         parcela_numero = excluded.parcela_numero, parcela_total = excluded.parcela_total, atualizado_em = now()`,
-      [l.id, empresaId, l.natureza, l.valor, l.categoriaId ?? null, l.contaFinanceiraId, l.contaDestinoId ?? null, l.situacao, l.dataCompetencia, l.dataVencimento ?? null, l.dataPagamento ?? null, l.formaPagamento, l.descricao ?? null, l.contraparte ?? null, l.notaEmitida, l.recorrenciaId ?? null, !!l.pagoComDinheiroPessoal, l.espelhoDe ?? null, l.comprovante?.id ?? null, l.observacao ?? null, l.parcelaDe ?? null, l.parcela?.numero ?? null, l.parcela?.total ?? null],
+         parcela_numero = excluded.parcela_numero, parcela_total = excluded.parcela_total, ref_extrato = excluded.ref_extrato, atualizado_em = now()`,
+      [l.id, empresaId, l.natureza, l.valor, l.categoriaId ?? null, l.contaFinanceiraId, l.contaDestinoId ?? null, l.situacao, l.dataCompetencia, l.dataVencimento ?? null, l.dataPagamento ?? null, l.formaPagamento, l.descricao ?? null, l.contraparte ?? null, l.notaEmitida, l.recorrenciaId ?? null, !!l.pagoComDinheiroPessoal, l.espelhoDe ?? null, l.comprovante?.id ?? null, l.observacao ?? null, l.parcelaDe ?? null, l.parcela?.numero ?? null, l.parcela?.total ?? null, l.refExtrato ?? null],
+    )
+  }
+
+  // Depois dos lançamentos: o atendimento aponta a conta a receber criada no mesmo lote.
+  if (m.atendimentos?.excluir.length) {
+    await c.query('delete from atendimento where empresa_id = $1 and id = any($2::uuid[])', [empresaId, m.atendimentos.excluir])
+  }
+  for (const a of m.atendimentos?.salvar ?? []) {
+    if (a.lancamentoId && !(await c.query('select 1 from lancamento where id = $1 and empresa_id = $2', [a.lancamentoId, empresaId])).rowCount) {
+      throw new ErroDeDados('Conta a receber do atendimento não encontrada.')
+    }
+    await c.query(
+      `insert into atendimento (id, empresa_id, cliente, telefone, servico, data, inicio, duracao_min, valor, situacao, observacao, lancamento_id)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+       on conflict (id) do update set cliente = excluded.cliente, telefone = excluded.telefone, servico = excluded.servico, data = excluded.data,
+         inicio = excluded.inicio, duracao_min = excluded.duracao_min, valor = excluded.valor, situacao = excluded.situacao,
+         observacao = excluded.observacao, lancamento_id = excluded.lancamento_id, atualizado_em = now()`,
+      [a.id, empresaId, a.cliente, a.telefone ?? null, a.servico ?? null, a.data, a.inicio, a.duracaoMin, a.valor ?? null, a.situacao, a.observacao ?? null, a.lancamentoId ?? null],
     )
   }
 

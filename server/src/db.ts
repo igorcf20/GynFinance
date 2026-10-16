@@ -7,7 +7,10 @@ pg.types.setTypeParser(20, (v) => Number(v))
 export type Cliente = pg.PoolClient
 
 export function criarPool(url: string): pg.Pool {
-  return new pg.Pool({ connectionString: url, max: 10 })
+  const pool = new pg.Pool({ connectionString: url, max: 10 })
+  // Banco reiniciou com conexões paradas: só registra. Sem isso, o servidor inteiro cai.
+  pool.on('error', (e) => console.error('Conexão com o banco perdida:', e.message))
+  return pool
 }
 
 /**

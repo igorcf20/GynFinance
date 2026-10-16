@@ -1,4 +1,4 @@
-import { BarChart3, ChevronRight } from 'lucide-react'
+import { BarChart3, CalendarDays, ChevronRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { NAV_MAIS } from '../components/layout/navegacao'
 import { Header } from '../components/layout/Header'
@@ -9,7 +9,7 @@ import { useStore } from '../data/store'
 /** No celular, tudo o que não cabe na barra inferior. */
 export function More() {
   const { modo, servidor, conta } = useStore()
-  const itens = [{ para: '/relatorios', rotulo: 'Relatórios', icone: BarChart3 }, ...NAV_MAIS]
+  const itens = [{ para: '/agenda', rotulo: 'Agenda', icone: CalendarDays }, { para: '/relatorios', rotulo: 'Relatórios', icone: BarChart3 }, ...NAV_MAIS]
   return (
     <>
       <Header titulo="Mais" />

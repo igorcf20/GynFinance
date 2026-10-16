@@ -7,7 +7,8 @@ import { estaAtivo, NAV_PRINCIPAL } from './navegacao'
 export function MobileNavigation() {
   const { pathname } = useLocation()
   const { dados } = useStore()
-  const [inicio, lancamentos, contas, mei, relatorios] = NAV_PRINCIPAL
+  const item = (para: string) => NAV_PRINCIPAL.find((i) => i.para === para)!
+  const [inicio, lancamentos, contas, mei, relatorios] = ['/', '/lancamentos', '/contas', '/mei', '/relatorios'].map(item)
   // Meu MEI só aparece para MEI; para os outros, o quarto lugar fica com Relatórios.
   const itens = [inicio, lancamentos, null, contas, dados.empresa.ehMei ? mei : relatorios]
   return (

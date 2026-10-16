@@ -1,12 +1,13 @@
-import { ArrowUpRight, ArrowDownRight, ChevronRight, CalendarClock, PiggyBank, Wallet } from 'lucide-react'
+import { ArrowUpRight, ArrowDownRight, ChevronRight, CalendarClock, FileUp, PiggyBank, Wallet } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { SaldoSparkline, SobrouMesesChart } from '../components/financial/charts'
 import { Aviso, iconeDoAviso } from '../components/financial/Aviso'
 import { ContaItem } from '../components/financial/ContaItem'
 import { FinancialSummary } from '../components/financial/FinancialSummary'
+import { ReceberEAtraso } from '../components/financial/ReceberEAtraso'
 import { Header } from '../components/layout/Header'
-import { Button } from '../components/ui/Button'
+import { Button, ButtonLink } from '../components/ui/Button'
 import { Card, CardTitulo, EstadoVazio, IconeBox } from '../components/ui/Card'
 import { Explica } from '../components/ui/Explica'
 import { Modal, useToast } from '../components/ui/Modal'
@@ -45,7 +46,18 @@ export function Dashboard() {
 
   return (
     <>
-      <Header titulo={`${saudacao()}, ${dados.empresa.nomeDono.split(' ')[0]}`} subtitulo={`${dados.empresa.nomeFantasia} · ${dados.empresa.ehMei ? 'MEI' : 'Empresa'}`} periodo />
+      <Header
+        titulo={`${saudacao()}, ${dados.empresa.nomeDono.split(' ')[0]}`}
+        subtitulo={`${dados.empresa.nomeFantasia} · ${dados.empresa.ehMei ? 'MEI' : 'Empresa'}`}
+        periodo
+        acoes={
+          <span className="hidden lg:inline-flex">
+            <ButtonLink to="/importar" variante="secundario" icone={<FileUp size={16} />}>
+              Importar extrato
+            </ButtonLink>
+          </span>
+        }
+      />
 
       <div className="grid grid-cols-1 gap-4 md:gap-5 xl:grid-cols-[1.5fr_1fr]">
         <div className="flex flex-col gap-4 md:gap-5">
@@ -89,6 +101,8 @@ export function Dashboard() {
           </Card>
 
           <FinancialSummary r={r} />
+
+          <ReceberEAtraso lancamentos={dados.lancamentos} hoje={hoje} />
 
           <Card interativo className="relative flex items-center gap-4 md:gap-5">
               <IconeBox tom="azul" tamanho="lg">

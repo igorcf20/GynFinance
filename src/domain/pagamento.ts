@@ -117,5 +117,6 @@ export function reverterDados(atual: Dados, antes: Dados, depois: Dados): Dados 
     lancamentos: reverter(atual.lancamentos, antes.lancamentos, depois.lancamentos, (l) => l.id),
     pagamentosDas: reverter(atual.pagamentosDas, antes.pagamentosDas, depois.pagamentosDas, (p) => p.competencia),
     recorrencias: reverter(atual.recorrencias, antes.recorrencias, depois.recorrencias, (r) => r.id),
+    atendimentos: reverter(atual.atendimentos, antes.atendimentos, depois.atendimentos, (a) => a.id),
   }
 }

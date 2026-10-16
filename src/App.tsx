@@ -9,6 +9,8 @@ import { StoreProvider, useStore } from './data/store'
 import { dentroDeMoldura, rotaInicial } from './lib/moldura'
 import { Entrar } from './pages/Entrar'
 import { Accounts } from './pages/Accounts'
+import { Agenda } from './pages/Agenda'
+import { ImportarExtrato } from './pages/ImportarExtrato'
 import { CashFlow } from './pages/CashFlow'
 import { Dashboard } from './pages/Dashboard'
 import { MEI } from './pages/MEI'
@@ -70,6 +72,8 @@ export default function App() {
                 <Route path="lancamentos" element={<Transactions />} />
                 <Route path="lancar" element={<NewTransaction />} />
                 <Route path="contas" element={<Accounts />} />
+                <Route path="agenda" element={<Agenda />} />
+                <Route path="importar" element={<ImportarExtrato />} />
                 <Route path="mei" element={<MEI />} />
                 <Route path="relatorios" element={<Reports />} />
                 <Route path="fluxo" element={<CashFlow />} />

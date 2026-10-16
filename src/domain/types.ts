@@ -89,6 +89,8 @@ export interface Lancamento {
   parcelaDe?: string
   /** Parcela "2 de 3" de um pagamento parcelado. */
   parcela?: { numero: number; total: number }
+  /** Veio de um extrato importado: o código da transação no banco, para não importar duas vezes. */
+  refExtrato?: string
 }
 
 /** Arquivo anexado a um pagamento. No servidor, o conteúdo fica guardado à parte (só o id vem aqui). */
@@ -149,6 +151,27 @@ export interface Preferencias {
   resumoMensal: boolean
 }
 
+export type SituacaoAtendimento = 'agendado' | 'confirmado' | 'concluido' | 'faltou' | 'cancelado'
+
+/** Horário marcado com um cliente (agenda). Com valor, vira também uma conta a receber. */
+export interface Atendimento {
+  id: string
+  empresaId: string
+  cliente: string
+  telefone?: string
+  /** O que vai ser feito: corte, consulta, entrega da encomenda... */
+  servico?: string
+  data: DataISO
+  /** Hora de início, HH:MM. */
+  inicio: string
+  duracaoMin: number
+  valor?: Centavos
+  situacao: SituacaoAtendimento
+  observacao?: string
+  /** Conta a receber criada junto com o atendimento. */
+  lancamentoId?: string
+}
+
 export interface Dados {
   empresa: Empresa
   contas: ContaFinanceira[]
@@ -156,6 +179,7 @@ export interface Dados {
   lancamentos: Lancamento[]
   recorrencias: Recorrencia[]
   pagamentosDas: PagamentoDas[]
+  atendimentos: Atendimento[]
   preferencias: Preferencias
   /** Avisos que o usuário dispensou (o id do aviso já traz o mês ou a conta). */
   avisosDispensados?: string[]

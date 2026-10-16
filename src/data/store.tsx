@@ -4,6 +4,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { vencimentoDas } from '../domain/calc'
 import { parametroDoAno } from '../domain/parametros'
+import { excluirAtendimento as tirarAtendimento, salvarAtendimento as gravarAtendimento, type NovoAtendimento } from '../domain/agenda'
+import { aplicarImportacao, type LinhaImportacao } from '../domain/extrato'
 import { aplicarPagamento, reverterDados, type DetalhesPagamento } from '../domain/pagamento'
 import { gerarPrevistos } from '../domain/recorrencia'
 import type { Atividade, Centavos, Comprovante, Dados, DataISO, Empresa, Lancamento, MesISO, Preferencias, Recorrencia, SeFimDeSemana } from '../domain/types'
@@ -39,7 +41,8 @@ function carregar(): Salvo {
     if (bruto) {
       const s = JSON.parse(bruto) as Salvo
       // A demonstração nunca fica gravada: cada visita começa com os dados de exemplo.
-      if (s.modo !== 'demo') return { modo: s.modo, dados: comPrevistos(s.dados, hojeDo(s.modo)) }
+      // Dados gravados antes da agenda não têm a lista de atendimentos.
+      if (s.modo !== 'demo') return { modo: s.modo, dados: comPrevistos({ ...s.dados, atendimentos: s.dados.atendimentos ?? [] }, hojeDo(s.modo)) }
     }
   } catch {
     /* sem armazenamento: segue com a demonstração */
@@ -109,6 +112,7 @@ export function dadosIniciais(c: ConfigInicial, hoje: DataISO): Dados {
     lancamentos: [],
     recorrencias: [],
     pagamentosDas,
+    atendimentos: [],
     preferencias: { lembreteDias: 1, lembreteEmail: true, resumoMensal: true },
     avisosDispensados: [],
   }
@@ -140,6 +144,11 @@ interface Store {
   /** Separa para a reserva a sobra de um mês (competência); a transferência acontece hoje. */
   separarReserva: (valor: Centavos, mes: MesISO) => Desfazer
   recorrenciaDe: (l: Lancamento) => Recorrencia | undefined
+  /** Marca ou altera um atendimento; com valor e gerarConta, cria a conta a receber junto. */
+  salvarAtendimento: (a: NovoAtendimento, id: string | undefined, gerarConta: boolean) => Desfazer
+  excluirAtendimento: (id: string) => Desfazer
+  /** Grava as linhas escolhidas de um extrato importado na conta indicada. */
+  importarExtrato: (contaId: string, linhas: LinhaImportacao[]) => Desfazer
   atualizarEmpresa: (e: Partial<Empresa>) => void
   atualizarPreferencias: (p: Partial<Preferencias>) => void
   dispensarAviso: (id: string) => void
@@ -467,6 +476,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [desfazivel, hoje],
   )
 
+  const salvarAtendimento = useCallback(
+    (a: NovoAtendimento, id: string | undefined, gerarConta: boolean) => desfazivel((d) => gravarAtendimento(d, a, id ?? uid(), gerarConta, uid)),
+    [desfazivel],
+  )
+  const excluirAtendimento = useCallback((id: string) => desfazivel((d) => tirarAtendimento(d, id)), [desfazivel])
+  const importarExtrato = useCallback(
+    (contaId: string, linhas: LinhaImportacao[]) => desfazivel((d) => aplicarImportacao(d, contaId, linhas, uid)),
+    [desfazivel],
+  )
+
   const recorrenciaDe = useCallback((l: Lancamento) => (l.recorrenciaId ? salvo.dados.recorrencias.find((r) => r.id === l.recorrenciaId) : undefined), [salvo.dados.recorrencias])
 
   const atualizarEmpresa = useCallback((e: Partial<Empresa>) => mudar((d) => ({ ...d, empresa: { ...d.empresa, ...e } })), [mudar])
@@ -520,6 +539,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       marcarDasPago,
       separarReserva,
       recorrenciaDe,
+      salvarAtendimento,
+      excluirAtendimento,
+      importarExtrato,
       atualizarEmpresa,
       atualizarPreferencias,
       dispensarAviso,
@@ -532,7 +554,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       criarConta,
       sair,
     }),
-    [salvo, hoje, mes, salvarLancamento, excluirLancamento, marcarComoPago, registrarPagamento, anexarComprovante, marcarDasPago, separarReserva, recorrenciaDe, atualizarEmpresa, atualizarPreferencias, dispensarAviso, comecar, restaurarDemo, servidor, conta, salvamento, entrar, criarConta, sair],
+    [salvo, hoje, mes, salvarLancamento, excluirLancamento, marcarComoPago, registrarPagamento, anexarComprovante, marcarDasPago, separarReserva, recorrenciaDe, salvarAtendimento, excluirAtendimento, importarExtrato, atualizarEmpresa, atualizarPreferencias, dispensarAviso, comecar, restaurarDemo, servidor, conta, salvamento, entrar, criarConta, sair],
   )
   return <Ctx.Provider value={valor}>{children}</Ctx.Provider>
 }

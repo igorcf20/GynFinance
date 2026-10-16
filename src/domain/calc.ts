@@ -2,7 +2,7 @@
 // Painel em regime de caixa (data de pagamento); faturamento do MEI pela data da venda.
 import { addMeses, brl, diasEntre, mesDe, nomeMes, prazo, capitalizar } from '../lib/format'
 import { parametroDoAno } from './parametros'
-import type { Categoria, ContaFinanceira, Dados, DataISO, Lancamento, MesISO, PagamentoDas } from './types'
+import type { Categoria, Centavos, ContaFinanceira, Dados, DataISO, Lancamento, MesISO, PagamentoDas } from './types'
 
 const realizadoNoMes = (l: Lancamento, mes: MesISO) =>
   l.situacao === 'realizado' && !!l.dataPagamento && mesDe(l.dataPagamento) === mes
@@ -378,4 +378,27 @@ export function separadoNoMes(lancamentos: Lancamento[], mes: MesISO): number {
 /** Sugestão de reserva que ainda falta separar no mês. */
 export function reservaPendente(lancamentos: Lancamento[], mes: MesISO): number {
   return Math.max(0, reservaSugerida(resumoMes(lancamentos, mes)) - separadoNoMes(lancamentos, mes))
+}
+
+// ---------- Painel: o que vai entrar e o que está atrasado ----------
+
+export interface Totalizador {
+  total: Centavos
+  quantidade: number
+}
+
+const totalizar = (ls: Lancamento[]): Totalizador => ({ total: soma(ls), quantidade: ls.length })
+
+/** Contas a receber que ainda não venceram: o total e quanto chega nos próximos 30 dias. */
+export function aReceberFuturo(lancamentos: Lancamento[], hoje: DataISO): Totalizador & { em30Dias: Centavos; proxima?: Lancamento } {
+  const futuras = lancamentos
+    .filter((l) => l.situacao === 'previsto' && l.natureza === 'entrada' && l.dataVencimento && l.dataVencimento >= hoje)
+    .sort((a, b) => (a.dataVencimento! < b.dataVencimento! ? -1 : 1))
+  return { ...totalizar(futuras), em30Dias: soma(futuras.filter((l) => diasEntre(hoje, l.dataVencimento!) <= 30)), proxima: futuras[0] }
+}
+
+/** Contas vencidas e não pagas, dos dois lados. */
+export function emAtraso(lancamentos: Lancamento[], hoje: DataISO): { receber: Totalizador; pagar: Totalizador } {
+  const vencidas = lancamentos.filter((l) => l.situacao === 'previsto' && l.dataVencimento && l.dataVencimento < hoje)
+  return { receber: totalizar(vencidas.filter((l) => l.natureza === 'entrada')), pagar: totalizar(vencidas.filter((l) => l.natureza === 'saida')) }
 }

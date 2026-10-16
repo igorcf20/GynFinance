@@ -5,7 +5,7 @@ import { CATEGORIAS_PADRAO } from './categorias'
 import { saldoCaixa } from '../domain/calc'
 import { parametroDoAno } from '../domain/parametros'
 import { gerarPrevistos } from '../domain/recorrencia'
-import type { Dados, Lancamento, PagamentoDas, Recorrencia } from '../domain/types'
+import type { Atendimento, Dados, Lancamento, PagamentoDas, Recorrencia } from '../domain/types'
 
 export const DEMO_HOJE = '2026-10-15'
 
@@ -218,6 +218,40 @@ export function dadosDemo(): Dados {
     lancamentos: [...lancamentos, ...gerado.novos],
     recorrencias: gerado.recorrencias,
     pagamentosDas,
+    atendimentos: atendimentosDemo(lancamentos),
     preferencias: { lembreteDias: 1, lembreteEmail: true, resumoMensal: true },
   }
+}
+
+/**
+ * Agenda da Ana: retiradas, entregas e degustações. As que têm valor usam as contas a receber
+ * que já existem, para os números do painel e do MEI continuarem os da imagem de referência.
+ */
+function atendimentosDemo(lancamentos: Lancamento[]): Atendimento[] {
+  const conta = (contraparte: string) => lancamentos.find((l) => l.situacao === 'previsto' && l.natureza === 'entrada' && l.contraparte === contraparte)
+  const marcar = (data: string, inicio: string, duracaoMin: number, cliente: string, servico: string, situacao: Atendimento['situacao'], extra: Partial<Atendimento> = {}): Atendimento => ({
+    id: id('a'),
+    empresaId: EMPRESA,
+    cliente,
+    servico,
+    data,
+    inicio,
+    duracaoMin,
+    situacao,
+    ...extra,
+  })
+  const joao = conta('João Silva')
+  const buffet = conta('Buffet Estrela')
+  return [
+    marcar('2026-10-02', '17:00', 30, 'João Silva', 'Encomenda de doces', 'concluido', { valor: joao?.valor, lancamentoId: joao?.id, telefone: '(62) 99654-7788' }),
+    marcar('2026-10-13', '10:00', 60, 'Paula e Rui', 'Degustação de doces para casamento', 'concluido'),
+    marcar('2026-10-14', '15:00', 45, 'Pedro Alves', 'Degustação de bolos', 'faltou'),
+    marcar('2026-10-15', '09:00', 30, 'Maria Souza', 'Retirada: 100 brigadeiros (já pago)', 'confirmado', { telefone: '(62) 99876-1234' }),
+    marcar('2026-10-15', '14:30', 60, 'Carla Mendes', 'Orçamento de bolo de 15 anos', 'agendado', { telefone: '(62) 98111-2233' }),
+    marcar('2026-10-16', '16:00', 45, 'Padaria Central', 'Entrega de bolos para revenda', 'confirmado'),
+    marcar('2026-10-17', '10:00', 90, 'Juliana Prado', 'Aula de brigadeiro gourmet', 'agendado'),
+    marcar('2026-10-20', '11:00', 30, 'Lúcia Ramos', 'Orçamento de doces para batizado', 'agendado'),
+    marcar('2026-10-22', '15:00', 60, 'Fernanda Lima', 'Degustação de bolo de casamento', 'agendado'),
+    marcar('2026-10-28', '16:00', 60, 'Buffet Estrela', 'Entrega dos doces do casamento', 'confirmado', { valor: buffet?.valor, lancamentoId: buffet?.id }),
+  ]
 }
