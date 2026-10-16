@@ -7,8 +7,10 @@ import { ProtecaoDeErro } from './components/layout/ProtecaoDeErro'
 import { Button } from './components/ui/Button'
 import { ToastProvider } from './components/ui/Modal'
 import { StoreProvider, useStore } from './data/store'
+import { definirPagina } from './lib/erros'
 import { dentroDeMoldura, rotaInicial } from './lib/moldura'
 import { Entrar } from './pages/Entrar'
+import { RedefinirSenha } from './pages/RedefinirSenha'
 import { Accounts } from './pages/Accounts'
 import { Agenda } from './pages/Agenda'
 import { Admin } from './pages/admin/Admin'
@@ -22,6 +24,7 @@ import { NewTransaction } from './pages/NewTransaction'
 import { Onboarding } from './pages/Onboarding'
 import { Reports } from './pages/Reports'
 import { Settings } from './pages/Settings'
+import { Suporte } from './pages/Suporte'
 import { Transactions } from './pages/Transactions'
 
 /**
@@ -31,6 +34,8 @@ import { Transactions } from './pages/Transactions'
 function Portao({ children }: { children: ReactNode }) {
   const { servidor, conta } = useStore()
   const { pathname } = useLocation()
+  // A tela atual vai junto com os erros e com o chamado de suporte.
+  definirPagina(pathname)
   if (servidor === 'verificando') {
     return (
       <div className="flex min-h-dvh items-center justify-center" aria-busy="true" aria-label="Carregando">
@@ -41,7 +46,7 @@ function Portao({ children }: { children: ReactNode }) {
     )
   }
   // O superadmin entra no painel mesmo sem ter configurado um negócio próprio.
-  if (conta && !conta.temNegocio && pathname !== '/comecar' && !(conta.admin && pathname === '/admin')) return <Navigate to="/comecar" replace />
+  if (conta && !conta.temNegocio && pathname !== '/comecar' && pathname !== '/redefinir-senha' && !(conta.admin && pathname === '/admin')) return <Navigate to="/comecar" replace />
   return <>{children}</>
 }
 
@@ -69,6 +74,7 @@ export default function App() {
           <Portao>
             <Routes>
               <Route path="entrar" element={<Entrar />} />
+              <Route path="redefinir-senha" element={<RedefinirSenha />} />
               <Route path="comecar" element={<Onboarding />} />
               <Route element={<MainLayout />}>
                 <Route index element={<Dashboard />} />
@@ -84,6 +90,7 @@ export default function App() {
                 <Route path="configuracoes/:secao?" element={<Settings />} />
                 <Route path="mais" element={<More />} />
                 <Route path="admin" element={<Admin />} />
+                <Route path="suporte" element={<Suporte />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Route>
             </Routes>

@@ -20,6 +20,19 @@ export const config = {
   /** Em produção o cookie só anda por HTTPS. */
   cookieSeguro: process.env.COOKIE_SEGURO ? process.env.COOKIE_SEGURO === 'true' : process.env.NODE_ENV === 'production',
   diasSessao: 30,
+  /** Endereço público do sistema, para os links dos e-mails. */
+  urlSistema: () => (process.env.URL_SISTEMA ?? 'https://gynfinance.kodemi.pt').replace(/\/+$/, ''),
+  /** Provedor de e-mail (SMTP). Sem SMTP_HOST, nenhum e-mail sai. */
+  smtp: () =>
+    process.env.SMTP_HOST
+      ? {
+          host: process.env.SMTP_HOST,
+          porta: Number(process.env.SMTP_PORT ?? 587),
+          usuario: process.env.SMTP_USER ?? '',
+          senha: process.env.SMTP_PASS ?? '',
+          remetente: process.env.EMAIL_REMETENTE ?? `Gynfinance <${process.env.SMTP_USER}>`,
+        }
+      : null,
   /** E-mails que entram no painel de superadmin (separados por vírgula). */
   adminEmails: () =>
     (process.env.ADMIN_EMAILS ?? '')

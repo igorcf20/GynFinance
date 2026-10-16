@@ -302,8 +302,8 @@ export function alertas(dados: Dados, hoje: DataISO): Alerta[] {
   }
 
   // Contas vencendo: no dia e até X dias antes (Configurações, Notificações). Só no sino; o painel já mostra os próximos 7 dias.
-  const antecedencia = dados.preferencias.lembreteDias
-  for (const l of pagar.filter((l) => { const d = diasEntre(hoje, l.dataVencimento!); return d >= 0 && d <= antecedencia })) {
+  // Cada conta pode ter o próprio lembrete (Novo lançamento); sem ele, vale o padrão.
+  for (const l of pagar.filter((l) => { const d = diasEntre(hoje, l.dataVencimento!); return d >= 0 && d <= (l.lembreteDias ?? dados.preferencias.lembreteDias) })) {
     const d = diasEntre(hoje, l.dataVencimento!)
     const quando = d === 0 ? 'Hoje vence' : d === 1 ? 'Amanhã vence' : `Em ${d} dias vence`
     lista.push({ id: `vence:${l.id}`, nivel: 'info', painel: false, texto: `${quando} ${nomeDaConta(l, dados.categorias)}: ${brl(l.valor)}.`, acao: { rotulo: 'Ver', para: '/contas' } })

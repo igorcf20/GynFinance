@@ -91,6 +91,8 @@ export interface Lancamento {
   parcela?: { numero: number; total: number }
   /** Veio de um extrato importado: o código da transação no banco, para não importar duas vezes. */
   refExtrato?: string
+  /** Lembrete desta conta: dias antes do vencimento (-1 = sem lembrete). Vazio = o padrão de Configurações. */
+  lembreteDias?: -1 | 0 | 1 | 3
 }
 
 /** Arquivo anexado a um pagamento. No servidor, o conteúdo fica guardado à parte (só o id vem aqui). */
@@ -112,7 +114,7 @@ export interface Recorrencia {
   id: string
   empresaId: string
   /** Cópia dos campos do lançamento que se repetem. */
-  modelo: Pick<Lancamento, 'natureza' | 'valor' | 'categoriaId' | 'contaFinanceiraId' | 'formaPagamento' | 'descricao' | 'contraparte'>
+  modelo: Pick<Lancamento, 'natureza' | 'valor' | 'categoriaId' | 'contaFinanceiraId' | 'formaPagamento' | 'descricao' | 'contraparte' | 'lembreteDias'>
   frequencia: 'mensal'
   diaVencimento: number
   inicio: DataISO

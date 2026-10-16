@@ -1,6 +1,6 @@
 import type { IdModulo } from '../../domain/planos'
 import { temModulo } from '../../domain/planos'
-import { CalendarCheck, CalendarDays, ChartSpline, FileUp, FileChartColumn, FileText, House, ReceiptText, Settings, ShieldCheck, Store, type LucideIcon } from 'lucide-react'
+import { CalendarCheck, LifeBuoy, CalendarDays, ChartSpline, FileUp, FileChartColumn, FileText, House, ReceiptText, Settings, ShieldCheck, Store, type LucideIcon } from 'lucide-react'
 
 export interface ItemNav {
   para: string
@@ -28,6 +28,7 @@ export const NAV_MAIS: ItemNav[] = [
   { para: '/importar', rotulo: 'Importar extrato', icone: FileUp, modulo: 'extrato' },
   { para: '/fechamento', rotulo: 'Fechamento do mês', icone: CalendarCheck },
   { para: '/configuracoes', rotulo: 'Configurações', icone: Settings },
+  { para: '/suporte', rotulo: 'Ajuda e suporte', icone: LifeBuoy },
 ]
 
 /** Tira os itens de módulos que o plano do cliente não tem. */

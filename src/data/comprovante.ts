@@ -16,7 +16,7 @@ function lerComoDataUrl(b: Blob): Promise<string> {
 }
 
 /** Foto de celular tem vários MB: reduz para no máximo 1600 px e JPEG, que fica legível e leve. */
-async function comprimirFoto(arquivo: File): Promise<{ dados: string; tipo: string; tamanho: number }> {
+export async function comprimirFoto(arquivo: File): Promise<{ dados: string; tipo: string; tamanho: number }> {
   const img = await createImageBitmap(arquivo).catch(() => {
     throw new Error('Esta imagem não abriu. Envie uma foto JPG ou PNG, ou um PDF.')
   })

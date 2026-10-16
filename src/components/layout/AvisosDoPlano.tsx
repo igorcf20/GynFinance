@@ -1,6 +1,8 @@
-import { Lock, Megaphone, Wrench } from 'lucide-react'
+import { ChevronRight, LifeBuoy, Lock, Megaphone, Wrench } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 import { useStore } from '../../data/store'
+import { naoLidosDaConta, suporteDemo, useNaoLidosSuporte } from '../../data/suporte'
 import { temModulo, type IdModulo, MODULOS } from '../../domain/planos'
 import { dataBR, diasEntre } from '../../lib/format'
 import { Aviso } from '../financial/Aviso'
@@ -12,7 +14,28 @@ import { Card, EstadoVazio } from '../ui/Card'
  */
 export function AvisosDoPlano() {
   const { conta, servidor, bloqueio, hoje } = useStore()
-  if (servidor !== 'com' || !conta) return null
+  const { pathname } = useLocation()
+  if (servidor === 'com') naoLidosDaConta(conta)
+  else if (servidor === 'sem') suporteDemo()
+  const respostas = useNaoLidosSuporte()
+  const suporte =
+    respostas > 0 && pathname !== '/suporte' ? (
+      <Link
+        to="/suporte"
+        className="anim-subir group mb-4 flex items-center gap-3 rounded-[16px] border border-[#cfdffc] bg-gradient-to-r from-[#eef4ff] to-[#f7faff] px-4 py-3 text-[14px] text-ink shadow-[var(--shadow-card)] transition-all hover:-translate-y-px hover:shadow-[var(--shadow-card-hover)]"
+      >
+        <span className="grad-primario relative inline-flex size-9 shrink-0 items-center justify-center rounded-full text-white">
+          <LifeBuoy size={18} aria-hidden />
+          <span className="anim-pulso absolute -top-0.5 -right-0.5 size-3 rounded-full bg-danger ring-2 ring-white" aria-hidden />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="font-semibold">{respostas === 1 ? 'O suporte respondeu seu chamado.' : `O suporte respondeu ${respostas} chamados seus.`}</span>{' '}
+          <span className="text-ink-2">Toque para ler.</span>
+        </span>
+        <ChevronRight size={18} className="shrink-0 text-primary transition-transform group-hover:translate-x-0.5" aria-hidden />
+      </Link>
+    ) : null
+  if (servidor !== 'com' || !conta) return suporte
   const a = conta.assinatura
   const s = conta.sistema
   const itens: ReactNode[] = []
@@ -45,8 +68,13 @@ export function AvisosDoPlano() {
         </Aviso>,
       )
   }
-  if (!itens.length) return null
-  return <div className="mb-4 flex flex-col gap-2.5">{itens}</div>
+  if (!itens.length) return suporte
+  return (
+    <>
+      {suporte}
+      <div className="mb-4 flex flex-col gap-2.5">{itens}</div>
+    </>
+  )
 }
 
 /** Tela de um módulo que o plano do cliente não inclui. */

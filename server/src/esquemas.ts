@@ -19,6 +19,11 @@ export const criarConta = z.object({
   senha: z.string().min(8, 'A senha precisa de pelo menos 8 caracteres.').max(200),
   aceiteTermos: z.literal(true),
 })
+export const esqueci = z.object({ email: z.string().trim().max(200) })
+export const redefinir = z.object({
+  codigo: z.string().min(20).max(200),
+  senha: z.string().min(8, 'A senha precisa de pelo menos 8 caracteres.').max(200),
+})
 export const entrar = z.object({ email: z.string().trim().max(200), senha: z.string().max(200) })
 
 export const empresa = z.object({
@@ -65,6 +70,7 @@ export const lancamento = z.object({
   parcelaDe: id.optional(),
   parcela: z.object({ numero: z.number().int().min(1).max(60), total: z.number().int().min(2).max(60) }).optional(),
   refExtrato: texto(200).optional(),
+  lembreteDias: z.union([z.literal(-1), z.literal(0), z.literal(1), z.literal(3)]).optional(),
 })
 
 export const atendimento = z.object({
@@ -100,6 +106,7 @@ export const recorrencia = z.object({
     formaPagamento: forma,
     descricao: texto(200).optional(),
     contraparte: texto(120).optional(),
+    lembreteDias: z.union([z.literal(-1), z.literal(0), z.literal(1), z.literal(3)]).optional(),
   }),
   frequencia: z.literal('mensal'),
   diaVencimento: z.number().int().min(1).max(31),
