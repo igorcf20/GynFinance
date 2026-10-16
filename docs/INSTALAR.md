@@ -10,12 +10,25 @@ endereço, e o banco mantém os dados de cada empresa separados. Não há uma in
 
 - Uma VPS Linux (Ubuntu 24.04, por exemplo) com 2 GB de memória e 20 GB de disco.
   Hospedagem com data center no Brasil deixa o sistema mais rápido para os clientes.
-- Um domínio ou subdomínio para o sistema, como `app.gynfinance.com.br`.
+- Um domínio ou subdomínio para o sistema. O da KodeMI é `gynfinance.kodemi.pt`.
 
 ## 1. Apontar o domínio
 
-No painel do domínio, crie um registro **A** com o nome do subdomínio (`app`) apontando para o
-IP da VPS. Pode levar alguns minutos para valer.
+No painel do domínio `kodemi.pt`, crie um registro **A** com o nome `gynfinance` apontando para o
+IP da VPS. Pode levar alguns minutos para valer. Para conferir, `dig +short gynfinance.kodemi.pt`
+deve responder o IP da VPS.
+
+## Antes de tudo: a VPS já tem um site?
+
+```bash
+ss -ltnp | grep -E ':(80|443) '
+```
+
+- **Não aparece nada:** siga o caminho normal abaixo; o Caddy do Gynfinance cuida das portas 80 e 443
+  e do certificado.
+- **Aparece nginx, Apache, Caddy, Traefik ou um painel (Easypanel, Coolify, aaPanel...):** as portas
+  já têm dono. Siga os passos 2 e 3 e depois vá para
+  [Quando a VPS já tem um site](#quando-a-vps-já-tem-um-site) em vez do passo 4.
 
 ## 2. Preparar a VPS
 
@@ -23,7 +36,8 @@ IP da VPS. Pode levar alguns minutos para valer.
 # Docker oficial
 curl -fsSL https://get.docker.com | sh
 
-# Firewall: só SSH e web
+# Firewall: libera web sem fechar o SSH. Se o SSH não usa a porta 22, libere a porta dele antes.
+ufw status                       # se já estiver "active", basta liberar 80 e 443
 ufw allow OpenSSH && ufw allow 80 && ufw allow 443 && ufw enable
 ```
 
@@ -48,8 +62,45 @@ docker compose up -d --build
 docker compose ps        # banco, app e https "running"; migrar "exited (0)"
 ```
 
-Abra `https://app.gynfinance.com.br`. A demonstração aparece primeiro; "Usar com o meu negócio"
+Abra `https://gynfinance.kodemi.pt`. A demonstração aparece primeiro; "Usar com o meu negócio"
 leva para criar a conta e fazer a configuração inicial.
+
+## Quando a VPS já tem um site
+
+Suba só o banco e o servidor, sem o Caddy. O servidor fica ouvindo apenas dentro da VPS, em
+`127.0.0.1:3000` (troque com `PORTA_APP` no `.env` se essa porta já estiver em uso):
+
+```bash
+docker compose up -d --build banco migrar app
+curl -s http://127.0.0.1:3000/api/saude    # {"ok":true}
+```
+
+Depois aponte o site que já existe para ele. No **nginx**, um arquivo
+`/etc/nginx/sites-available/gynfinance.kodemi.pt`:
+
+```nginx
+server {
+    server_name gynfinance.kodemi.pt;
+    client_max_body_size 5m;
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+```bash
+ln -s /etc/nginx/sites-available/gynfinance.kodemi.pt /etc/nginx/sites-enabled/
+nginx -t && systemctl reload nginx
+certbot --nginx -d gynfinance.kodemi.pt   # certificado HTTPS gratuito
+```
+
+O `Host` precisa chegar igual ao endereço do navegador: o servidor recusa gravações vindas de
+outra origem. Num painel (Easypanel, Coolify...), crie um domínio `gynfinance.kodemi.pt` que
+encaminha para `http://127.0.0.1:3000` com HTTPS ligado. Ao atualizar, use também
+`docker compose up -d --build banco migrar app`.
 
 ## Atualizar para uma versão nova
 
@@ -91,4 +142,5 @@ docker compose exec -T banco pg_restore -U gynfinance_admin -d gynfinance --clea
 - O servidor sempre usa a empresa da sessão, nunca um id vindo do navegador. Além disso, o
   próprio banco (regras de RLS) só mostra a cada pessoa as empresas dela, e o servidor conecta
   com um usuário do banco sem permissão para ignorar essas regras.
-- O banco não fica exposto na internet: só o Caddy (portas 80 e 443) recebe conexões.
+- O banco não fica exposto na internet: só o Caddy (portas 80 e 443) recebe conexões. O servidor
+  só aceita conexões de dentro da VPS (127.0.0.1).
