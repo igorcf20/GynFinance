@@ -1,15 +1,78 @@
-// Gynfinance — site de venda: menu do celular, sombra do cabeçalho e entrada suave das seções.
+// Gynfinance — site de venda: menu, cabeçalho que encolhe ao rolar, voltar ao topo e entrada suave das seções.
 (function () {
   var raiz = document.documentElement;
   var header = document.querySelector('.site-header');
   var botaoMenu = document.querySelector('.menu-btn');
 
-  // Sombra no cabeçalho depois de rolar a página
+  // Ao rolar: cabeçalho e logo encolhem (com folga para não tremer no limite) e aparece o botão de voltar ao topo.
+  var topo = document.querySelector('.topo');
+  var rolou = false;
   function aoRolar() {
-    if (header) header.classList.toggle('rolou', window.scrollY > 8);
+    var y = window.scrollY;
+    if (!rolou && y > 40) rolou = true;
+    else if (rolou && y < 8) rolou = false;
+    if (header) header.classList.toggle('rolou', rolou);
+    if (topo) topo.classList.toggle('visivel', y > 600);
   }
   window.addEventListener('scroll', aoRolar, { passive: true });
   aoRolar();
+  if (topo) {
+    topo.addEventListener('click', function () {
+      var suave = !window.matchMedia || !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      window.scrollTo({ top: 0, behavior: suave ? 'smooth' : 'auto' });
+      var marca = document.querySelector('.brand');
+      if (marca) marca.focus({ preventScroll: true });
+    });
+  }
+
+  // Ano do rodapé
+  document.querySelectorAll('[data-ano]').forEach(function (e) { e.textContent = String(new Date().getFullYear()); });
+
+  // Menu: destaca a seção em que o visitante está, com um fundo que desliza entre os itens.
+  var nav = document.querySelector('.nav');
+  var marcaNav = document.querySelector('.nav-marca');
+  var linksSecao = document.querySelectorAll('[data-secao]');
+  function marcar(id) {
+    var alvo = null;
+    linksSecao.forEach(function (a) {
+      var ativo = a.getAttribute('data-secao') === id;
+      a.classList.toggle('ativo', ativo);
+      if (ativo) a.setAttribute('aria-current', 'location');
+      else a.removeAttribute('aria-current');
+      if (ativo && nav && nav.contains(a)) alvo = a;
+    });
+    if (!marcaNav) return;
+    if (alvo) {
+      marcaNav.style.width = alvo.offsetWidth + 'px';
+      marcaNav.style.transform = 'translateX(' + alvo.offsetLeft + 'px)';
+      marcaNav.classList.add('pronta');
+    } else {
+      marcaNav.classList.remove('pronta');
+    }
+  }
+  var secoes = [];
+  linksSecao.forEach(function (a) {
+    var s = document.getElementById(a.getAttribute('data-secao'));
+    if (s && secoes.indexOf(s) === -1) secoes.push(s);
+  });
+  function secaoAtual() {
+    // A seção cujo topo já passou de um terço da tela; "Para o MEI" fica dentro de "Recursos" e vence quando visível.
+    var linha = window.innerHeight / 3;
+    var atual = null;
+    secoes.forEach(function (s) {
+      var r = s.getBoundingClientRect();
+      if (r.top <= linha && r.bottom > linha) atual = s.id;
+    });
+    marcar(atual);
+  }
+  var agendado = false;
+  window.addEventListener('scroll', function () {
+    if (agendado) return;
+    agendado = true;
+    requestAnimationFrame(function () { agendado = false; secaoAtual(); });
+  }, { passive: true });
+  window.addEventListener('resize', secaoAtual);
+  secaoAtual();
 
   // Menu do celular
   function fecharMenu() {
@@ -132,6 +195,15 @@
       var alvo = a.querySelector('span') || a;
       alvo.textContent = email;
       a.hidden = false;
+    });
+
+    // Empresa: CNPJ, responsável e endereço só aparecem quando preenchidos.
+    document.querySelectorAll('[data-empresa]').forEach(function (e) {
+      var v = (texto(c['empresa.' + e.getAttribute('data-empresa')]) || '').trim();
+      if (!v) return;
+      var alvo = e.querySelector('span') || e;
+      alvo.textContent = v;
+      e.hidden = false;
     });
 
     // Instagram (aceita link completo ou @perfil)

@@ -68,6 +68,8 @@
     <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
     <symbol id="i-fechar" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
     <symbol id="i-email" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3.5 7l8.5 6 8.5-6"/></symbol>
+    <symbol id="i-seta-cima" viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></symbol>
+    <symbol id="i-local" viewBox="0 0 24 24"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/></symbol>
     <symbol id="i-instagram" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="5"/><circle cx="12" cy="12" r="4"/><path d="M17 7h.01"/></symbol>
   </svg>
 
@@ -79,11 +81,12 @@
         <img src="img/logo.png" alt="Gynfinance" width="147" height="30">
       </a>
       <nav class="nav" aria-label="Seções do site">
-        <a href="#recursos">Recursos</a>
-        <a href="#mei">Para o MEI</a>
-        <a href="#como-comecar">Como começar</a>
-        <a href="#preco">Preço</a>
-        <a href="#duvidas">Dúvidas</a>
+        <a href="#recursos" data-secao="recursos">Recursos</a>
+        <a href="#mei" data-secao="mei">Para o MEI</a>
+        <a href="#como-comecar" data-secao="como-comecar">Como começar</a>
+        <a href="#preco" data-secao="preco">Preço</a>
+        <a href="#duvidas" data-secao="duvidas">Dúvidas</a>
+        <span class="nav-marca" aria-hidden="true"></span>
       </nav>
       <div class="header-actions">
         <a class="link-entrar" href="/app/#/entrar">Entrar</a>
@@ -95,13 +98,21 @@
       </div>
     </div>
     <div class="menu-mobile" id="menu-mobile">
-      <a class="item" href="#recursos">Recursos</a>
-      <a class="item" href="#mei">Para o MEI</a>
-      <a class="item" href="#como-comecar">Como começar</a>
-      <a class="item" href="#preco">Preço</a>
-      <a class="item" href="#duvidas">Dúvidas</a>
-      <a class="btn btn-primary btn-block" href="/app/#/entrar?depois=comecar">Criar minha conta</a>
-      <a class="btn btn-secondary btn-block" href="/app/">Testar a demonstração</a>
+      <nav class="menu-mobile-itens" aria-label="Seções do site">
+        <a class="item" href="#recursos" data-secao="recursos"><svg class="icon" aria-hidden="true"><use href="#i-barras"/></svg>Recursos</a>
+        <a class="item" href="#mei" data-secao="mei"><svg class="icon" aria-hidden="true"><use href="#i-recibo"/></svg>Para o MEI</a>
+        <a class="item" href="#como-comecar" data-secao="como-comecar"><svg class="icon" aria-hidden="true"><use href="#i-raio"/></svg>Como começar</a>
+        <a class="item" href="#preco" data-secao="preco"><svg class="icon" aria-hidden="true"><use href="#i-carteira"/></svg>Preço</a>
+        <a class="item" href="#duvidas" data-secao="duvidas"><svg class="icon" aria-hidden="true"><use href="#i-interrogacao"/></svg>Dúvidas</a>
+      </nav>
+      <div class="menu-mobile-acoes">
+        <a class="btn btn-primary btn-block" href="/app/#/entrar?depois=comecar">Criar minha conta</a>
+        <a class="btn btn-secondary btn-block" href="/app/">Testar a demonstração</a>
+        <p class="menu-mobile-rodape">
+          <a href="/app/#/entrar">Já tenho conta: entrar</a>
+          <a href="https://wa.me/?text=Ol%C3%A1!%20Quero%20saber%20mais%20sobre%20o%20Gynfinance." data-whats target="_blank" rel="noopener"><svg class="icon" aria-hidden="true"><use href="#i-conversa"/></svg>WhatsApp</a>
+        </p>
+      </div>
     </div>
   </header>
 
@@ -540,27 +551,54 @@
 
   <footer class="site-footer">
     <div class="container">
-      <div class="footer-row">
+      <div class="footer-grid">
         <div class="footer-brand">
-          <img src="img/logo.png" alt="Gynfinance" width="137" height="28" loading="lazy">
-          <p><span data-cms="rodape.texto">Controle financeiro simples para MEI e pequenas empresas.</span> Gynfinance é um produto <a href="https://kodemi.pt" target="_blank" rel="noopener">KodeMI</a>.</p>
+          <img src="img/logo.png" alt="Gynfinance" width="147" height="30" loading="lazy">
+          <p data-cms="rodape.texto">Controle financeiro simples para MEI e pequenas empresas.</p>
           <p class="footer-contato">
             <a data-contato="email" hidden><svg class="icon" aria-hidden="true"><use href="#i-email"/></svg><span></span></a>
             <a data-contato="instagram" target="_blank" rel="noopener" hidden><svg class="icon" aria-hidden="true"><use href="#i-instagram"/></svg><span>Instagram</span></a>
           </p>
         </div>
-        <nav class="footer-links" aria-label="Acesso">
+        <nav class="footer-col" aria-labelledby="rodape-produto">
+          <h2 id="rodape-produto">Produto</h2>
+          <a href="#recursos">Recursos</a>
+          <a href="#mei">Para o MEI</a>
+          <a href="#como-comecar">Como começar</a>
+          <a href="#preco">Preço</a>
+          <a href="#duvidas">Dúvidas</a>
+        </nav>
+        <nav class="footer-col" aria-labelledby="rodape-acesso">
+          <h2 id="rodape-acesso">Acesso</h2>
           <a href="/app/#/entrar">Entrar</a>
           <a href="/app/#/entrar?depois=comecar">Criar conta</a>
           <a href="/app/">Testar a demonstração</a>
-          <a href="https://wa.me/?text=Ol%C3%A1!%20Quero%20saber%20mais%20sobre%20o%20Gynfinance." data-whats target="_blank" rel="noopener">WhatsApp</a>
         </nav>
+        <div class="footer-col footer-atendimento">
+          <h2>Atendimento</h2>
+          <p class="footer-info"><svg class="icon" aria-hidden="true"><use href="#i-relogio"/></svg><span data-cms="atendimento.horario">Segunda a sexta, em horário comercial</span></p>
+          <p class="footer-info" data-empresa="endereco" hidden><svg class="icon" aria-hidden="true"><use href="#i-local"/></svg><span></span></p>
+          <a class="btn btn-whats btn-sm footer-whats" href="https://wa.me/?text=Ol%C3%A1!%20Quero%20saber%20mais%20sobre%20o%20Gynfinance." data-whats target="_blank" rel="noopener">
+            <svg class="icon" aria-hidden="true"><use href="#i-conversa"/></svg>Falar no WhatsApp
+          </a>
+        </div>
       </div>
       <div class="footer-base">
-        <span>© 2026 KodeMI. Todos os direitos reservados.</span>
-        <a href="https://kodemi.pt" target="_blank" rel="noopener">kodemi.pt</a>
+        <div class="footer-legal">
+          <span>© <span data-ano>2026</span> <span data-cms="empresa.nome">KodeMI</span>. Todos os direitos reservados.</span>
+          <span data-empresa="cnpj" hidden>CNPJ <span></span></span>
+          <span data-empresa="responsavel" hidden>Responsável: <span></span></span>
+        </div>
+        <a class="credito" href="https://kodemi.pt" target="_blank" rel="noopener" aria-label="Desenvolvido por KodeMI, Soluções Personalizadas em Tecnologia">
+          <span>Desenvolvido por</span>
+          <img src="img/kodemi.png" alt="" width="140" height="37" loading="lazy">
+        </a>
       </div>
     </div>
   </footer>
+
+  <button class="topo" type="button" aria-label="Voltar ao topo" title="Voltar ao topo">
+    <svg class="icon" aria-hidden="true"><use href="#i-seta-cima"/></svg>
+  </button>
 </body>
 </html>

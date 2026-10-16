@@ -24,9 +24,14 @@ const AJUDA_IMAGEM = 'Use uma imagem larga (print da tela do computador). Deixe 
 export const SECOES_SITE: SecaoSite[] = [
   {
     id: 'contato',
-    titulo: 'Contatos',
-    descricao: 'WhatsApp, e-mail e Instagram que aparecem no site.',
+    titulo: 'Empresa e atendimento',
+    descricao: 'Quem está por trás do Gynfinance, horário de atendimento e contatos. Aparecem no rodapé do site e na tela de suporte do sistema.',
     campos: [
+      { chave: 'empresa.nome', rotulo: 'Nome da empresa', tipo: 'texto', padrao: 'KodeMI', ajuda: 'Aparece no rodapé, em "© 2026 KodeMI".' },
+      { chave: 'empresa.cnpj', rotulo: 'CNPJ', tipo: 'texto', padrao: '', ajuda: 'Ex.: 12.345.678/0001-90. Deixe em branco para não mostrar.' },
+      { chave: 'empresa.responsavel', rotulo: 'Responsável (gestor)', tipo: 'texto', padrao: '', ajuda: 'Nome de quem responde pelo Gynfinance. Deixe em branco para não mostrar.' },
+      { chave: 'empresa.endereco', rotulo: 'Cidade ou endereço', tipo: 'texto', padrao: '', ajuda: 'Ex.: Goiânia, GO. Deixe em branco para não mostrar.' },
+      { chave: 'atendimento.horario', rotulo: 'Horário de atendimento', tipo: 'texto', padrao: 'Segunda a sexta, em horário comercial', ajuda: 'Ex.: Segunda a sexta, das 9h às 18h. Sábado, das 9h às 12h.' },
       { chave: 'contato.whatsapp', rotulo: 'Número do WhatsApp', tipo: 'telefone', padrao: '', ajuda: 'Só números com DDD, ex.: 62999990000. Os botões de WhatsApp do site usam este número.' },
       { chave: 'contato.whatsapp_mensagem', rotulo: 'Mensagem que já vem escrita no WhatsApp', tipo: 'texto', padrao: 'Olá! Quero saber mais sobre o Gynfinance.', ajuda: 'O cliente pode mudar a mensagem antes de enviar.' },
       { chave: 'contato.email', rotulo: 'E-mail de contato', tipo: 'email', padrao: '', ajuda: 'Aparece no rodapé do site. Deixe em branco para não mostrar.' },
@@ -169,7 +174,7 @@ export const SECOES_SITE: SecaoSite[] = [
     id: 'rodape',
     titulo: 'Rodapé',
     campos: [
-      { chave: 'rodape.texto', rotulo: 'Frase do rodapé', tipo: 'texto', padrao: 'Controle financeiro simples para MEI e pequenas empresas.', ajuda: 'Logo depois vem "Gynfinance é um produto KodeMI."' },
+      { chave: 'rodape.texto', rotulo: 'Frase do rodapé', tipo: 'texto', padrao: 'Controle financeiro simples para MEI e pequenas empresas.', ajuda: 'Aparece embaixo do logo, no rodapé.' },
     ],
   },
 ]

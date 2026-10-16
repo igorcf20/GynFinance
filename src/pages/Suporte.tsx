@@ -1,6 +1,6 @@
 // Ajuda e suporte: o cliente abre chamados com fotos, a tela onde estava e os erros recentes do
 // app, e conversa com a equipe por aqui. Os dados do perfil vão junto sozinhos.
-import { ArrowLeft, Bug, Check, ChevronDown, ChevronRight, CircleHelp, CreditCard, Inbox, Lightbulb, LifeBuoy, MessageCircle, MonitorSmartphone, Plus, RefreshCw, UserRound, WifiOff } from 'lucide-react'
+import { ArrowLeft, Bug, Check, ChevronDown, ChevronRight, CircleHelp, Clock, CreditCard, Inbox, Lightbulb, LifeBuoy, MessageCircle, MonitorSmartphone, Plus, RefreshCw, UserRound, WifiOff } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Header } from '../components/layout/Header'
@@ -10,7 +10,10 @@ import { Button } from '../components/ui/Button'
 import { Card, EstadoVazio, Skeleton } from '../components/ui/Card'
 import { Input, Label, Select } from '../components/ui/Field'
 import { useToast } from '../components/ui/Modal'
+import { api } from '../data/api'
 import { useStore } from '../data/store'
+import { linkWhatsapp } from '../components/agenda/visual'
+import { valorPadrao } from '../domain/conteudoSite'
 import { definirNaoLidos, nomeDaPagina, PAGINAS_ESCOLHA, suporteDemo, suporteServidor, type FonteSuporte } from '../data/suporte'
 import { CATEGORIAS_TICKET, SITUACOES_TICKET, type CategoriaTicket, type PerfilTicket, type ResumoTicket, type Ticket } from '../domain/suporte'
 import { contextoTecnico, errosRecentes, ultimaPaginaAntesDoSuporte } from '../lib/erros'
@@ -30,6 +33,21 @@ function usePerfil(): PerfilTicket {
     plano: conta?.assinatura?.planoNome ?? 'Essencial',
     situacaoAssinatura: conta?.assinatura?.situacao,
   }
+}
+
+/** Horário e WhatsApp do atendimento, os mesmos do rodapé do site (editados no superadmin, em Site). */
+function useAtendimento(): { horario: string; whatsapp: string; mensagem: string } {
+  const { servidor } = useStore()
+  const [conteudo, setConteudo] = useState<Record<string, string>>({})
+  useEffect(() => {
+    if (servidor !== 'com') return
+    api<{ conteudo?: Record<string, string> }>('GET', 'publico/site').then(
+      (r) => setConteudo(r.conteudo ?? {}),
+      () => {},
+    )
+  }, [servidor])
+  const valor = (chave: string) => conteudo[chave]?.trim() || valorPadrao(chave) || ''
+  return { horario: valor('atendimento.horario'), whatsapp: valor('contato.whatsapp'), mensagem: 'Olá! Sou cliente do Gynfinance e preciso de ajuda.' }
 }
 
 export function Suporte() {
@@ -55,6 +73,7 @@ export function Suporte() {
     void carregar()
   }, [carregar])
 
+  const atendimento = useAtendimento()
   const abrir = (id: string) => setParams({ chamado: id })
   const voltar = () => setParams({}, { replace: true })
   const detalhe = novo || !!aberto
@@ -79,6 +98,22 @@ export function Suporte() {
             <Button className="relative mt-4 w-full" icone={<Plus size={17} aria-hidden />} onClick={() => setParams({ novo: '1' })}>
               Abrir um chamado
             </Button>
+            <div className="relative mt-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-line pt-3.5 text-[13px] text-ink-2">
+              <span className="inline-flex min-w-0 items-center gap-1.5">
+                <Clock size={15} className="shrink-0 text-primary" aria-hidden />
+                <span>{atendimento.horario}</span>
+              </span>
+              {atendimento.whatsapp && (
+                <a
+                  href={linkWhatsapp(atendimento.whatsapp, atendimento.mensagem)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 font-semibold text-success hover:underline"
+                >
+                  <MessageCircle size={15} aria-hidden /> WhatsApp
+                </a>
+              )}
+            </div>
           </Card>
 
           <Card className="!p-2">
