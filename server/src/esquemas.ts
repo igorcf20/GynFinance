@@ -72,6 +72,9 @@ export const lancamento = z.object({
   refExtrato: texto(200).optional(),
   lembreteDias: z.union([z.literal(-1), z.literal(0), z.literal(1), z.literal(3)]).optional(),
   parceiroId: id.optional(),
+  numeroFatura: texto(60).optional(),
+  numeroProforma: texto(60).optional(),
+  numeroOrcamento: texto(60).optional(),
 })
 
 export const atendimento = z.object({
@@ -98,6 +101,9 @@ export const parceiro = z.object({
   email: texto(200).optional(),
   endereco: texto(300).optional(),
   observacao: texto(500).optional(),
+  contatos: z.array(z.object({ id: texto(60).min(1), nome: texto(120).min(1), cargo: texto(80).optional(), telefone: texto(40).optional(), email: texto(200).optional() })).max(30).optional(),
+  anotacoes: z.array(z.object({ id: texto(60).min(1), data, texto: texto(2000).min(1) })).max(500).optional(),
+  tarefas: z.array(z.object({ id: texto(60).min(1), texto: texto(300).min(1), prazo: data.optional(), feita: z.boolean() })).max(300).optional(),
   ativo: z.boolean(),
   criadoEm: data,
 })

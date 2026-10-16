@@ -94,6 +94,56 @@ describe.skipIf(!URL_ADMIN)('servidor', () => {
     expect((await app.inject({ method: 'GET', url: '/api/dados' })).statusCode).toBe(401)
   })
 
+  /** Muda o plano direto no banco, como o superadmin faria pelo painel. */
+  async function mudarPlano(email: string, plano: string) {
+    const admin = new pg.Client({ connectionString: URL_ADMIN })
+    await admin.connect()
+    await admin.query('update assinatura set plano_id = $2 where usuario_id = (select id from usuario where email = $1)', [email, plano])
+    await admin.end()
+  }
+
+  it('clientes e fornecedores: só no plano Plus, com contatos, anotações e números da fatura', async () => {
+    const caio = await criarConta('caio@exemplo.com')
+    const inicial = dadosIniciais(config, '2026-10-16')
+    await pedir(caio, 'POST', '/api/negocio', paraNovoNegocio(inicial))
+    const atacadao = {
+      id: uid(), empresaId: inicial.empresa.id, tipo: 'fornecedor' as const, nome: 'Atacadão', telefone: '(62) 3088-4000', ativo: true, criadoEm: '2026-10-16',
+      contatos: [{ id: 'c1', nome: 'Rita', cargo: 'Vendedora', telefone: '(62) 99999-0000' }],
+      anotacoes: [{ id: 'a1', data: '2026-10-16', texto: 'Desconto de 5% à vista.' }],
+      tarefas: [{ id: 't1', texto: 'Pedir tabela nova', prazo: '2026-10-20', feita: false }],
+    }
+    const banco = inicial.contas.find((c) => c.tipo === 'banco')!.id
+    const compra: Lancamento = {
+      id: uid(), empresaId: inicial.empresa.id, natureza: 'saida', valor: 50000, categoriaId: 'mercadoria', contaFinanceiraId: banco, situacao: 'realizado',
+      dataCompetencia: '2026-10-16', dataPagamento: '2026-10-16', formaPagamento: 'pix', notaEmitida: 'nao_se_aplica', contraparte: 'Atacadão',
+      parceiroId: atacadao.id, numeroFatura: 'FT 2026/118', numeroProforma: 'PF-77', numeroOrcamento: 'ORC-12',
+    }
+    const depois: Dados = { ...inicial, parceiros: [atacadao], lancamentos: [compra] }
+    // No Essencial a ficha não grava.
+    expect((await pedir(caio, 'POST', '/api/sincronizar', diferencas(inicial, depois))).statusCode).toBe(403)
+    await mudarPlano('caio@exemplo.com', 'plus')
+    expect((await pedir(caio, 'GET', '/api/conta')).json().assinatura.modulos).toContain('clientes')
+    expect((await pedir(caio, 'POST', '/api/sincronizar', diferencas(inicial, depois))).statusCode).toBe(200)
+    const lido: Dados = (await pedir(caio, 'GET', '/api/dados')).json().dados
+    expect(lido).toEqual(depois)
+
+    // Apagar a ficha solta o lançamento, que continua lá.
+    const semFicha: Dados = { ...depois, parceiros: [], lancamentos: [{ ...compra, parceiroId: undefined }] }
+    expect((await pedir(caio, 'POST', '/api/sincronizar', diferencas(depois, semFicha))).statusCode).toBe(200)
+    const lido2: Dados = (await pedir(caio, 'GET', '/api/dados')).json().dados
+    expect(lido2.parceiros).toEqual([])
+    expect(lido2.lancamentos[0].parceiroId).toBeUndefined()
+
+    // Ficha de outra empresa não serve.
+    const bia = await criarConta('bia.plus@exemplo.com')
+    await pedir(bia, 'POST', '/api/negocio', paraNovoNegocio(dadosIniciais(config, '2026-10-16')))
+    await mudarPlano('bia.plus@exemplo.com', 'plus')
+    const daBia: Dados = (await pedir(bia, 'GET', '/api/dados')).json().dados
+    const intrusa = { ...compra, id: uid(), contaFinanceiraId: daBia.contas[0].id, parceiroId: atacadao.id }
+    const r = await pedir(bia, 'POST', '/api/sincronizar', { lancamentos: { salvar: [intrusa], excluir: [] } })
+    expect(r.statusCode).toBe(400)
+  })
+
   it('negócio: cria pela configuração inicial e guarda o que muda no app', async () => {
     const ana = await criarConta('ana2@exemplo.com')
     expect((await pedir(ana, 'GET', '/api/dados')).json()).toEqual({ dados: null })

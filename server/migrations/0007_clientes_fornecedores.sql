@@ -11,6 +11,10 @@ create table parceiro (
   email text,
   endereco text,
   observacao text,
+  -- Pessoas de contato, anotações e tarefas da ficha (listas pequenas, gravadas inteiras).
+  contatos jsonb not null default '[]',
+  anotacoes jsonb not null default '[]',
+  tarefas jsonb not null default '[]',
   ativo boolean not null default true,
   criado_em date not null default current_date,
   atualizado_em timestamptz not null default now()
@@ -26,6 +30,11 @@ alter table lancamento add column parceiro_id uuid references parceiro (id) on d
 alter table recorrencia add column parceiro_id uuid references parceiro (id) on delete set null;
 alter table atendimento add column parceiro_id uuid references parceiro (id) on delete set null;
 create index on lancamento (parceiro_id) where parceiro_id is not null;
+
+-- Números dos documentos do lançamento (modo avançado do formulário).
+alter table lancamento add column numero_fatura text;
+alter table lancamento add column numero_proforma text;
+alter table lancamento add column numero_orcamento text;
 
 -- Plano Plus: o Essencial mais Clientes e fornecedores. Nasce desligado (fora do site) até o
 -- preço ser confirmado em Superadmin > Planos; já dá para colocar assinantes nele.
