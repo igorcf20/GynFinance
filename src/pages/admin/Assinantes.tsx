@@ -89,7 +89,7 @@ export function AbaAssinantes({ assinantes, planos, hoje, onAbrir }: { assinante
         ) : (
           <>
             {/* Celular: um cartão por assinante. */}
-            <ul className="divide-y divide-line md:hidden">
+            <ul className="divide-y divide-line lg:hidden">
               {lista.map((a) => (
                 <li key={a.id}>
                   <button onClick={() => onAbrir(a.id)} className="flex w-full items-start gap-3 px-4 py-3.5 text-left active:bg-hover">
@@ -107,7 +107,7 @@ export function AbaAssinantes({ assinantes, planos, hoje, onAbrir }: { assinante
               ))}
             </ul>
             {/* Computador: tabela. */}
-            <div className="hidden overflow-x-auto md:block">
+            <div className="relative hidden overflow-x-auto lg:block">
               <table className="w-full text-left text-[14px]">
                 <thead className="border-b border-line bg-[#f8fafc] text-[12px] font-semibold tracking-wide text-ink-2 uppercase">
                   <tr>

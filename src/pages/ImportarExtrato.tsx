@@ -174,18 +174,21 @@ export function ImportarExtrato() {
                   )}
                 </div>
               </div>
-              <Segmentado
-                rotulo="Mostrar"
-                valor={filtro}
-                onChange={setFiltro}
-                className="mb-2 w-full overflow-x-auto sm:w-auto"
-                opcoes={[
-                  { valor: 'todos', rotulo: 'Todos', contagem: linhas.length },
-                  { valor: 'novos', rotulo: 'Novos', contagem: resumo.novos },
-                  { valor: 'contas', rotulo: 'Pagam contas', contagem: resumo.contas },
-                  { valor: 'repetidos', rotulo: 'Já lançados', contagem: resumo.repetidos },
-                ]}
-              />
+              {/* Rola de lado no celular em vez de espremer as opções. */}
+              <div className="relative -mx-1 mb-2 overflow-x-auto px-1 pb-1">
+                <Segmentado
+                  rotulo="Mostrar"
+                  valor={filtro}
+                  onChange={setFiltro}
+                  rolar
+                  opcoes={[
+                    { valor: 'todos', rotulo: 'Todos', contagem: linhas.length },
+                    { valor: 'novos', rotulo: 'Novos', contagem: resumo.novos },
+                    { valor: 'contas', rotulo: 'Pagam contas', contagem: resumo.contas },
+                    { valor: 'repetidos', rotulo: 'Já lançados', contagem: resumo.repetidos },
+                  ]}
+                />
+              </div>
               <ul className="divide-y divide-line">
                 {visiveis.map(({ l, i }) => (
                   <LinhaExtrato key={l.mov.ref} l={l} onMudar={(m) => mudar(i, m)} />

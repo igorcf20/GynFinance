@@ -79,47 +79,51 @@ export function ContaItem({ conta, compacto, mostrarCobrar }: { conta: Lancament
   const nome = receber ? conta.contraparte || conta.descricao : conta.descricao || conta.contraparte
 
   return (
-    <li className={`group flex items-center gap-3 md:gap-4 ${compacto ? 'py-3.5' : 'py-4'} ${saindo ? 'anim-sair' : ''}`}>
-      <IconeBox tom={tom} className="transition-transform duration-300 group-hover:scale-105">
-        <Icone size={20} strokeWidth={2} aria-hidden />
-      </IconeBox>
-      <div className="min-w-0 flex-1">
-        <p className="flex items-center gap-1.5 truncate text-[15px] font-bold text-ink">
-          {nome}
-          {conta.recorrenciaId && <Repeat size={13} strokeWidth={2.2} className="shrink-0 text-slate" aria-label="Repete todo mês" />}
-        </p>
-        <p className={`truncate text-[13px] font-medium ${corLinha}`}>{descricaoConta(conta, hoje)}</p>
-      </div>
-      <span className="num shrink-0 text-right text-[15px] font-bold text-ink">
-        {varia && <span className="block text-[11px] font-medium text-ink-2">cerca de</span>}
-        {brl(conta.valor)}
-      </span>
-      <div className="flex shrink-0 gap-2">
-        {mostrarCobrar && receber && (
-          <a
-            href={linkCobranca(conta, dados.empresa.nomeFantasia)}
-            target="_blank"
-            rel="noreferrer"
-            aria-label={`Cobrar ${conta.contraparte} no WhatsApp`}
-            className="hidden h-10 items-center gap-1.5 rounded-[12px] border-[1.5px] border-[#bfe6d1] px-3.5 text-[13px] font-semibold text-success transition-colors hover:bg-success-soft sm:inline-flex"
-          >
-            <MessageCircle size={15} aria-hidden />
-            Cobrar
-          </a>
-        )}
-        <div className="flex">
-          <Button variante="contorno" tamanho="sm" onClick={aoTocar} className="!h-10 min-w-[78px] !rounded-r-none md:min-w-[90px]">
-            {receber ? 'Recebi' : 'Paguei'}
-          </Button>
-          <button
-            type="button"
-            onClick={() => setDetalhando(true)}
-            aria-label={`${receber ? 'Receber' : 'Pagar'} com detalhes: comprovante, parcial ou parcelado`}
-            title="Comprovante, parcial ou parcelado"
-            className="-ml-[1.5px] inline-flex h-10 w-9 items-center justify-center rounded-r-[12px] border-[1.5px] border-primary-line bg-surface text-primary transition-colors hover:border-primary hover:bg-primary-soft/60"
-          >
-            <SlidersHorizontal size={15} aria-hidden />
-          </button>
+    // Mede a largura da própria lista (e não da tela): a mesma linha serve no celular e na coluna estreita do painel.
+    <li className={`group @container ${compacto ? 'py-3.5' : 'py-4'} ${saindo ? 'anim-sair' : ''}`}>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2.5 @md:flex-nowrap @lg:gap-4">
+        <IconeBox tom={tom} className="transition-transform duration-300 group-hover:scale-105">
+          <Icone size={20} strokeWidth={2} aria-hidden />
+        </IconeBox>
+        <div className="min-w-0 flex-1">
+          <p className="flex items-center gap-1.5 truncate text-[15px] font-bold text-ink">
+            {nome}
+            {conta.recorrenciaId && <Repeat size={13} strokeWidth={2.2} className="shrink-0 text-slate" aria-label="Repete todo mês" />}
+          </p>
+          <p className={`truncate text-[13px] font-medium ${corLinha}`}>{descricaoConta(conta, hoje)}</p>
+        </div>
+        <span className="num shrink-0 text-right text-[15px] font-bold text-ink">
+          {varia && <span className="block text-[11px] font-medium text-ink-2">cerca de</span>}
+          {brl(conta.valor)}
+        </span>
+        {/* No celular os botões ficam numa linha própria, alinhados ao texto: o nome da conta não some. */}
+        <div className="flex shrink-0 basis-full justify-end gap-2 pl-[56px] @md:basis-auto @md:pl-0">
+          {mostrarCobrar && receber && (
+            <a
+              href={linkCobranca(conta, dados.empresa.nomeFantasia)}
+              target="_blank"
+              rel="noreferrer"
+              aria-label={`Cobrar ${conta.contraparte} no WhatsApp`}
+              className="hidden h-10 items-center gap-1.5 rounded-[12px] border-[1.5px] border-[#bfe6d1] px-3.5 text-[13px] font-semibold text-success transition-colors hover:bg-success-soft @xs:inline-flex"
+            >
+              <MessageCircle size={15} aria-hidden />
+              Cobrar
+            </a>
+          )}
+          <div className="flex">
+            <Button variante="contorno" tamanho="sm" onClick={aoTocar} className="!h-10 min-w-[78px] !rounded-r-none md:min-w-[90px]">
+              {receber ? 'Recebi' : 'Paguei'}
+            </Button>
+            <button
+              type="button"
+              onClick={() => setDetalhando(true)}
+              aria-label={`${receber ? 'Receber' : 'Pagar'} com detalhes: comprovante, parcial ou parcelado`}
+              title="Comprovante, parcial ou parcelado"
+              className="-ml-[1.5px] inline-flex h-10 w-9 items-center justify-center rounded-r-[12px] border-[1.5px] border-primary-line bg-surface text-primary transition-colors hover:border-primary hover:bg-primary-soft/60"
+            >
+              <SlidersHorizontal size={15} aria-hidden />
+            </button>
+          </div>
         </div>
       </div>
       <RegistrarPagamento conta={conta} aberto={detalhando} onFechar={() => setDetalhando(false)} onConfirmar={comDetalhes} />

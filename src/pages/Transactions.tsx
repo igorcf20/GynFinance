@@ -155,8 +155,8 @@ export function Transactions() {
       />
 
       <Card className="!p-0">
-        <div className="flex flex-col gap-3 border-b border-line p-4 md:p-5 lg:flex-row lg:items-center">
-          <div className="relative lg:w-64">
+        <div className="flex flex-col gap-3 border-b border-line p-4 md:p-5 xl:flex-row xl:items-center">
+          <div className="relative xl:w-64">
             <Search size={17} strokeWidth={2} className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-navy" aria-hidden />
             <input
               type="search"
@@ -177,18 +177,18 @@ export function Transactions() {
               { valor: 'saidas', rotulo: 'Saídas' },
             ]}
           />
-          <div className="grid grid-cols-2 gap-3 sm:flex lg:ml-auto">
-            <SeletorMes />
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:ml-auto xl:flex">
+            <SeletorMes className="col-span-2 sm:col-span-1" />
             <Select
               aria-label="Categoria"
-              className="sm:w-52"
+              className="xl:w-52"
               value={categoria}
               onChange={(e) => resetPagina(setCategoria)(e.target.value)}
               opcoes={[{ valor: '', rotulo: 'Todas as categorias' }, ...dados.categorias.map((c) => ({ valor: c.id, rotulo: c.nome }))]}
             />
             <Select
               aria-label="Situação"
-              className="col-span-2 sm:w-48"
+              className="xl:w-48"
               value={situacao}
               onChange={(e) => resetPagina(setSituacao)(e.target.value)}
               opcoes={[
@@ -215,7 +215,7 @@ export function Transactions() {
         ) : (
           <>
             {/* Desktop e tablet: tabela */}
-            <div className="hidden overflow-x-auto md:block">
+            <div className="relative hidden overflow-x-auto lg:block">
               <table className="w-full min-w-[760px] text-left text-[14px]">
                 <thead>
                   <tr className="border-b border-line bg-[#fafbfd] text-[13px] text-[#3d5170]">
@@ -255,7 +255,7 @@ export function Transactions() {
                           </span>
                         </td>
                         <td className="px-3 py-3.5 text-[#3d5170]">{FORMAS.find((f) => f.valor === l.formaPagamento)?.rotulo}</td>
-                        <td className={`num px-3 py-3.5 text-right font-bold ${valorCor(l)}`}>{valorTxt(l)}</td>
+                        <td className={`num px-3 py-3.5 text-right font-bold whitespace-nowrap ${valorCor(l)}`}>{valorTxt(l)}</td>
                         <td className="px-3 py-3.5">
                           <Badge tom={s.tom}>{s.texto}</Badge>
                         </td>
@@ -277,7 +277,7 @@ export function Transactions() {
             </div>
 
             {/* Celular: lista */}
-            <ul className="divide-y divide-line md:hidden">
+            <ul className="divide-y divide-line lg:hidden">
               {visiveis.map((l) => {
                 const s = situacaoBadge(l)
                 return (

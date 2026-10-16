@@ -35,7 +35,7 @@ export function MainLayout() {
   return (
     <div className="flex min-h-dvh">
       <Sidebar />
-      <main className="min-w-0 flex-1 px-4 pt-5 pb-28 md:px-7 md:pt-8 md:pb-10 xl:px-10">
+      <main className="min-w-0 flex-1 px-4 pt-[calc(1.25rem+env(safe-area-inset-top))] pb-[calc(7rem+env(safe-area-inset-bottom))] md:px-7 md:pt-8 md:pb-10 xl:px-10">
         <div key={pathname} ref={ref} className="mx-auto max-w-[1240px]">
           <ProtecaoDeErro acao={<Button onClick={() => navigate('/')}>Voltar ao início</Button>}>
             <AvisosDoPlano />

@@ -42,7 +42,7 @@ export function Modal({
         aria-modal="true"
         aria-label={titulo}
         onMouseDown={(e) => e.stopPropagation()}
-        className={`anim-janela max-h-[92dvh] w-full ${larga ? 'max-w-2xl' : 'max-w-md'} overflow-y-auto overscroll-contain rounded-t-[22px] bg-surface p-6 shadow-[var(--shadow-pop)] md:rounded-[20px]`}
+        className={`anim-janela max-h-[92dvh] w-full ${larga ? 'max-w-2xl' : 'max-w-md'} overflow-y-auto overscroll-contain rounded-t-[22px] bg-surface p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-[var(--shadow-pop)] md:rounded-[20px] md:p-6`}
       >
         <div className="mb-3 flex items-start justify-between gap-4">
           <h2 className="text-[16px] font-semibold">{titulo}</h2>
@@ -52,7 +52,7 @@ export function Modal({
         </div>
         <div className="text-ink-2">{children}</div>
         {/* Rodapé fixo embaixo: em janela longa, os botões ficam sempre à mão. */}
-        {rodape && <div className="sticky -bottom-6 -mx-6 -mb-6 mt-2 flex justify-end gap-2 bg-surface/95 px-6 pt-4 pb-6 backdrop-blur">{rodape}</div>}
+        {rodape && <div className="sticky -bottom-[calc(1.25rem+env(safe-area-inset-bottom))] -mx-5 -mb-[calc(1.25rem+env(safe-area-inset-bottom))] mt-2 flex flex-wrap justify-end gap-2 bg-surface/95 px-5 pt-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] backdrop-blur md:-bottom-6 md:-mx-6 md:-mb-6 md:px-6 md:pb-6">{rodape}</div>}
       </div>
     </div>
   )
@@ -129,7 +129,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastCtx.Provider value={mostrar}>
       {children}
-      <div aria-live="polite" className="pointer-events-none fixed inset-x-0 bottom-24 z-[60] flex flex-col items-center gap-2 px-4 md:bottom-6 md:items-end md:pr-6">
+      <div aria-live="polite" className="pointer-events-none fixed inset-x-0 bottom-[calc(6rem+env(safe-area-inset-bottom))] z-[60] flex flex-col items-center gap-2 px-4 md:bottom-6 md:items-end md:pr-6">
         {toasts.map((t) => (
           <ItemToast key={t.id} t={t} fechar={fechar} />
         ))}

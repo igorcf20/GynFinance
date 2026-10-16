@@ -12,7 +12,7 @@ import { Segmentado } from '../components/ui/Tabs'
 import { diasDaSemana, eventosDoPeriodo, gradeDoMes, minutosDoDia, totaisDoPeriodo, type Evento, type FiltroAgenda } from '../domain/agenda'
 import type { DataISO } from '../domain/types'
 import { useStore } from '../data/store'
-import { addDias, addMeses, brl, mesAno, nomeMes } from '../lib/format'
+import { addDias, addMeses, brl, diaMes, mesAno, nomeMes } from '../lib/format'
 
 type Vista = 'mes' | 'semana' | 'dia' | 'lista'
 const VISTAS: Vista[] = ['mes', 'semana', 'dia', 'lista']
@@ -107,6 +107,11 @@ export function Agenda() {
             {vista === 'dia' ? (
               <>
                 <span className="sm:hidden">{`${DIAS_CURTOS[new Date(`${cursor}T12:00:00`).getDay()]}, ${Number(cursor.slice(8, 10))} de ${nomeMes(mes)}`}</span>
+                <span className="hidden sm:inline">{titulo}</span>
+              </>
+            ) : vista === 'lista' ? (
+              <>
+                <span className="sm:hidden">{`30 dias desde ${diaMes(de)}`}</span>
                 <span className="hidden sm:inline">{titulo}</span>
               </>
             ) : (
