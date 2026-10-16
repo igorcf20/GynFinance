@@ -2,7 +2,7 @@
 // Cada campo tem uma chave (a mesma do atributo data-cms / data-cms-img / data-contato no HTML)
 // e um padrão igual ao texto que já está no HTML: sem nenhuma edição, o site fica idêntico.
 
-export type TipoCampo = 'texto' | 'texto-longo' | 'imagem' | 'link' | 'telefone' | 'email'
+export type TipoCampo = 'texto' | 'texto-longo' | 'imagem' | 'link' | 'telefone' | 'email' | 'data'
 
 export interface CampoSite {
   chave: string
@@ -32,13 +32,21 @@ export const SECOES_SITE: SecaoSite[] = [
       { chave: 'empresa.responsavel', rotulo: 'Responsável (gestor)', tipo: 'texto', padrao: '', ajuda: 'Nome de quem responde pelo Gynfinance. Deixe em branco para não mostrar.' },
       { chave: 'empresa.endereco', rotulo: 'Cidade ou endereço', tipo: 'texto', padrao: '', ajuda: 'Ex.: Goiânia, GO. Deixe em branco para não mostrar.' },
       { chave: 'atendimento.horario', rotulo: 'Horário de atendimento', tipo: 'texto', padrao: 'Segunda a sexta, em horário comercial', ajuda: 'Ex.: Segunda a sexta, das 9h às 18h. Sábado, das 9h às 12h.' },
-      { chave: 'contato.whatsapp', rotulo: 'Número do WhatsApp', tipo: 'telefone', padrao: '', ajuda: 'Só números com DDD, ex.: 62999990000. Os botões de WhatsApp do site usam este número.' },
+      { chave: 'contato.whatsapp', rotulo: 'Número do WhatsApp', tipo: 'telefone', padrao: '351914125381', ajuda: 'Com o código do país: 351 para Portugal (ex.: 351914125381) ou 55 para o Brasil (ex.: 5562999990000). Os botões de WhatsApp do site e a lista de espera usam este número.' },
       { chave: 'contato.whatsapp_mensagem', rotulo: 'Mensagem que já vem escrita no WhatsApp', tipo: 'texto', padrao: 'Olá! Quero saber mais sobre o Gynfinance.', ajuda: 'O cliente pode mudar a mensagem antes de enviar.' },
-      { chave: 'lista.botao', rotulo: 'Botão da lista de espera', tipo: 'texto', padrao: 'Quero ser avisado', ajuda: 'Com os cadastros fechados (Superadmin > Sistema), os botões "Criar minha conta" mostram este texto e abrem o WhatsApp.' },
-      { chave: 'lista.mensagem', rotulo: 'Mensagem da lista de espera', tipo: 'texto-longo', padrao: 'Olá! Quero entrar na lista de espera do Gynfinance e ser avisado quando abrir.\nNome:\nNegócio:\nCidade:\nComo conheci o Gynfinance:', ajuda: 'Vem escrita no WhatsApp de quem clica em "Quero ser avisado". Se o link tiver ?origem=instagram (ou outro canal), o site acrescenta "Vim por: instagram".' },
-      { chave: 'lista.oferta', rotulo: 'Oferta de lançamento', tipo: 'texto', padrao: 'Os 10 primeiros assinantes ganham 3 meses grátis.', ajuda: 'Aparece abaixo dos botões do topo enquanto os cadastros estão fechados. Os 3 meses se dão em Superadmin > Assinantes, pondo o próximo vencimento 3 meses à frente.' },
       { chave: 'contato.email', rotulo: 'E-mail de contato', tipo: 'email', padrao: '', ajuda: 'Aparece no rodapé do site. Deixe em branco para não mostrar.' },
       { chave: 'contato.instagram', rotulo: 'Link do Instagram', tipo: 'link', padrao: '', ajuda: 'Ex.: https://instagram.com/gynfinance. Aparece no rodapé. Deixe em branco para não mostrar.' },
+    ],
+  },
+  {
+    id: 'lista',
+    titulo: 'Pré-lançamento',
+    descricao: 'Vale enquanto os cadastros estão fechados (Superadmin > Sistema > Aceitar novos cadastros). Os botões "Criar minha conta" viram o botão abaixo e abrem o WhatsApp do atendimento. Ao abrir os cadastros, o site volta ao normal sozinho.',
+    campos: [
+      { chave: 'lista.abertura', rotulo: 'Data de abertura dos cadastros', tipo: 'data', padrao: '2026-11-05', ajuda: 'Aparece no topo do site ("Cadastros abrem em 5 de novembro") e no passo "Entre na lista de espera". A abertura em si é manual: no dia, ligue "Aceitar novos cadastros" em Sistema.' },
+      { chave: 'lista.botao', rotulo: 'Botão da lista de espera', tipo: 'texto', padrao: 'Quero ser avisado', ajuda: 'Os botões "Criar minha conta" mostram este texto enquanto os cadastros estão fechados.' },
+      { chave: 'lista.mensagem', rotulo: 'Mensagem da lista de espera', tipo: 'texto-longo', padrao: 'Olá! Quero entrar na lista de espera do Gynfinance e ser avisado quando abrir.\nNome:\nNegócio:\nCidade:\nComo conheci o Gynfinance:', ajuda: 'Vem escrita no WhatsApp de quem clica em "Quero ser avisado". Se o link tiver ?origem=instagram (ou outro canal), o site acrescenta "Vim por: instagram".' },
+      { chave: 'lista.oferta', rotulo: 'Oferta de lançamento', tipo: 'texto', padrao: 'Os 10 primeiros assinantes ganham 3 meses grátis.', ajuda: 'Aparece no topo do site, ao lado da data de abertura. Os 3 meses se dão em Superadmin > Assinantes, pondo o próximo vencimento 3 meses à frente.' },
     ],
   },
   {

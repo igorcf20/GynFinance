@@ -115,6 +115,9 @@
   var MSG_WHATS_PADRAO = 'Olá! Quero saber mais sobre o Gynfinance.';
   var LINK_COMECAR = '/app/#/entrar?depois=comecar';
   var LISTA_OFERTA_PADRAO = 'Os 10 primeiros assinantes ganham 3 meses grátis.';
+  var WHATS_PADRAO = '351914125381';
+  var LISTA_ABERTURA_PADRAO = '2026-11-05';
+  var MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
   var LISTA_BOTAO_PADRAO = 'Quero ser avisado';
   var LISTA_MSG_PADRAO = 'Olá! Quero entrar na lista de espera do Gynfinance e ser avisado quando abrir.\nNome:\nNegócio:\nCidade:\nComo conheci o Gynfinance:';
   var SVG_NS = 'http://www.w3.org/2000/svg';
@@ -171,8 +174,9 @@
   }
 
   function numeroWhats(c) {
-    var numero = (texto(c['contato.whatsapp']) || '').replace(/\D/g, '');
+    var numero = ((texto(c['contato.whatsapp']) || '').trim() || WHATS_PADRAO).replace(/\D/g, '');
     if (numero.length === 10 || numero.length === 11) numero = '55' + numero; // só DDD + número: Brasil
+    else if (/^9\d{8}$/.test(numero)) numero = '351' + numero; // celular de Portugal sem o 351
     return numero;
   }
 
@@ -193,10 +197,18 @@
     a.insertBefore(document.createTextNode(valor), a.firstChild);
   }
 
+  // "2026-11-05" -> "5 de novembro" (vazio ou inválido -> "")
+  function dataExtenso(v) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec((v || '').trim());
+    if (!m || +m[2] < 1 || +m[2] > 12) return '';
+    return String(+m[3]) + ' de ' + MESES[+m[2] - 1];
+  }
+
   // Cadastro fechado (Superadmin > Sistema): "Criar minha conta" vira "Quero ser avisado" e abre o WhatsApp.
   function aplicarListaEspera(c) {
     var rotulo = (texto(c['lista.botao']) || '').trim() || LISTA_BOTAO_PADRAO;
     var msg = (texto(c['lista.mensagem']) || '').trim() || LISTA_MSG_PADRAO;
+    var quando = dataExtenso(texto(c['lista.abertura']) || LISTA_ABERTURA_PADRAO);
     var canal = origem();
     if (canal) msg += '\nVim por: ' + canal;
     var href = 'https://wa.me/' + numeroWhats(c) + '?text=' + encodeURIComponent(msg);
@@ -210,12 +222,13 @@
       // Texto editado pelo superadmin vale mais que o texto da lista.
       var chave = e.getAttribute('data-cms');
       if (chave && texto(c[chave]) !== null) return;
-      e.textContent = e.getAttribute('data-lista-texto');
+      e.textContent = e.getAttribute('data-lista-texto').replace('{data}', quando ? 'em ' + quando : 'em breve');
     });
     var oferta = (texto(c['lista.oferta']) || '').trim() || LISTA_OFERTA_PADRAO;
+    var faixa = [quando ? 'Cadastros abrem em ' + quando + '.' : '', oferta].filter(Boolean).join(' ');
     var caixa = document.querySelector('[data-lista-oferta]');
-    if (oferta && caixa) {
-      caixa.querySelector('span').textContent = oferta;
+    if (faixa && caixa) {
+      caixa.querySelector('span').textContent = faixa;
       caixa.hidden = false;
     }
   }

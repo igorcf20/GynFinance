@@ -58,6 +58,6 @@ export function rotuloTipo(e: Evento): string {
 /** Link do WhatsApp com o número do cliente (Brasil) e uma mensagem pronta. */
 export function linkWhatsapp(telefone: string | undefined, texto: string): string {
   const digitos = (telefone ?? '').replace(/\D/g, '')
-  const numero = digitos.length >= 12 ? digitos : digitos.length >= 10 ? `55${digitos}` : ''
+  const numero = digitos.length >= 12 ? digitos : digitos.length >= 10 ? `55${digitos}` : /^9\d{8}$/.test(digitos) ? `351${digitos}` : ''
   return `https://wa.me/${numero}?text=${encodeURIComponent(texto)}`
 }
