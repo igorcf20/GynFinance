@@ -117,8 +117,9 @@ function Campo({ campo: c, valor, fonte, onChange }: { campo: CampoSite; valor: 
     <div>
       <Input
         label={c.rotulo}
-        value={valor}
+        value={c.tipo === 'data' ? valor || c.padrao : valor}
         onChange={(e) => onChange(e.target.value)}
+        type={c.tipo === 'data' ? 'date' : undefined}
         placeholder={c.padrao || (c.tipo === 'telefone' ? '62999990000' : c.tipo === 'email' ? 'contato@seudominio.com.br' : c.tipo === 'link' ? 'https://' : '')}
         inputMode={c.tipo === 'telefone' ? 'tel' : c.tipo === 'email' ? 'email' : c.tipo === 'link' ? 'url' : undefined}
       />
