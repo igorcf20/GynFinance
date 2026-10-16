@@ -9,6 +9,7 @@ import { MEI } from './pages/MEI'
 import { MonthlyClosing } from './pages/MonthlyClosing'
 import { More } from './pages/More'
 import { NewTransaction } from './pages/NewTransaction'
+import { Onboarding } from './pages/Onboarding'
 import { Reports } from './pages/Reports'
 import { Settings } from './pages/Settings'
 import { Transactions } from './pages/Transactions'
@@ -20,6 +21,7 @@ export default function App() {
       <ToastProvider>
         <HashRouter>
           <Routes>
+            <Route path="comecar" element={<Onboarding />} />
             <Route element={<MainLayout />}>
               <Route index element={<Dashboard />} />
               <Route path="lancamentos" element={<Transactions />} />

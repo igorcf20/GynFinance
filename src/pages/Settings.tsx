@@ -1,10 +1,10 @@
-import { Bell, Building2, CreditCard, Landmark, RotateCcw, Tags, Users, type LucideIcon } from 'lucide-react'
+import { Bell, Building2, CreditCard, Landmark, RotateCcw, Sparkles, Tags, Users, type LucideIcon } from 'lucide-react'
 import { useState } from 'react'
 import { NavLink, useParams } from 'react-router-dom'
 import { NOMES_GRUPO } from '../data/categorias'
 import { Header } from '../components/layout/Header'
 import { Badge } from '../components/ui/Badge'
-import { Button } from '../components/ui/Button'
+import { Button, ButtonLink } from '../components/ui/Button'
 import { Card, CardTitulo } from '../components/ui/Card'
 import { Input, Select, Toggle } from '../components/ui/Field'
 import { Modal, useToast } from '../components/ui/Modal'
@@ -194,16 +194,35 @@ function Assinatura() {
       {modo === 'demo' && (
         <Card>
           <CardTitulo>Demonstração</CardTitulo>
-          <p className="mb-4 text-[13px] text-ink-2">Você está vendo os dados de exemplo da Doces da Ana. Para começar a apresentação do zero, restaure os dados originais.</p>
+          <p className="mb-4 text-[13px] text-ink-2">
+            Você está vendo os dados de exemplo da Doces da Ana. Para usar com o seu negócio, faça a configuração inicial. Para começar a apresentação do zero, restaure os
+            dados originais.
+          </p>
+          <div className="flex flex-col gap-2.5 sm:flex-row">
+            <ButtonLink to="/comecar" icone={<Sparkles size={16} />}>
+              Usar com o meu negócio
+            </ButtonLink>
+            <Button variante="secundario" icone={<RotateCcw size={16} />} onClick={() => setConfirmar(true)}>
+              Restaurar dados de exemplo
+            </Button>
+          </div>
+        </Card>
+      )}
+      {modo === 'real' && (
+        <Card>
+          <CardTitulo>Seus dados</CardTitulo>
+          <p className="mb-4 text-[13px] text-ink-2">
+            Por enquanto os dados ficam guardados neste navegador. Voltar para a demonstração apaga os lançamentos do seu negócio.
+          </p>
           <Button variante="secundario" icone={<RotateCcw size={16} />} onClick={() => setConfirmar(true)}>
-            Restaurar dados de exemplo
+            Voltar para a demonstração
           </Button>
         </Card>
       )}
       <Modal
         aberto={confirmar}
         onFechar={() => setConfirmar(false)}
-        titulo="Restaurar dados de exemplo?"
+        titulo={modo === 'demo' ? 'Restaurar dados de exemplo?' : 'Voltar para a demonstração?'}
         rodape={
           <>
             <Button variante="secundario" onClick={() => setConfirmar(false)}>
@@ -221,7 +240,11 @@ function Assinatura() {
           </>
         }
       >
-        <p>Tudo o que foi lançado na demonstração será apagado e os números voltam aos originais.</p>
+        <p>
+          {modo === 'demo'
+            ? 'Tudo o que foi lançado na demonstração será apagado e os números voltam aos originais.'
+            : 'Os lançamentos e a configuração do seu negócio serão apagados deste navegador, e a Doces da Ana volta a aparecer.'}
+        </p>
       </Modal>
     </div>
   )

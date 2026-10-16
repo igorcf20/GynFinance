@@ -3,13 +3,21 @@ import { Link } from 'react-router-dom'
 import { NAV_MAIS } from '../components/layout/navegacao'
 import { Header } from '../components/layout/Header'
 import { Card } from '../components/ui/Card'
+import { CartaoComecar } from '../components/layout/CartaoComecar'
+import { useStore } from '../data/store'
 
 /** No celular, tudo o que não cabe na barra inferior. */
 export function More() {
+  const { modo } = useStore()
   const itens = [{ para: '/relatorios', rotulo: 'Relatórios', icone: BarChart3 }, ...NAV_MAIS]
   return (
     <>
       <Header titulo="Mais" />
+      {modo === 'demo' && (
+        <div className="mb-4">
+          <CartaoComecar />
+        </div>
+      )}
       <Card className="!p-2">
         <ul>
           {itens.map((i) => (

@@ -1,12 +1,15 @@
 import { Plus } from 'lucide-react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
+import { useStore } from '../../data/store'
 import { estaAtivo, NAV_PRINCIPAL } from './navegacao'
 
 /** Abaixo de 768px a sidebar vira esta barra inferior, com o botão de lançar no centro. */
 export function MobileNavigation() {
   const { pathname } = useLocation()
-  const [inicio, lancamentos, contas, mei] = NAV_PRINCIPAL
-  const itens = [inicio, lancamentos, null, contas, mei]
+  const { dados } = useStore()
+  const [inicio, lancamentos, contas, mei, relatorios] = NAV_PRINCIPAL
+  // Meu MEI só aparece para MEI; para os outros, o quarto lugar fica com Relatórios.
+  const itens = [inicio, lancamentos, null, contas, dados.empresa.ehMei ? mei : relatorios]
   return (
     <nav
       aria-label="Principal"

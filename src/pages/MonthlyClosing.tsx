@@ -1,11 +1,11 @@
-import { MessageCircle, PiggyBank } from 'lucide-react'
+import { CalendarCheck, MessageCircle, PiggyBank, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Aviso } from '../components/financial/Aviso'
 import { BarrasHorizontais, SobrouMesesChart } from '../components/financial/charts'
 import { Header } from '../components/layout/Header'
-import { Button } from '../components/ui/Button'
-import { Card, CardTitulo, IconeBox } from '../components/ui/Card'
+import { Button, ButtonLink } from '../components/ui/Button'
+import { Card, CardTitulo, EstadoVazio, IconeBox } from '../components/ui/Card'
 import { Select } from '../components/ui/Field'
 import { Explica } from '../components/ui/Explica'
 import { Modal, useToast } from '../components/ui/Modal'
@@ -27,6 +27,7 @@ export function MonthlyClosing() {
   const semNota = vendasSemNota(dados.lancamentos, mes)
   const reserva = reservaPendente(dados.lancamentos, mes)
   const opcoes = Array.from({ length: 11 }, (_, i) => addMeses(mesAtual, -1 - i))
+  const temLancamentos = dados.lancamentos.some((l) => l.situacao === 'realizado' && l.dataPagamento?.startsWith(mes))
 
   const textoWhats = [
     `Resumo de ${nomeMes(mes)} da ${dados.empresa.nomeFantasia}`,
@@ -68,7 +69,21 @@ export function MonthlyClosing() {
         opcoes={opcoes.map((m) => ({ valor: m, rotulo: mesAno(m) }))}
       />
 
-      <div className="grid grid-cols-1 gap-4 md:gap-5 xl:grid-cols-[1.5fr_1fr]">
+      {!temLancamentos && (
+        <Card>
+          <EstadoVazio
+            icone={<CalendarCheck size={22} />}
+            titulo={`Nada lançado em ${nomeMes(mes)}`}
+            texto={`O fechamento resume um mês que já terminou. O de ${nomeMes(mesAtual)} aparece aqui no dia 1º, com o que você lançar até lá.`}
+            acao={
+              <ButtonLink to="/lancar" icone={<Plus size={16} strokeWidth={2.4} />}>
+                Novo lançamento
+              </ButtonLink>
+            }
+          />
+        </Card>
+      )}
+      <div className={`grid grid-cols-1 gap-4 md:gap-5 xl:grid-cols-[1.5fr_1fr] ${temLancamentos ? '' : 'hidden'}`}>
         <div className="flex flex-col gap-4 md:gap-5">
           <Card className="flex items-end gap-5 md:!p-7">
             <div className="min-w-0 flex-1">
@@ -109,7 +124,7 @@ export function MonthlyClosing() {
           </Card>
 
           {semNota > 0 && (
-            <Aviso nivel="atencao" para="/lancamentos">
+            <Aviso nivel="atencao" para={`/lancamentos?situacao=semnota&mes=${mes}`}>
               {semNota} {semNota === 1 ? 'venda do mês está' : 'vendas do mês estão'} sem nota.
             </Aviso>
           )}

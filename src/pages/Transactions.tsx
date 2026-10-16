@@ -1,6 +1,6 @@
 import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Download, Pencil, Plus, ReceiptText, Search, Trash2 } from 'lucide-react'
-import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Header, SeletorMes } from '../components/layout/Header'
 import { IconeCategoria } from '../components/financial/categoriaVisual'
 import { Badge, type TomBadge } from '../components/ui/Badge'
@@ -73,13 +73,19 @@ function exportarCsv(linhas: Lancamento[], categorias: Categoria[], mes: string)
 }
 
 export function Transactions() {
-  const { dados, mes, excluirLancamento } = useStore()
+  const { dados, mes, setMes, excluirLancamento } = useStore()
   const toast = useToast()
   const navigate = useNavigate()
+  const [params] = useSearchParams()
   const [filtro, setFiltro] = useState<Filtro>('todos')
   const [busca, setBusca] = useState('')
   const [categoria, setCategoria] = useState('')
-  const [situacao, setSituacao] = useState('')
+  // Avisos e o fechamento abrem o extrato já filtrado (ex.: ?situacao=semnota&mes=2026-09).
+  const [situacao, setSituacao] = useState(params.get('situacao') ?? '')
+  const mesDoLink = params.get('mes')
+  useEffect(() => {
+    if (mesDoLink && /^\d{4}-\d{2}$/.test(mesDoLink)) setMes(mesDoLink)
+  }, [mesDoLink, setMes])
   const [ordem, setOrdem] = useState<Ordem>({ campo: 'data', desc: true })
   const [pagina, setPagina] = useState(1)
   const [excluir, setExcluir] = useState<Lancamento | null>(null)

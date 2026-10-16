@@ -1,4 +1,4 @@
-import type { Categoria } from '../domain/types'
+import type { Atividade, Categoria } from '../domain/types'
 
 const c = (id: string, nome: string, grupo: Categoria['grupo'], contaNoFaturamento = false): Categoria => ({
   id,
@@ -26,6 +26,16 @@ export const CATEGORIAS_PADRAO: Categoria[] = [
   c('das', 'DAS e impostos', 'imposto'),
   c('prolabore', 'Pró-labore', 'retirada'),
 ]
+
+/**
+ * Categorias conforme o tipo de negócio (configuração inicial): quem só presta serviço não vê
+ * mercadoria e embalagem; quem só vende produto não vê "Serviços prestados". Ficam desativadas,
+ * não apagadas, para o resto do sistema continuar encontrando o id.
+ */
+export function categoriasDoNegocio(atividade: Atividade): Categoria[] {
+  const fora = atividade === 'servico' ? ['mercadoria', 'embalagem'] : atividade === 'misto' ? [] : ['servicos']
+  return CATEGORIAS_PADRAO.map((c) => (fora.includes(c.id) ? { ...c, ativa: false } : c))
+}
 
 export const NOMES_GRUPO: Record<Categoria['grupo'], string> = {
   receita: 'Receita',

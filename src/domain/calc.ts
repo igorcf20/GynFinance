@@ -195,7 +195,8 @@ export interface SituacaoMei {
 
 export function situacaoMei(dados: Dados, hoje: DataISO): SituacaoMei {
   const ano = Number(hoje.slice(0, 4))
-  const faturado = faturadoNoAno(dados.lancamentos, dados.categorias, ano)
+  const antes = dados.empresa.faturadoAntes?.ano === ano ? dados.empresa.faturadoAntes.valor : 0
+  const faturado = faturadoNoAno(dados.lancamentos, dados.categorias, ano) + antes
   const limite = limiteDoAno(ano, dados.empresa.dataAbertura)
   return {
     ano,
@@ -210,7 +211,7 @@ export function situacaoMei(dados: Dados, hoje: DataISO): SituacaoMei {
 export type EstadoDas = 'pago' | 'pendente' | 'atrasado' | 'futuro'
 
 export function estadoDas(p: PagamentoDas | undefined, competencia: MesISO, hoje: DataISO): EstadoDas {
-  if (p?.lancamentoId) return 'pago'
+  if (p?.lancamentoId || p?.pagoForaDoSistema) return 'pago'
   // Como o usuário enxerga: "DAS de outubro" é o que vence no dia 20 de outubro.
   const mesHoje = mesDe(hoje)
   if (competencia > mesHoje) return 'futuro'
@@ -224,6 +225,8 @@ export function vencimentoDas(competencia: MesISO): DataISO {
 }
 
 // ---------- Alertas ----------
+// Tabela "Alertas" do planejamento. O id de cada aviso traz o mês ou a conta, para que dispensar
+// um aviso não esconda o do mês seguinte.
 
 export type NivelAlerta = 'atencao' | 'perigo' | 'info'
 
@@ -232,46 +235,129 @@ export interface Alerta {
   nivel: NivelAlerta
   texto: string
   acao?: { rotulo: string; para: string }
+  /** Aparece também no topo do painel; os demais ficam só no sino. */
+  painel: boolean
+  /** Pode ser dispensado com o X (os que somem sozinhos com a ação, como o DAS, não). */
+  dispensavel?: boolean
+}
+
+function nomeDaConta(l: Lancamento, categorias: Categoria[]): string {
+  const nome = (l.natureza === 'entrada' ? l.contraparte || l.descricao : l.descricao || l.contraparte) || categorias.find((c) => c.id === l.categoriaId)?.nome
+  return nome ?? (l.natureza === 'entrada' ? 'Um cliente' : 'Uma conta')
 }
 
 export function alertas(dados: Dados, hoje: DataISO): Alerta[] {
   const lista: Alerta[] = []
   const mes = mesDe(hoje)
   const dia = Number(hoje.slice(8, 10))
+  const nMes = Number(hoje.slice(5, 7))
+  const ano = Number(hoje.slice(0, 4))
+  const mesPassado = addMeses(mes, -1)
 
   if (dados.empresa.ehMei) {
     const das = dados.pagamentosDas.find((p) => p.competencia === mes)
     const estado = estadoDas(das, mes, hoje)
     if (estado === 'pendente' && dia >= 15) {
-      lista.push({ id: 'das', nivel: 'atencao', texto: `O DAS de ${nomeMes(mes)} vence dia 20.`, acao: { rotulo: 'Ver', para: '/mei' } })
+      lista.push({ id: `das:${mes}`, nivel: 'atencao', painel: true, texto: `O DAS de ${nomeMes(mes)} vence dia 20.`, acao: { rotulo: 'Ver', para: '/mei' } })
     }
     if (estado === 'atrasado') {
-      lista.push({ id: 'das-atrasado', nivel: 'perigo', texto: 'O DAS venceu. Pague logo para a multa não crescer.', acao: { rotulo: 'Ver', para: '/mei' } })
+      lista.push({ id: `das-atrasado:${mes}`, nivel: 'perigo', painel: true, texto: 'O DAS venceu. Pague logo para a multa não crescer.', acao: { rotulo: 'Ver', para: '/mei' } })
     }
     const s = situacaoMei(dados, hoje)
+    const ver = { rotulo: 'Ver', para: '/mei' }
     if (s.usado > 1.2) {
-      lista.push({ id: 'mei-120', nivel: 'perigo', texto: 'Você passou mais de 20% do limite do MEI. Procure um contador agora.', acao: { rotulo: 'Ver', para: '/mei' } })
+      lista.push({ id: `mei-120:${ano}`, nivel: 'perigo', painel: true, texto: 'Você passou mais de 20% do limite do MEI. O desenquadramento vale desde janeiro. Procure um contador agora.', acao: ver })
     } else if (s.usado > 1) {
-      lista.push({ id: 'mei-100', nivel: 'perigo', texto: 'Você passou o limite do MEI. Fale com um contador.', acao: { rotulo: 'Ver', para: '/mei' } })
+      lista.push({ id: `mei-100:${ano}`, nivel: 'perigo', painel: true, texto: 'Você passou o limite do MEI. Fale com um contador: no ano que vem a empresa deixa de ser MEI.', acao: ver })
     } else if (s.usado >= 0.9) {
-      lista.push({ id: 'mei-90', nivel: 'atencao', texto: 'Atenção: falta pouco para o limite do MEI.', acao: { rotulo: 'Ver', para: '/mei' } })
+      lista.push({ id: `mei-90:${ano}`, nivel: 'atencao', painel: true, dispensavel: true, texto: 'Atenção: falta pouco para o limite do MEI.', acao: ver })
     } else if (s.usado >= 0.7) {
-      lista.push({ id: 'mei-70', nivel: 'atencao', texto: `Você já usou 70% do limite do ano. Ainda pode faturar ${brl(s.restante)}.`, acao: { rotulo: 'Ver', para: '/mei' } })
-    } else if (Number(hoje.slice(5, 7)) >= 3 && s.projecao > s.limite) {
-      lista.push({ id: 'mei-proj', nivel: 'atencao', texto: 'No ritmo atual, você passa do limite do MEI este ano.', acao: { rotulo: 'Ver', para: '/mei' } })
+      lista.push({ id: `mei-70:${ano}`, nivel: 'atencao', painel: true, dispensavel: true, texto: `Você já usou 70% do limite do ano. Ainda pode faturar ${brl(s.restante)}.`, acao: ver })
+    } else if (nMes >= 3 && s.projecao > s.limite) {
+      lista.push({ id: `mei-proj:${mes}`, nivel: 'atencao', painel: true, dispensavel: true, texto: 'No ritmo atual, você passa do limite do MEI este ano.', acao: ver })
     }
+    // Declaração anual: de 1º de abril a 31 de maio, com o faturamento do ano anterior.
+    if (nMes === 4 || nMes === 5) {
+      const fat = faturadoNoAno(dados.lancamentos, dados.categorias, ano - 1) + (dados.empresa.faturadoAntes?.ano === ano - 1 ? dados.empresa.faturadoAntes.valor : 0)
+      lista.push({
+        id: `dasn:${ano}`,
+        nivel: nMes === 5 && dia >= 15 ? 'atencao' : 'info',
+        painel: true,
+        dispensavel: true,
+        texto: `A declaração anual do MEI (DASN-SIMEI) vence em 31/05. Seu faturamento de ${ano - 1} foi ${brl(fat)}.`,
+        acao: ver,
+      })
+    }
+  }
+
+  // Contas a pagar atrasadas: no painel.
+  const pagar = contasAbertas(dados.lancamentos, 'pagar')
+  const atrasadas = pagar.filter((l) => diasEntre(hoje, l.dataVencimento!) < 0)
+  if (atrasadas.length === 1) {
+    const l = atrasadas[0]
+    const d = -diasEntre(hoje, l.dataVencimento!)
+    lista.push({ id: `atrasada:${l.id}`, nivel: 'perigo', painel: true, texto: `A conta "${nomeDaConta(l, dados.categorias)}" venceu há ${d} ${d === 1 ? 'dia' : 'dias'}.`, acao: { rotulo: 'Ver', para: '/contas' } })
+  } else if (atrasadas.length > 1) {
+    lista.push({ id: `atrasadas:${atrasadas.map((l) => l.id).join(',')}`, nivel: 'perigo', painel: true, texto: `${atrasadas.length} contas estão atrasadas, somando ${brl(soma(atrasadas))}.`, acao: { rotulo: 'Ver', para: '/contas' } })
+  }
+
+  // Contas vencendo: no dia e até X dias antes (Configurações, Notificações). Só no sino; o painel já mostra os próximos 7 dias.
+  const antecedencia = dados.preferencias.lembreteDias
+  for (const l of pagar.filter((l) => { const d = diasEntre(hoje, l.dataVencimento!); return d >= 0 && d <= antecedencia })) {
+    const d = diasEntre(hoje, l.dataVencimento!)
+    const quando = d === 0 ? 'Hoje vence' : d === 1 ? 'Amanhã vence' : `Em ${d} dias vence`
+    lista.push({ id: `vence:${l.id}`, nivel: 'info', painel: false, texto: `${quando} ${nomeDaConta(l, dados.categorias)}: ${brl(l.valor)}.`, acao: { rotulo: 'Ver', para: '/contas' } })
+  }
+
+  // A receber atrasado: só no sino, com o atalho para cobrar.
+  for (const l of contasAbertas(dados.lancamentos, 'receber').filter((l) => diasEntre(hoje, l.dataVencimento!) < 0)) {
+    const [, m, d] = l.dataVencimento!.split('-')
+    lista.push({
+      id: `receber:${l.id}`,
+      nivel: 'atencao',
+      painel: false,
+      texto: `${nomeDaConta(l, dados.categorias)} deve ${brl(l.valor)} desde ${d}/${m}. Cobrar pelo WhatsApp?`,
+      acao: { rotulo: 'Cobrar', para: '/contas?aba=receber' },
+    })
   }
 
   const r = resumoMes(dados.lancamentos, mes)
   if (r.retirei > r.sobrou && r.sobrou >= 0 && r.retirei > 0) {
-    lista.push({ id: 'retirada', nivel: 'atencao', texto: `Você tirou ${brl(r.retirei - r.sobrou)} a mais do que o negócio gerou este mês.` })
+    lista.push({ id: `retirada:${mes}`, nivel: 'atencao', painel: true, dispensavel: true, texto: `Você tirou ${brl(r.retirei - r.sobrou)} a mais do que o negócio gerou este mês.` })
   }
 
   const aportes = dados.lancamentos.filter((l) => l.natureza === 'aporte' && l.espelhoDe && l.dataPagamento && mesDe(l.dataPagamento) === mes)
   if (aportes.length >= 3) {
-    lista.push({ id: 'mistura', nivel: 'info', texto: `Você usou dinheiro pessoal ${aportes.length} vezes este mês. Que tal manter um valor fixo no caixa da empresa?` })
+    lista.push({ id: `mistura:${mes}`, nivel: 'info', painel: true, dispensavel: true, texto: `Você usou dinheiro pessoal ${aportes.length} vezes este mês. Que tal manter um valor fixo no caixa da empresa?` })
   }
-  return lista
+
+  // Primeira semana do mês: fechamento do mês que terminou e vendas que ficaram sem nota.
+  if (dia <= 7 && dados.lancamentos.some((l) => l.dataPagamento && mesDe(l.dataPagamento) === mesPassado)) {
+    const rp = resumoMes(dados.lancamentos, mesPassado)
+    const fechou = rp.sobrou >= 0 ? `sobrou ${brl(rp.sobrou)}` : `faltou ${brl(-rp.sobrou)}`
+    lista.push({
+      id: `fechamento:${mesPassado}`,
+      nivel: 'info',
+      painel: true,
+      dispensavel: true,
+      texto: `${capitalizar(nomeMes(mesPassado))} fechou: ${fechou}.`,
+      acao: { rotulo: 'Ver resumo', para: '/fechamento' },
+    })
+    const semNota = vendasSemNota(dados.lancamentos, mesPassado)
+    if (semNota > 0) {
+      lista.push({
+        id: `sem-nota:${mesPassado}`,
+        nivel: 'atencao',
+        painel: false,
+        dispensavel: true,
+        texto: `${semNota} ${semNota === 1 ? 'venda' : 'vendas'} de ${nomeMes(mesPassado)} ${semNota === 1 ? 'está' : 'estão'} sem nota.`,
+        acao: { rotulo: 'Ver', para: `/lancamentos?situacao=semnota&mes=${mesPassado}` },
+      })
+    }
+  }
+
+  const dispensados = new Set(dados.avisosDispensados ?? [])
+  return lista.filter((a) => !dispensados.has(a.id))
 }
 
 export function descricaoConta(l: Lancamento, hoje: DataISO): string {

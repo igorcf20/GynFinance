@@ -1,5 +1,6 @@
 import { CheckCircle2, Plus, Search } from 'lucide-react'
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { ContaItem } from '../components/financial/ContaItem'
 import { Header } from '../components/layout/Header'
 import { ButtonLink } from '../components/ui/Button'
@@ -17,7 +18,8 @@ const GRUPOS: { id: GrupoPrazo; titulo: string }[] = [
 
 export function Accounts() {
   const { dados, hoje } = useStore()
-  const [aba, setAba] = useState<'pagar' | 'receber'>('pagar')
+  const [params] = useSearchParams()
+  const [aba, setAba] = useState<'pagar' | 'receber'>(params.get('aba') === 'receber' ? 'receber' : 'pagar')
   const [busca, setBusca] = useState('')
   const pagar = contasAbertas(dados.lancamentos, 'pagar')
   const receber = contasAbertas(dados.lancamentos, 'receber')

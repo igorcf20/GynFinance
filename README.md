@@ -26,9 +26,14 @@ npm run build    # gera dist/, que roda em qualquer hospedagem estática
 | Fluxo de caixa | `#/fluxo` |
 | Relatórios | `#/relatorios` |
 | Configurações | `#/configuracoes` |
+| Configuração inicial (primeiro acesso) | `#/comecar` |
 
 O app abre em **modo demonstração** com a "Doces da Ana" vista em 15/10/2026. Os dados ficam no navegador
 (localStorage). Em Configurações, Assinatura, dá para restaurar os dados de exemplo antes de uma apresentação.
+
+"Usar com o meu negócio" (menu lateral, Mais ou Configurações) abre a configuração inicial: nome, tipo de negócio,
+MEI, mês de abertura, saldo de hoje, pró-labore desejado e, para MEI, o que já vendeu no ano e se os DAS estão em dia.
+Ela troca a demonstração por um negócio vazio, com a data de hoje.
 
 ## Organização
 
@@ -45,6 +50,8 @@ src/
 ```
 
 - Visual: segue o [DESIGN.md](docs/DESIGN.md) e a [imagem de referência](docs/telas-referencia.png). Cores só pelos tokens de `src/styles/tokens.css`; degradês em `grad-primario` e `grad-navy` (`src/index.css`).
+- Avisos: `alertas()` em `src/domain/calc.ts` segue a tabela "Alertas" do planejamento. Os marcados `painel` aparecem
+  no Início; todos aparecem no sino. O id traz o mês ou a conta, então dispensar um aviso não esconde o do mês seguinte.
 - Movimento: as curvas e animações ficam em `src/index.css` (`anim-*`) e somem para quem pede menos movimento no sistema.
   Números contam até o valor (`ValorAnimado`) e os principais têm um "?" (`Explica`) com o que são e a conta do mês.
 - Regras: o painel usa regime de caixa (data de pagamento); o faturamento do MEI usa a data da venda.

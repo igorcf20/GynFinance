@@ -5,8 +5,9 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { vencimentoDas } from '../domain/calc'
 import { parametroDoAno } from '../domain/parametros'
 import { gerarPrevistos } from '../domain/recorrencia'
-import type { Centavos, Dados, DataISO, Empresa, Lancamento, MesISO, Preferencias, Recorrencia, SeFimDeSemana } from '../domain/types'
+import type { Atividade, Centavos, Dados, DataISO, Empresa, Lancamento, MesISO, Preferencias, Recorrencia, SeFimDeSemana } from '../domain/types'
 import { hojeReal, mesDe, uid } from '../lib/format'
+import { categoriasDoNegocio } from './categorias'
 import { dadosDemo, DEMO_HOJE } from './demo'
 
 // v2: valores em centavos e contas fixas como Recorrencia.
@@ -41,6 +42,71 @@ function carregar(): Salvo {
 
 export type NovoLancamento = Omit<Lancamento, 'id' | 'empresaId'>
 
+/** Respostas da configuração inicial (tela 0 do planejamento). */
+export interface ConfigInicial {
+  nomeDono: string
+  nomeFantasia: string
+  cnpj?: string
+  uf: string
+  ehMei: boolean
+  /** Mês de abertura da empresa (AAAA-MM). */
+  mesAbertura: MesISO
+  atividade: Atividade
+  saldoBanco: Centavos
+  saldoCaixa: Centavos
+  prolaboreDesejado?: Centavos
+  /** MEI: vendas deste ano antes de começar a usar o sistema. */
+  faturadoAntes?: Centavos
+  /** MEI: os DAS deste ano até o mês passado já estão pagos. */
+  dasEmDia?: boolean
+}
+
+/** Monta os dados de um negócio novo, sem nenhum lançamento. */
+export function dadosIniciais(c: ConfigInicial, hoje: DataISO): Dados {
+  const empresaId = uid()
+  const ano = Number(hoje.slice(0, 4))
+  const abertura = `${c.mesAbertura}-01`
+  const pagamentosDas = []
+  if (c.ehMei && c.dasEmDia) {
+    // Do mês de abertura (ou janeiro) até o mês passado: pagos antes do Gynfinance, sem gerar saída.
+    let m = c.mesAbertura > `${ano}-01` ? c.mesAbertura : `${ano}-01`
+    const atual = mesDe(hoje)
+    while (m < atual) {
+      const valor = parametroDoAno(ano).dasValorPorAtividade[c.atividade]
+      pagamentosDas.push({ empresaId, competencia: m, valor, vencimento: vencimentoDas(m), pagoForaDoSistema: true })
+      const [a, mm] = m.split('-').map(Number)
+      m = mm === 12 ? `${a + 1}-01` : `${a}-${String(mm + 1).padStart(2, '0')}`
+    }
+  }
+  return {
+    empresa: {
+      id: empresaId,
+      nomeDono: c.nomeDono.trim(),
+      nomeFantasia: c.nomeFantasia.trim(),
+      cnpj: c.cnpj?.trim() || undefined,
+      ehMei: c.ehMei,
+      dataAbertura: abertura,
+      atividade: c.atividade,
+      uf: c.uf,
+      prolaboreDesejado: c.prolaboreDesejado || undefined,
+      faturadoAntes: c.ehMei && c.faturadoAntes ? { ano, valor: c.faturadoAntes } : undefined,
+      modulosAtivos: ['financeiro'],
+    },
+    // Mesmos ids da demonstração: as telas escolhem a conta pela forma de pagamento.
+    contas: [
+      { id: 'conta-pj', empresaId, nome: 'Conta da empresa', tipo: 'banco', saldoInicial: c.saldoBanco, ativa: true },
+      { id: 'caixa', empresaId, nome: 'Caixa (dinheiro)', tipo: 'caixa', saldoInicial: c.saldoCaixa, ativa: true },
+      { id: 'reserva', empresaId, nome: 'Reserva', tipo: 'reserva', saldoInicial: 0, ativa: true },
+    ],
+    categorias: categoriasDoNegocio(c.atividade),
+    lancamentos: [],
+    recorrencias: [],
+    pagamentosDas,
+    preferencias: { lembreteDias: 1, lembreteEmail: true, resumoMensal: true },
+    avisosDispensados: [],
+  }
+}
+
 /** Opções de conta fixa ao salvar um lançamento previsto. */
 export interface OpcoesRepetir {
   repetir: boolean
@@ -65,6 +131,9 @@ interface Store {
   recorrenciaDe: (l: Lancamento) => Recorrencia | undefined
   atualizarEmpresa: (e: Partial<Empresa>) => void
   atualizarPreferencias: (p: Partial<Preferencias>) => void
+  dispensarAviso: (id: string) => void
+  /** Sai da demonstração e começa com os dados do próprio negócio. */
+  comecar: (c: ConfigInicial) => void
   restaurarDemo: () => void
 }
 
@@ -256,6 +325,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     (p: Partial<Preferencias>) => mudar((d) => ({ ...d, preferencias: { ...d.preferencias, ...p } })),
     [mudar],
   )
+  const dispensarAviso = useCallback(
+    (id: string) => mudar((d) => ({ ...d, avisosDispensados: [...(d.avisosDispensados ?? []), id] })),
+    [mudar],
+  )
+  const comecar = useCallback((c: ConfigInicial) => {
+    const hojeReal_ = hojeReal()
+    setSalvo({ modo: 'real', dados: dadosIniciais(c, hojeReal_) })
+    setMes(mesDe(hojeReal_))
+  }, [])
   const restaurarDemo = useCallback(() => {
     setSalvo({ modo: 'demo', dados: dadosDemo() })
     setMes(mesDe(DEMO_HOJE))
@@ -276,9 +354,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       recorrenciaDe,
       atualizarEmpresa,
       atualizarPreferencias,
+      dispensarAviso,
+      comecar,
       restaurarDemo,
     }),
-    [salvo, hoje, mes, salvarLancamento, excluirLancamento, marcarComoPago, marcarDasPago, separarReserva, recorrenciaDe, atualizarEmpresa, atualizarPreferencias, restaurarDemo],
+    [salvo, hoje, mes, salvarLancamento, excluirLancamento, marcarComoPago, marcarDasPago, separarReserva, recorrenciaDe, atualizarEmpresa, atualizarPreferencias, dispensarAviso, comecar, restaurarDemo],
   )
   return <Ctx.Provider value={valor}>{children}</Ctx.Provider>
 }

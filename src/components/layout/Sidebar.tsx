@@ -52,7 +52,7 @@ export function Sidebar() {
       </Link>
 
       <nav aria-label="Principal" className="flex flex-col gap-1">
-        {NAV_PRINCIPAL.map((i) => (
+        {NAV_PRINCIPAL.filter((i) => i.para !== '/mei' || e.ehMei).map((i) => (
           <span key={i.para}>
             <span className="xl:hidden">
               <Item item={i} caminho={pathname} compacto />
@@ -93,9 +93,15 @@ export function Sidebar() {
 
       <div className="mt-auto">
         {modo === 'demo' && (
-          <p className="mb-3 hidden rounded-[12px] border border-[#d6e4fc] bg-primary-soft/70 px-3 py-2 text-[12px] font-medium text-primary xl:block">
+          <Link
+            to="/comecar"
+            className="group mb-3 hidden rounded-[12px] border border-[#d6e4fc] bg-primary-soft/70 px-3 py-2.5 text-[12px] font-medium text-primary transition-colors hover:bg-primary-soft xl:block"
+          >
             Modo demonstração com dados de exemplo.
-          </p>
+            <span className="mt-1 flex items-center gap-1 font-bold">
+              Usar com o meu negócio <ChevronRight size={14} className="transition-transform group-hover:translate-x-0.5" aria-hidden />
+            </span>
+          </Link>
         )}
         <Link
           to="/configuracoes"

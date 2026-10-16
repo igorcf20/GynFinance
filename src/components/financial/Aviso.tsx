@@ -1,5 +1,5 @@
-import { AlertTriangle, ChevronRight, FileText, Info, type LucideIcon } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { AlertTriangle, CalendarCheck, ChevronRight, FileText, HandCoins, Info, X, type LucideIcon } from 'lucide-react'
+import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 
 type Nivel = 'perigo' | 'atencao' | 'info'
@@ -32,6 +32,7 @@ export function Aviso({
   icone,
   acao,
   para,
+  onDispensar,
 }: {
   nivel: Nivel
   children: ReactNode
@@ -39,8 +40,11 @@ export function Aviso({
   /** Botão à direita (ex.: "Ver"). Sem ele, a faixa inteira vira link com seta. */
   acao?: { rotulo: string; para: string }
   para?: string
+  /** Mostra o X; o aviso sai deslizando e só então é dispensado. */
+  onDispensar?: () => void
 }) {
   const e = ESTILO[nivel]
+  const [saindo, setSaindo] = useState(false)
   const Icone = icone ?? (nivel === 'info' ? Info : AlertTriangle)
   const conteudo = (
     <>
@@ -54,9 +58,24 @@ export function Aviso({
         </Link>
       )}
       {!acao && para && <ChevronRight size={18} className={e.texto} aria-hidden />}
+      {onDispensar && (
+        <button
+          type="button"
+          aria-label="Dispensar aviso"
+          title="Dispensar"
+          onClick={(ev) => {
+            ev.preventDefault()
+            setSaindo(true)
+            window.setTimeout(onDispensar, 300)
+          }}
+          className={`-mr-1.5 inline-flex size-8 shrink-0 items-center justify-center rounded-full opacity-60 transition-all hover:bg-white/70 hover:opacity-100 ${e.texto}`}
+        >
+          <X size={16} strokeWidth={2.2} aria-hidden />
+        </button>
+      )}
     </>
   )
-  const classe = `flex items-center gap-3.5 rounded-[18px] border px-4 py-3.5 shadow-[0_10px_28px_-18px_rgba(194,97,12,0.45)] md:px-5 ${e.caixa}`
+  const classe = `flex items-center gap-3.5 rounded-[18px] border px-4 py-3.5 shadow-[0_10px_28px_-18px_rgba(194,97,12,0.45)] md:px-5 ${e.caixa} ${saindo ? 'anim-sair' : ''}`
   if (!acao && para)
     return (
       <Link data-entrar to={para} className={`${classe} transition-transform hover:-translate-y-0.5`}>
@@ -71,5 +90,8 @@ export function Aviso({
 }
 
 export function iconeDoAviso(id: string): LucideIcon | undefined {
-  return id.startsWith('das') ? FileText : undefined
+  if (id.startsWith('das')) return FileText
+  if (id.startsWith('fechamento')) return CalendarCheck
+  if (id.startsWith('receber')) return HandCoins
+  return undefined
 }

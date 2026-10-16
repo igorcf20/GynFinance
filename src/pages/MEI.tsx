@@ -37,6 +37,7 @@ function RevenueLimit() {
         >
           Soma das vendas e serviços do ano, pela data da venda, como a Receita conta. O MEI pode faturar até {brl(s.limite)} por ano; no ano em que a empresa abre, o
           limite é proporcional aos meses de atividade.
+          {dados.empresa.faturadoAntes?.ano === s.ano && ` Inclui ${brl(dados.empresa.faturadoAntes.valor)} vendidos antes de você começar a usar o Gynfinance.`}
         </Explica>
       </p>
       <div className="mt-2 flex items-baseline justify-between gap-3">

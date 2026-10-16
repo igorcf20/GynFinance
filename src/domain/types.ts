@@ -21,6 +21,8 @@ export interface Empresa {
   uf: string
   municipio?: string
   prolaboreDesejado?: Centavos
+  /** Vendas do ano feitas antes de usar o Gynfinance, informadas na configuração inicial (limite do MEI). */
+  faturadoAntes?: { ano: number; valor: Centavos }
   modulosAtivos: string[]
 }
 
@@ -117,6 +119,8 @@ export interface PagamentoDas {
   valor: Centavos
   vencimento: DataISO
   lancamentoId?: string
+  /** Pago antes de usar o Gynfinance (informado na configuração inicial); não gera saída. */
+  pagoForaDoSistema?: boolean
 }
 
 export interface Preferencias {
@@ -133,4 +137,6 @@ export interface Dados {
   recorrencias: Recorrencia[]
   pagamentosDas: PagamentoDas[]
   preferencias: Preferencias
+  /** Avisos que o usuário dispensou (o id do aviso já traz o mês ou a conta). */
+  avisosDispensados?: string[]
 }

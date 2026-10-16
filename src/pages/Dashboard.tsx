@@ -21,7 +21,7 @@ function saudacao(): string {
 }
 
 export function Dashboard() {
-  const { dados, hoje, mes, separarReserva } = useStore()
+  const { dados, hoje, mes, separarReserva, dispensarAviso } = useStore()
   const toast = useToast()
   const [confirmarReserva, setConfirmarReserva] = useState(false)
 
@@ -32,7 +32,9 @@ export function Dashboard() {
   const serie = serieMensal(dados.lancamentos, mes, 5)
   const saldo = saldoCaixa(dados)
   const proximos = proximos7Dias(dados.lancamentos, hoje)
-  const avisos = alertas(dados, hoje)
+  // Conta atrasada que já aparece em "Próximos 7 dias" não vira uma faixa repetida.
+  const naLista = new Set(proximos.slice(0, 3).map((c) => `atrasada:${c.id}`))
+  const avisos = alertas(dados, hoje).filter((a) => a.painel && !naLista.has(a.id))
   const reserva = reservaPendente(dados.lancamentos, mes)
   const ehMesAtual = mes === hoje.slice(0, 7)
   // Um ponto por semana deixa a linha suave, como na imagem de referência.
@@ -43,7 +45,7 @@ export function Dashboard() {
 
   return (
     <>
-      <Header titulo={`${saudacao()}, ${dados.empresa.nomeDono}`} subtitulo={`${dados.empresa.nomeFantasia} · ${dados.empresa.ehMei ? 'MEI' : 'Empresa'}`} periodo />
+      <Header titulo={`${saudacao()}, ${dados.empresa.nomeDono.split(' ')[0]}`} subtitulo={`${dados.empresa.nomeFantasia} · ${dados.empresa.ehMei ? 'MEI' : 'Empresa'}`} periodo />
 
       <div className="grid grid-cols-1 gap-4 md:gap-5 xl:grid-cols-[1.5fr_1fr]">
         <div className="flex flex-col gap-4 md:gap-5">
@@ -78,9 +80,12 @@ export function Dashboard() {
               )}
               <p className="mt-4 text-[14px] text-ink-2">{fraseSobrou(r, maiores)}</p>
             </div>
-            <div className="w-full sm:w-[230px]">
-              <SobrouMesesChart serie={serie} />
-            </div>
+            {/* Sem nenhum mês com movimento, o gráfico só ocuparia espaço. */}
+            {serie.some((m) => m.entrou || m.saiu) && (
+              <div className="w-full sm:w-[230px]">
+                <SobrouMesesChart serie={serie} />
+              </div>
+            )}
           </Card>
 
           <FinancialSummary r={r} />
@@ -140,7 +145,7 @@ export function Dashboard() {
           </Card>
 
           {avisos.map((a) => (
-            <Aviso key={a.id} nivel={a.nivel} icone={iconeDoAviso(a.id)} acao={a.acao}>
+            <Aviso key={a.id} nivel={a.nivel} icone={iconeDoAviso(a.id)} acao={a.acao} onDispensar={a.dispensavel ? () => dispensarAviso(a.id) : undefined}>
               {a.texto}
             </Aviso>
           ))}
