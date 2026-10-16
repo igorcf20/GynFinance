@@ -1,6 +1,8 @@
 // Conversa com o servidor do Gynfinance (server/). Na demonstração publicada não há servidor:
 // verificarServidor() responde "sem" e o app segue guardando tudo no navegador.
 
+import { dentroDeMoldura } from '../lib/moldura'
+
 export interface Conta {
   usuario: { nome: string; email: string }
   temNegocio: boolean
@@ -35,6 +37,7 @@ export type Servidor = { tem: false } | { tem: true; conta: Conta | null }
 
 /** Há servidor? Se houver, quem está logado? */
 export async function verificarServidor(): Promise<Servidor> {
+  if (dentroDeMoldura) return { tem: false }
   try {
     const r = await fetch('api/conta', { credentials: 'same-origin' })
     const tipo = r.headers.get('content-type') ?? ''

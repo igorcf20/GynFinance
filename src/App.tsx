@@ -1,9 +1,10 @@
-import type { ReactNode } from 'react'
-import { HashRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { useState, type ReactNode } from 'react'
+import { HashRouter, Navigate, Route, Routes, UNSAFE_createMemoryHistory, unstable_HistoryRouter as HistoryRouter, useLocation } from 'react-router-dom'
 import { LogoMarca } from './components/layout/Logo'
 import { MainLayout } from './components/layout/MainLayout'
 import { ToastProvider } from './components/ui/Modal'
 import { StoreProvider, useStore } from './data/store'
+import { dentroDeMoldura, rotaInicial } from './lib/moldura'
 import { Entrar } from './pages/Entrar'
 import { Accounts } from './pages/Accounts'
 import { CashFlow } from './pages/CashFlow'
@@ -37,12 +38,26 @@ function Portao({ children }: { children: ReactNode }) {
   return <>{children}</>
 }
 
+/**
+ * Na demonstração (dentro de moldura) a navegação fica na memória. Os links apontam para "#",
+ * que não muda de tela nem de endereço se o clique escapar do React.
+ */
+function RoteadorDaMoldura({ children }: { children: ReactNode }) {
+  const [historico] = useState(() => {
+    const h = UNSAFE_createMemoryHistory({ initialEntries: [rotaInicial()], v5Compat: true })
+    return new Proxy(h, { get: (alvo, chave) => (chave === 'createHref' ? () => '#' : Reflect.get(alvo, chave)) })
+  })
+  return <HistoryRouter history={historico}>{children}</HistoryRouter>
+}
+
 // HashRouter: o build roda em qualquer hospedagem estática, sem configurar o servidor.
+const Roteador = dentroDeMoldura ? RoteadorDaMoldura : HashRouter
+
 export default function App() {
   return (
     <StoreProvider>
       <ToastProvider>
-        <HashRouter>
+        <Roteador>
           <Portao>
             <Routes>
               <Route path="entrar" element={<Entrar />} />
@@ -62,7 +77,7 @@ export default function App() {
               </Route>
             </Routes>
           </Portao>
-        </HashRouter>
+        </Roteador>
       </ToastProvider>
     </StoreProvider>
   )
