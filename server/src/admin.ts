@@ -140,15 +140,18 @@ export async function rotasAdmin(app: FastifyInstance, pool: pg.Pool, exigirLogi
 
   // ---------- Público (site de venda) ----------
   app.get('/api/publico/site', async (_req, rep) => {
-    const [conteudo, planos] = await Promise.all([
+    const [conteudo, planos, config] = await Promise.all([
       pool.query<{ chave: string; valor: string }>('select chave, valor from site_conteudo'),
       pool.query<Linha>('select * from plano where ativo order by ordem, preco'),
+      pool.query<{ cadastro_aberto: boolean }>('select cadastro_aberto from config_sistema'),
     ])
     rep.header('cache-control', 'public, max-age=60')
     return {
       conteudo: Object.fromEntries(conteudo.rows.map((r) => [r.chave, r.valor])),
       planos: planos.rows.map(plano),
       modulos: MODULOS_SERVIDOR,
+      // Fechado, o site troca "Criar minha conta" por "Quero ser avisado" (lista de espera no WhatsApp).
+      cadastroAberto: config.rows[0]?.cadastro_aberto ?? true,
     }
   })
 

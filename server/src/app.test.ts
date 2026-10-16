@@ -331,6 +331,7 @@ describe.skipIf(!URL_ADMIN)('servidor', () => {
     const cfg = { cadastroAberto: false, diasTeste: 14, planoPadrao: 'essencial', iaLigada: false, aviso: 'Manutenção às 22h', manutencao: false }
     expect((await pedir(igor, 'PUT', '/api/admin/config', cfg)).statusCode).toBe(200)
     expect((await app.inject({ method: 'POST', url: '/api/conta/criar', payload: { nome: 'Zé', email: 'ze@exemplo.com', senha: 'senha-forte-1', aceiteTermos: true } })).statusCode).toBe(403)
+    expect((await app.inject({ method: 'GET', url: '/api/publico/site' })).json().cadastroAberto).toBe(false)
     expect((await pedir(igor, 'GET', '/api/conta')).json().sistema.aviso).toBe('Manutenção às 22h')
     await pedir(igor, 'PUT', '/api/admin/config', { ...cfg, cadastroAberto: true, aviso: '' })
     expect((await pedir(igor, 'GET', '/api/admin/registro')).json().registro.length).toBeGreaterThan(2)

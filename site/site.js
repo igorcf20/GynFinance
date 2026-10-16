@@ -114,6 +114,8 @@
 (function () {
   var MSG_WHATS_PADRAO = 'Olá! Quero saber mais sobre o Gynfinance.';
   var LINK_COMECAR = '/app/#/entrar?depois=comecar';
+  var LISTA_BOTAO_PADRAO = 'Quero ser avisado';
+  var LISTA_MSG_PADRAO = 'Olá! Quero entrar na lista de espera do Gynfinance e ser avisado quando abrir.\nNome:\nNegócio:\nCidade:\nComo conheci o Gynfinance:';
   var SVG_NS = 'http://www.w3.org/2000/svg';
 
   function texto(v) { return typeof v === 'string' ? v : null; }
@@ -167,6 +169,56 @@
     img.src = src;
   }
 
+  function numeroWhats(c) {
+    var numero = (texto(c['contato.whatsapp']) || '').replace(/\D/g, '');
+    if (numero.length === 10 || numero.length === 11) numero = '55' + numero; // só DDD + número: Brasil
+    return numero;
+  }
+
+  // Canal de onde a pessoa veio: ?origem=instagram (ou utm_source) no link divulgado.
+  function origem() {
+    var m = /[?&](?:origem|utm_source)=([^&#]+)/i.exec(location.search);
+    if (!m) return '';
+    try { return decodeURIComponent(m[1].replace(/\+/g, ' ')).replace(/[^\w\s.-]/g, '').trim().slice(0, 40); } catch (e) { return ''; }
+  }
+
+  // Troca o texto do botão sem mexer nos ícones: o span editável, ou o primeiro texto solto.
+  function trocarRotulo(a, valor) {
+    var alvo = a.querySelector('span[data-cms]');
+    if (alvo) { alvo.textContent = valor; return; }
+    for (var n = a.firstChild; n; n = n.nextSibling) {
+      if (n.nodeType === 3 && n.textContent.trim()) { n.textContent = n.textContent.replace(/\S[\s\S]*\S|\S/, valor); return; }
+    }
+    a.insertBefore(document.createTextNode(valor), a.firstChild);
+  }
+
+  // Cadastro fechado (Superadmin > Sistema): "Criar minha conta" vira "Quero ser avisado" e abre o WhatsApp.
+  function aplicarListaEspera(c) {
+    var rotulo = (texto(c['lista.botao']) || '').trim() || LISTA_BOTAO_PADRAO;
+    var msg = (texto(c['lista.mensagem']) || '').trim() || LISTA_MSG_PADRAO;
+    var canal = origem();
+    if (canal) msg += '\nVim por: ' + canal;
+    var href = 'https://wa.me/' + numeroWhats(c) + '?text=' + encodeURIComponent(msg);
+    document.querySelectorAll('a[data-cadastro]').forEach(function (a) {
+      a.href = href;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      trocarRotulo(a, rotulo);
+    });
+    document.querySelectorAll('[data-lista-texto]').forEach(function (e) {
+      // Texto editado pelo superadmin vale mais que o texto da lista.
+      var chave = e.getAttribute('data-cms');
+      if (chave && texto(c[chave]) !== null) return;
+      e.textContent = e.getAttribute('data-lista-texto');
+    });
+    var oferta = (texto(c['lista.oferta']) || '').trim();
+    var caixa = document.querySelector('[data-lista-oferta]');
+    if (oferta && caixa) {
+      caixa.querySelector('span').textContent = oferta;
+      caixa.hidden = false;
+    }
+  }
+
   function aplicarConteudo(c) {
     document.querySelectorAll('[data-cms]').forEach(function (e) {
       var v = texto(c[e.getAttribute('data-cms')]);
@@ -178,8 +230,7 @@
     });
 
     // WhatsApp
-    var numero = (texto(c['contato.whatsapp']) || '').replace(/\D/g, '');
-    if (numero.length === 10 || numero.length === 11) numero = '55' + numero; // só DDD + número: Brasil
+    var numero = numeroWhats(c);
     var msg = texto(c['contato.whatsapp_mensagem']);
     if (msg === null || !msg.trim()) msg = MSG_WHATS_PADRAO;
     if (numero || msg !== MSG_WHATS_PADRAO) {
@@ -271,6 +322,7 @@
   function botaoComecar() {
     var a = el('a', 'btn btn-primary btn-block');
     a.href = LINK_COMECAR;
+    a.setAttribute('data-cadastro', '');
     a.appendChild(document.createTextNode('Começar agora'));
     a.appendChild(icone('i-seta', 'icon-arrow'));
     return a;
@@ -373,6 +425,9 @@
         try { aplicarConteudo(conteudo); } catch (e) { /* mantém o HTML */ }
         if (Array.isArray(dados.planos)) {
           try { aplicarPlanos(dados.planos, dados.modulos, conteudo); } catch (e) { /* mantém o cartão estático */ }
+        }
+        if (dados.cadastroAberto === false) {
+          try { aplicarListaEspera(conteudo); } catch (e) { /* mantém os botões de cadastro */ }
         }
       })
       .catch(function () { /* sem API: fica o conteúdo estático */ });

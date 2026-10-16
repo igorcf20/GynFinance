@@ -90,7 +90,7 @@
       </nav>
       <div class="header-actions">
         <a class="link-entrar" href="/app/#/entrar">Entrar</a>
-        <a class="btn btn-primary btn-sm header-cta" href="/app/#/entrar?depois=comecar">Criar minha conta</a>
+        <a class="btn btn-primary btn-sm header-cta" href="/app/#/entrar?depois=comecar" data-cadastro>Criar minha conta</a>
         <button class="menu-btn" type="button" aria-expanded="false" aria-controls="menu-mobile" aria-label="Abrir menu">
           <svg class="icon i-abrir" aria-hidden="true"><use href="#i-menu"/></svg>
           <svg class="icon i-fechar" aria-hidden="true"><use href="#i-fechar"/></svg>
@@ -106,7 +106,7 @@
         <a class="item" href="#duvidas" data-secao="duvidas"><svg class="icon" aria-hidden="true"><use href="#i-interrogacao"/></svg>Dúvidas</a>
       </nav>
       <div class="menu-mobile-acoes">
-        <a class="btn btn-primary btn-block" href="/app/#/entrar?depois=comecar">Criar minha conta</a>
+        <a class="btn btn-primary btn-block" href="/app/#/entrar?depois=comecar" data-cadastro>Criar minha conta</a>
         <a class="btn btn-secondary btn-block" href="/app/">Testar a demonstração</a>
         <p class="menu-mobile-rodape">
           <a href="/app/#/entrar">Já tenho conta: entrar</a>
@@ -130,12 +130,13 @@
               <svg class="icon" aria-hidden="true"><use href="#i-play"/></svg>
               <span data-cms="hero.botao_principal">Testar a demonstração</span>
             </a>
-            <a class="btn btn-secondary" href="/app/#/entrar?depois=comecar">
+            <a class="btn btn-secondary" href="/app/#/entrar?depois=comecar" data-cadastro>
               <span data-cms="hero.botao_secundario">Criar minha conta</span>
               <svg class="icon icon-arrow" aria-hidden="true"><use href="#i-seta"/></svg>
             </a>
           </div>
           <p class="hero-note"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span data-cms="hero.nota">A demonstração abre na hora, sem cadastro.</span></p>
+          <p class="hero-oferta" data-lista-oferta hidden><svg class="icon" aria-hidden="true"><use href="#i-sino"/></svg><span></span></p>
         </div>
 
         <div class="hero-visual">
@@ -411,9 +412,9 @@
           </li>
           <li class="step revela revela-d1">
             <span class="n">2</span>
-            <h3>Crie sua conta</h3>
-            <p>Só o seu nome, e-mail e uma senha. Os dados do seu negócio ficam guardados e separados dos de outras empresas.</p>
-            <a href="/app/#/entrar?depois=comecar">Criar minha conta <svg class="icon" aria-hidden="true"><use href="#i-seta"/></svg></a>
+            <h3 data-lista-texto="Entre na lista de espera">Crie sua conta</h3>
+            <p data-lista-texto="Os cadastros abrem em breve. Chame a gente no WhatsApp e avisamos você no dia da abertura.">Só o seu nome, e-mail e uma senha. Os dados do seu negócio ficam guardados e separados dos de outras empresas.</p>
+            <a href="/app/#/entrar?depois=comecar" data-cadastro>Criar minha conta <svg class="icon" aria-hidden="true"><use href="#i-seta"/></svg></a>
           </li>
           <li class="step revela revela-d2">
             <span class="n">3</span>
@@ -453,7 +454,7 @@
             <p class="plano">Plano Gynfinance</p>
             <p class="valor num"><small>a partir de</small><strong data-preco-min>R$ 25</strong><span>/mês</span></p>
             <p class="desc">Para MEI e pequenas empresas que querem saber, todo mês, quanto entrou, quanto saiu e quanto sobrou.</p>
-            <a class="btn btn-primary btn-block" href="/app/#/entrar?depois=comecar">
+            <a class="btn btn-primary btn-block" href="/app/#/entrar?depois=comecar" data-cadastro>
               Começar agora
               <svg class="icon icon-arrow" aria-hidden="true"><use href="#i-seta"/></svg>
             </a>
@@ -527,9 +528,9 @@
       <div class="container">
         <div class="cta-box revela">
           <h2 id="titulo-final" data-cms="chamada.titulo">Comece o próximo mês sabendo para onde vai o seu dinheiro.</h2>
-          <p data-cms="chamada.texto">Teste agora com dados de exemplo ou crie sua conta e configure o seu negócio em 2 minutos.</p>
+          <p data-cms="chamada.texto" data-lista-texto="Teste agora com dados de exemplo e entre na lista de espera para ser avisado quando os cadastros abrirem.">Teste agora com dados de exemplo ou crie sua conta e configure o seu negócio em 2 minutos.</p>
           <div class="cta-buttons">
-            <a class="btn btn-white" href="/app/#/entrar?depois=comecar">
+            <a class="btn btn-white" href="/app/#/entrar?depois=comecar" data-cadastro>
               Começar agora
               <svg class="icon icon-arrow" aria-hidden="true"><use href="#i-seta"/></svg>
             </a>
@@ -571,7 +572,7 @@
         <nav class="footer-col" aria-labelledby="rodape-acesso">
           <h2 id="rodape-acesso">Acesso</h2>
           <a href="/app/#/entrar">Entrar</a>
-          <a href="/app/#/entrar?depois=comecar">Criar conta</a>
+          <a href="/app/#/entrar?depois=comecar" data-cadastro>Criar conta</a>
           <a href="/app/">Testar a demonstração</a>
         </nav>
         <div class="footer-col footer-atendimento">
