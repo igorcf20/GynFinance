@@ -10,6 +10,7 @@ import { addDias, addMeses, brl, centavosParaTexto, dataBR, lerValor } from '../
 import { Button } from '../ui/Button'
 import { Input, Label, Select } from '../ui/Field'
 import { Modal } from '../ui/Modal'
+import { temModulo } from '../../domain/planos'
 import { Chips, Segmentado } from '../ui/Tabs'
 
 const PARCELAS = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 18, 24].map((n) => ({ valor: String(n), rotulo: `${n} vezes` }))
@@ -39,7 +40,7 @@ export function RegistrarPagamento({
   onFechar: () => void
   onConfirmar: (d: DetalhesPagamento) => void
 }) {
-  const { dados, hoje, anexarComprovante } = useStore()
+  const { dados, hoje, anexarComprovante, modulos } = useStore()
   const receber = conta.natureza === 'entrada'
   const contas = dados.contas.filter((c) => c.ativa)
   const [modo, setModo] = useState<ModoPagamento>('total')
@@ -220,6 +221,7 @@ export function RegistrarPagamento({
                 opcoes={FORMAS}
               />
             </div>
+            {temModulo(modulos, 'comprovantes') && (
             <div>
               <Label>Comprovante (opcional)</Label>
               {comprovante ? (
@@ -252,6 +254,7 @@ export function RegistrarPagamento({
               )}
               <input ref={arquivo} type="file" accept={ACEITOS} className="hidden" aria-label="Arquivo do comprovante" onChange={(e) => void escolherArquivo(e.target.files?.[0])} />
             </div>
+            )}
           </>
         )}
 

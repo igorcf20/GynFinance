@@ -1,6 +1,6 @@
 import { BarChart3, CalendarDays, ChevronRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { NAV_MAIS } from '../components/layout/navegacao'
+import { doPlano, NAV_ADMIN, NAV_MAIS, NAV_PRINCIPAL } from '../components/layout/navegacao'
 import { Header } from '../components/layout/Header'
 import { Card } from '../components/ui/Card'
 import { CartaoComecar } from '../components/layout/CartaoComecar'
@@ -8,8 +8,11 @@ import { useStore } from '../data/store'
 
 /** No celular, tudo o que não cabe na barra inferior. */
 export function More() {
-  const { modo, servidor, conta } = useStore()
-  const itens = [{ para: '/agenda', rotulo: 'Agenda', icone: CalendarDays }, { para: '/relatorios', rotulo: 'Relatórios', icone: BarChart3 }, ...NAV_MAIS]
+  const { modo, servidor, conta, modulos } = useStore()
+  const itens = [
+    ...doPlano([{ ...NAV_PRINCIPAL.find((i) => i.para === '/agenda')!, icone: CalendarDays }, { para: '/relatorios', rotulo: 'Relatórios', icone: BarChart3 }, ...NAV_MAIS], modulos),
+    ...(conta?.admin || servidor === 'sem' ? [NAV_ADMIN] : []),
+  ]
   return (
     <>
       <Header titulo="Mais" />

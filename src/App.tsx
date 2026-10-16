@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { HashRouter, Navigate, Route, Routes, UNSAFE_createMemoryHistory, unstable_HistoryRouter as HistoryRouter, useLocation } from 'react-router-dom'
 import { LogoMarca } from './components/layout/Logo'
+import { SoNoPlano } from './components/layout/AvisosDoPlano'
 import { MainLayout } from './components/layout/MainLayout'
 import { ProtecaoDeErro } from './components/layout/ProtecaoDeErro'
 import { Button } from './components/ui/Button'
@@ -10,6 +11,7 @@ import { dentroDeMoldura, rotaInicial } from './lib/moldura'
 import { Entrar } from './pages/Entrar'
 import { Accounts } from './pages/Accounts'
 import { Agenda } from './pages/Agenda'
+import { Admin } from './pages/admin/Admin'
 import { ImportarExtrato } from './pages/ImportarExtrato'
 import { CashFlow } from './pages/CashFlow'
 import { Dashboard } from './pages/Dashboard'
@@ -38,7 +40,8 @@ function Portao({ children }: { children: ReactNode }) {
       </div>
     )
   }
-  if (conta && !conta.temNegocio && pathname !== '/comecar') return <Navigate to="/comecar" replace />
+  // O superadmin entra no painel mesmo sem ter configurado um negócio próprio.
+  if (conta && !conta.temNegocio && pathname !== '/comecar' && !(conta.admin && pathname === '/admin')) return <Navigate to="/comecar" replace />
   return <>{children}</>
 }
 
@@ -72,14 +75,15 @@ export default function App() {
                 <Route path="lancamentos" element={<Transactions />} />
                 <Route path="lancar" element={<NewTransaction />} />
                 <Route path="contas" element={<Accounts />} />
-                <Route path="agenda" element={<Agenda />} />
-                <Route path="importar" element={<ImportarExtrato />} />
-                <Route path="mei" element={<MEI />} />
+                <Route path="agenda" element={<SoNoPlano modulo="agenda"><Agenda /></SoNoPlano>} />
+                <Route path="importar" element={<SoNoPlano modulo="extrato"><ImportarExtrato /></SoNoPlano>} />
+                <Route path="mei" element={<SoNoPlano modulo="mei"><MEI /></SoNoPlano>} />
                 <Route path="relatorios" element={<Reports />} />
                 <Route path="fluxo" element={<CashFlow />} />
                 <Route path="fechamento" element={<MonthlyClosing />} />
                 <Route path="configuracoes/:secao?" element={<Settings />} />
                 <Route path="mais" element={<More />} />
+                <Route path="admin" element={<Admin />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Route>
             </Routes>

@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { Button } from '../ui/Button'
+import { AvisosDoPlano } from './AvisosDoPlano'
 import { MobileNavigation } from './MobileNavigation'
 import { ProtecaoDeErro } from './ProtecaoDeErro'
 import { Sidebar } from './Sidebar'
@@ -37,6 +38,7 @@ export function MainLayout() {
       <main className="min-w-0 flex-1 px-4 pt-5 pb-28 md:px-7 md:pt-8 md:pb-10 xl:px-10">
         <div key={pathname} ref={ref} className="mx-auto max-w-[1240px]">
           <ProtecaoDeErro acao={<Button onClick={() => navigate('/')}>Voltar ao início</Button>}>
+            <AvisosDoPlano />
             <Outlet />
           </ProtecaoDeErro>
         </div>

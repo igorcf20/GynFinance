@@ -1,11 +1,17 @@
 // Conversa com o servidor do Gynfinance (server/). Na demonstração publicada não há servidor:
 // verificarServidor() responde "sem" e o app segue guardando tudo no navegador.
 
+import type { MinhaAssinatura } from '../domain/planos'
 import { dentroDeMoldura } from '../lib/moldura'
 
 export interface Conta {
   usuario: { nome: string; email: string }
   temNegocio: boolean
+  /** Entra no painel de superadmin (e-mail em ADMIN_EMAILS no servidor). */
+  admin?: boolean
+  assinatura?: MinhaAssinatura
+  /** Aviso geral e manutenção, definidos no painel de superadmin. */
+  sistema?: { aviso: string; manutencao: boolean; iaLigada: boolean }
 }
 
 export class ErroApi extends Error {
@@ -16,7 +22,7 @@ export class ErroApi extends Error {
   }
 }
 
-export async function api<T>(metodo: 'GET' | 'POST', caminho: string, corpo?: unknown): Promise<T> {
+export async function api<T>(metodo: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE', caminho: string, corpo?: unknown): Promise<T> {
   let r: Response
   try {
     r = await fetch(`api/${caminho}`, {

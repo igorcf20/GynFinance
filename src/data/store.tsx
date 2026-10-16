@@ -8,6 +8,7 @@ import { excluirAtendimento as tirarAtendimento, salvarAtendimento as gravarAten
 import { aplicarImportacao, type LinhaImportacao } from '../domain/extrato'
 import { aplicarPagamento, reverterDados, type DetalhesPagamento } from '../domain/pagamento'
 import { gerarPrevistos } from '../domain/recorrencia'
+import type { IdModulo } from '../domain/planos'
 import type { Atividade, Centavos, Comprovante, Dados, DataISO, Empresa, Lancamento, MesISO, Preferencias, Recorrencia, SeFimDeSemana } from '../domain/types'
 import { hojeReal, mesDe, uid } from '../lib/format'
 import { api, ErroApi, verificarServidor, type Conta } from './api'
@@ -160,6 +161,10 @@ interface Store {
   conta: Conta | null
   /** Situação do envio das mudanças ao servidor. */
   salvamento: 'ok' | 'salvando' | 'erro'
+  /** Módulos do plano do cliente. Sem servidor (demonstração), undefined: tudo liberado. */
+  modulos: IdModulo[] | undefined
+  /** Por que o servidor recusou gravar (assinatura suspensa, manutenção), quando recusou. */
+  bloqueio: string | null
   entrar: (email: string, senha: string) => Promise<Conta>
   criarConta: (nome: string, email: string, senha: string) => Promise<Conta>
   sair: () => Promise<void>
@@ -176,6 +181,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [servidor, setServidor] = useState<Store['servidor']>('verificando')
   const [conta, setConta] = useState<Conta | null>(null)
   const [salvamento, setSalvamento] = useState<Store['salvamento']>('ok')
+  const [bloqueio, setBloqueio] = useState<string | null>(null)
   const salvoRef = useRef(salvo)
   salvoRef.current = salvo
 
@@ -208,6 +214,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         if (status >= 400 && status < 500 && status !== 401 && status !== 408 && status !== 429) {
           // O servidor recusou o lote: repetir não adianta. Fica registrado e a fila segue.
           console.error('Mudança recusada pelo servidor', e, lote)
+          if (status === 403 && e instanceof ErroApi) setBloqueio(e.message)
           setSalvamento('erro')
           continue
         }
@@ -285,7 +292,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const entrar = useCallback(
     async (email: string, senha: string) => {
-      const c = await api<Conta>('POST', 'conta/entrar', { email, senha })
+      const entrou = await api<Conta>('POST', 'conta/entrar', { email, senha })
+      // A resposta do login é curta: plano, módulos e avisos vêm de /api/conta.
+      const c = await api<Conta>('GET', 'conta').catch(() => entrou)
+      setBloqueio(null)
       // Mudanças que ficaram esperando porque a sessão tinha vencido vão antes de recarregar.
       if (fila.current) await enviar()
       if (c.temNegocio) await carregarDoServidor()
@@ -295,7 +305,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [carregarDoServidor, enviar],
   )
   const criarConta = useCallback(async (nome: string, email: string, senha: string) => {
-    const c = await api<Conta>('POST', 'conta/criar', { nome, email, senha, aceiteTermos: true })
+    const criada = await api<Conta>('POST', 'conta/criar', { nome, email, senha, aceiteTermos: true })
+    const c = await api<Conta>('GET', 'conta').catch(() => criada)
     setConta(c)
     return c
   }, [])
@@ -550,11 +561,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       servidor,
       conta,
       salvamento,
+      modulos: servidor === 'com' && conta?.assinatura ? conta.assinatura.modulos : undefined,
+      bloqueio,
       entrar,
       criarConta,
       sair,
     }),
-    [salvo, hoje, mes, salvarLancamento, excluirLancamento, marcarComoPago, registrarPagamento, anexarComprovante, marcarDasPago, separarReserva, recorrenciaDe, salvarAtendimento, excluirAtendimento, importarExtrato, atualizarEmpresa, atualizarPreferencias, dispensarAviso, comecar, restaurarDemo, servidor, conta, salvamento, entrar, criarConta, sair],
+    [salvo, hoje, mes, salvarLancamento, excluirLancamento, marcarComoPago, registrarPagamento, anexarComprovante, marcarDasPago, separarReserva, recorrenciaDe, salvarAtendimento, excluirAtendimento, importarExtrato, atualizarEmpresa, atualizarPreferencias, dispensarAviso, comecar, restaurarDemo, servidor, conta, salvamento, bloqueio, entrar, criarConta, sair],
   )
   return <Ctx.Provider value={valor}>{children}</Ctx.Provider>
 }

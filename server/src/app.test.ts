@@ -12,6 +12,9 @@ import { aplicarImportacao, prepararImportacao } from '../../src/domain/extrato'
 import { uid } from '../../src/lib/format'
 import { criarApp } from './app.ts'
 import { criarPool } from './db.ts'
+import { MODULOS } from '../../src/domain/planos'
+import { maisUmMes } from './admin.ts'
+import { MODULOS_SERVIDOR } from './modulos.ts'
 import { migrar } from './migrar.ts'
 
 const URL_ADMIN = process.env.TEST_DATABASE_URL
@@ -49,13 +52,15 @@ describe.skipIf(!URL_ADMIN)('servidor', () => {
     await pool?.end()
   })
 
+  let contas = 0
   async function criarConta(email: string) {
-    const r = await app.inject({ method: 'POST', url: '/api/conta/criar', payload: { nome: 'Ana', email, senha: 'senha-forte-1', aceiteTermos: true } })
+    // Cada conta vem de um endereço diferente, para não esbarrar no limite de 10 cadastros por minuto.
+    const r = await app.inject({ method: 'POST', url: '/api/conta/criar', remoteAddress: `10.0.0.${++contas}`, payload: { nome: 'Ana', email, senha: 'senha-forte-1', aceiteTermos: true } })
     expect(r.statusCode).toBe(201)
     const c = r.cookies.find((x) => x.name === 'gyn_sessao')!
     return { gyn_sessao: c.value }
   }
-  const pedir = (cookies: Record<string, string>, method: 'GET' | 'POST', url: string, payload?: unknown) => app.inject({ method, url, cookies, payload: payload as object })
+  const pedir = (cookies: Record<string, string>, method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE', url: string, payload?: unknown) => app.inject({ method, url, cookies, payload: payload as object })
 
   it('o servidor não ignora as regras de acesso', async () => {
     const r = await pool.query<{ rolsuper: boolean; rolbypassrls: boolean }>('select rolsuper, rolbypassrls from pg_roles where rolname = current_user')
@@ -71,7 +76,13 @@ describe.skipIf(!URL_ADMIN)('servidor', () => {
     const certa = await app.inject({ method: 'POST', url: '/api/conta/entrar', payload: { email: 'Ana@Exemplo.com', senha: 'senha-forte-1' } })
     expect(certa.statusCode).toBe(200)
     const cookies = { gyn_sessao: certa.cookies.find((x) => x.name === 'gyn_sessao')!.value }
-    expect((await pedir(cookies, 'GET', '/api/conta')).json()).toEqual({ usuario: { nome: 'Ana', email: 'ana@exemplo.com' }, temNegocio: false })
+    expect((await pedir(cookies, 'GET', '/api/conta')).json()).toMatchObject({
+      usuario: { nome: 'Ana', email: 'ana@exemplo.com' },
+      temNegocio: false,
+      admin: false,
+      assinatura: { planoId: 'essencial', situacao: 'teste', modulos: ['financeiro', 'mei', 'agenda', 'extrato', 'comprovantes'], temIa: false },
+      sistema: { aviso: '', manutencao: false },
+    })
     await pedir(cookies, 'POST', '/api/conta/sair')
     expect((await pedir(cookies, 'GET', '/api/conta')).statusCode).toBe(401)
     expect((await app.inject({ method: 'GET', url: '/api/dados' })).statusCode).toBe(401)
@@ -225,5 +236,107 @@ describe.skipIf(!URL_ADMIN)('servidor', () => {
     expect(r.statusCode).toBe(403)
     const inval = await pedir(ana, 'POST', '/api/negocio', { empresa: { nomeFantasia: '' } })
     expect(inval.statusCode).toBe(400)
+  })
+
+  it('superadmin: só quem está em ADMIN_EMAILS entra e não vê lançamentos', async () => {
+    process.env.ADMIN_EMAILS = 'igor@exemplo.com'
+    const cliente = await criarConta('cliente@exemplo.com')
+    expect((await pedir(cliente, 'GET', '/api/admin/resumo')).statusCode).toBe(403)
+    expect((await app.inject({ method: 'GET', url: '/api/admin/assinantes' })).statusCode).toBe(401)
+
+    const igor = await criarConta('igor@exemplo.com')
+    expect((await pedir(igor, 'GET', '/api/conta')).json().admin).toBe(true)
+    const lista = (await pedir(igor, 'GET', '/api/admin/assinantes')).json().assinantes
+    const c = lista.find((x: { email: string }) => x.email === 'cliente@exemplo.com')
+    expect(c).toMatchObject({ planoId: 'essencial', situacao: 'teste', precoPlanoCentavos: 2500 })
+
+    // Mesmo com o superadmin ligado, o pedido normal do admin só vê o próprio negócio.
+    expect((await pedir(igor, 'GET', '/api/dados')).json()).toEqual({ dados: null })
+    // E a transação de admin não lê lançamentos de ninguém.
+    const k = await pool.connect()
+    await k.query("select set_config('app.superadmin', 'on', false)")
+    expect((await k.query('select count(*)::int as n from lancamento')).rows[0].n).toBe(0)
+    await k.query("select set_config('app.superadmin', '', false)")
+    k.release()
+  })
+
+  it('superadmin: planos, assinatura, mensalidade e bloqueio', async () => {
+    process.env.ADMIN_EMAILS = 'igor2@exemplo.com'
+    const igor = await criarConta('igor2@exemplo.com')
+    const bia = await criarConta('bia.admin@exemplo.com')
+    const inicial = dadosIniciais(config, '2026-10-16')
+    expect((await pedir(bia, 'POST', '/api/negocio', paraNovoNegocio(inicial))).statusCode).toBe(201)
+    const biaId = (await pedir(igor, 'GET', '/api/admin/assinantes')).json().assinantes.find((x: { email: string }) => x.email === 'bia.admin@exemplo.com').id
+    expect((await pedir(igor, 'GET', '/api/admin/assinantes')).json().assinantes.find((x: { id: string }) => x.id === biaId).negocio).toMatchObject({ nome: 'Doces da Ana', uf: 'GO' })
+
+    // Plano sem agenda: o servidor recusa atendimento.
+    const novo = await pedir(igor, 'POST', '/api/admin/planos', { nome: 'Básico', descricao: 'Só o financeiro', precoCentavos: 1500, modulos: ['mei'], temIa: false, destaque: false, ativo: true, ordem: 0 })
+    expect(novo.json()).toEqual({ id: 'basico' })
+    expect((await pedir(igor, 'PATCH', `/api/admin/assinantes/${biaId}`, { planoId: 'basico', situacao: 'ativa', telefone: '62999990000' })).statusCode).toBe(200)
+    expect((await pedir(bia, 'GET', '/api/conta')).json().assinatura).toMatchObject({ planoId: 'basico', modulos: ['financeiro', 'mei'], situacao: 'ativa' })
+    const banco = inicial.contas.find((k) => k.tipo === 'banco')!.id
+    const comAgenda = salvarAtendimento(inicial, { cliente: 'Lia', data: '2026-10-20', inicio: '10:00', duracaoMin: 60, situacao: 'agendado' }, uid(), false, uid)
+    const recusado = await pedir(bia, 'POST', '/api/sincronizar', diferencas(inicial, comAgenda))
+    expect(recusado.statusCode).toBe(403)
+    expect(recusado.json().erro).toMatch(/agenda/)
+
+    // Mensalidade recebida: fica ativa e o vencimento anda um mês.
+    await pedir(igor, 'PATCH', `/api/admin/assinantes/${biaId}`, { proximoVencimento: '2026-10-31', situacao: 'atrasada' })
+    const pago = await pedir(igor, 'POST', `/api/admin/assinantes/${biaId}/pagamentos`, { valorCentavos: 1500, pagoEm: '2026-10-16', referente: '2026-10', forma: 'pix' })
+    expect(pago.json().proximoVencimento).toBe('2026-11-30')
+    expect((await pedir(igor, 'GET', `/api/admin/assinantes/${biaId}/pagamentos`)).json().pagamentos).toHaveLength(1)
+    expect((await pedir(igor, 'GET', '/api/admin/resumo')).json()).toMatchObject({ recebidoNoMesCentavos: 1500, pagamentosNoMes: 1 })
+    expect((await pedir(igor, 'DELETE', '/api/admin/planos/basico')).statusCode).toBe(409)
+
+    // Suspensa: vê os dados, não grava.
+    await pedir(igor, 'PATCH', `/api/admin/assinantes/${biaId}`, { situacao: 'suspensa' })
+    const venda: Lancamento = {
+      id: uid(), empresaId: inicial.empresa.id, natureza: 'entrada', valor: 1000, categoriaId: 'vendas', contaFinanceiraId: banco,
+      situacao: 'realizado', dataCompetencia: '2026-10-16', dataPagamento: '2026-10-16', formaPagamento: 'pix', notaEmitida: 'nao',
+    }
+    const bloqueado = await pedir(bia, 'POST', '/api/sincronizar', diferencas(inicial, { ...inicial, lancamentos: [venda] }))
+    expect(bloqueado.statusCode).toBe(403)
+    expect(bloqueado.json().bloqueado).toBe(true)
+    expect((await pedir(bia, 'GET', '/api/dados')).statusCode).toBe(200)
+    // Refazer a configuração inicial não tira a suspensão.
+    expect((await pedir(bia, 'POST', '/api/negocio', paraNovoNegocio(inicial))).statusCode).toBe(403)
+    // Cliente não grava a própria assinatura nem com SQL direto.
+    await expect(pool.query("update assinatura set situacao = 'ativa'")).resolves.toMatchObject({ rowCount: 0 })
+  })
+
+  it('superadmin: site, imagens e configurações', async () => {
+    process.env.ADMIN_EMAILS = 'igor3@exemplo.com'
+    const igor = await criarConta('igor3@exemplo.com')
+    expect((await pedir(igor, 'PUT', '/api/admin/site', { conteudo: { 'hero.titulo': 'Seu dinheiro em ordem', 'contato.whatsapp': '5562999990000' } })).statusCode).toBe(200)
+    const png = Buffer.from('89504e470d0a1a0a0000000d49484452', 'hex').toString('base64')
+    const img = await pedir(igor, 'POST', '/api/admin/imagens', { id: uid(), nome: 'logo.png', tipo: 'image/png', dados: png })
+    expect(img.statusCode).toBe(201)
+    const falso = await pedir(igor, 'POST', '/api/admin/imagens', { id: uid(), nome: 'x.svg', tipo: 'image/svg+xml', dados: Buffer.from('<svg onload="alert(1)"/>').toString('base64') })
+    expect(falso.statusCode).toBe(400)
+    const pub = (await app.inject({ method: 'GET', url: '/api/publico/site' })).json()
+    expect(pub.conteudo).toMatchObject({ 'hero.titulo': 'Seu dinheiro em ordem', 'contato.whatsapp': '5562999990000' })
+    expect(pub.planos.map((p: { id: string }) => p.id)).toContain('essencial')
+    expect((await app.inject({ method: 'GET', url: img.json().url })).headers['content-type']).toBe('image/png')
+    // Texto vazio volta ao padrão.
+    await pedir(igor, 'PUT', '/api/admin/site', { conteudo: { 'hero.titulo': '' } })
+    expect((await app.inject({ method: 'GET', url: '/api/publico/site' })).json().conteudo['hero.titulo']).toBeUndefined()
+
+    // Cadastro fechado e manutenção.
+    const cfg = { cadastroAberto: false, diasTeste: 14, planoPadrao: 'essencial', iaLigada: false, aviso: 'Manutenção às 22h', manutencao: false }
+    expect((await pedir(igor, 'PUT', '/api/admin/config', cfg)).statusCode).toBe(200)
+    expect((await app.inject({ method: 'POST', url: '/api/conta/criar', payload: { nome: 'Zé', email: 'ze@exemplo.com', senha: 'senha-forte-1', aceiteTermos: true } })).statusCode).toBe(403)
+    expect((await pedir(igor, 'GET', '/api/conta')).json().sistema.aviso).toBe('Manutenção às 22h')
+    await pedir(igor, 'PUT', '/api/admin/config', { ...cfg, cadastroAberto: true, aviso: '' })
+    expect((await pedir(igor, 'GET', '/api/admin/registro')).json().registro.length).toBeGreaterThan(2)
+  })
+})
+
+describe('superadmin sem banco', () => {
+  it('a lista de módulos do servidor é a mesma do app', () => {
+    expect(MODULOS_SERVIDOR).toEqual(MODULOS)
+  })
+  it('vencimento anda um mês', () => {
+    expect(maisUmMes('2026-01-31')).toBe('2026-02-28')
+    expect(maisUmMes('2026-12-10')).toBe('2027-01-10')
   })
 })

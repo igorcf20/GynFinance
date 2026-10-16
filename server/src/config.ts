@@ -20,4 +20,10 @@ export const config = {
   /** Em produção o cookie só anda por HTTPS. */
   cookieSeguro: process.env.COOKIE_SEGURO ? process.env.COOKIE_SEGURO === 'true' : process.env.NODE_ENV === 'production',
   diasSessao: 30,
+  /** E-mails que entram no painel de superadmin (separados por vírgula). */
+  adminEmails: () =>
+    (process.env.ADMIN_EMAILS ?? '')
+      .split(',')
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean),
 }

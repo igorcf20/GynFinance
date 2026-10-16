@@ -9,6 +9,7 @@ import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify'
 import type pg from 'pg'
 import { z } from 'zod'
 import { config } from './config.ts'
+import { bloqueioDeGravacao, ehAdmin, lerAcesso, rotasAdmin } from './admin.ts'
 import { aplicarMudancas, criarNegocio, empresaDaSessao, ErroDeDados, gravarComprovante, lerComprovante, lerDados } from './dados.ts'
 import { comUsuario } from './db.ts'
 import * as esquema from './esquemas.ts'
@@ -82,6 +83,8 @@ export async function criarApp(pool: pg.Pool, opcoes: { site?: boolean; logger?:
 
   app.post('/api/conta/criar', limite, async (req, rep) => {
     const d = esquema.criarConta.parse(req.body)
+    const aberto = (await pool.query<{ cadastro_aberto: boolean }>('select cadastro_aberto from config_sistema')).rows[0]?.cadastro_aberto ?? true
+    if (!aberto) return rep.code(403).send({ erro: 'Novos cadastros estão fechados no momento. Fale com a gente pelo site.' })
     const email = d.email.trim().toLowerCase()
     const senhaHash = await bcrypt.hash(d.senha, 12)
     const r = await pool.query<{ id: string }>(
@@ -113,30 +116,38 @@ export async function criarApp(pool: pg.Pool, opcoes: { site?: boolean; logger?:
 
   app.get('/api/conta', { preHandler: exigirLogin }, async (req) => {
     const u = (await pool.query<{ nome: string; email: string }>('select nome, email from usuario where id = $1', [req.usuarioId])).rows[0]
-    const temNegocio = await comUsuario(pool, req.usuarioId!, async (c) => !!(await empresaDaSessao(c)))
-    return { usuario: u, temNegocio }
+    const { temNegocio, acesso } = await comUsuario(pool, req.usuarioId!, async (c) => ({ temNegocio: !!(await empresaDaSessao(c)), acesso: await lerAcesso(c) }))
+    return { usuario: u, temNegocio, admin: await ehAdmin(pool, req.usuarioId!), ...acesso }
   })
 
   app.get('/api/dados', { preHandler: exigirLogin }, async (req) => ({ dados: await comUsuario(pool, req.usuarioId!, lerDados) }))
 
   app.post('/api/negocio', { preHandler: exigirLogin }, async (req, rep) => {
     const n = esquema.novoNegocio.parse(req.body)
-    const dados = await comUsuario(pool, req.usuarioId!, async (c) => {
+    const r = await comUsuario(pool, req.usuarioId!, async (c) => {
+      const bloqueio = bloqueioDeGravacao(await lerAcesso(c))
+      if (bloqueio) return { bloqueio }
       await criarNegocio(c, req.usuarioId!, n)
-      return lerDados(c)
+      return { dados: await lerDados(c) }
     })
-    return rep.code(201).send({ dados })
+    if (r.bloqueio) return rep.code(403).send({ erro: r.bloqueio, bloqueado: true })
+    return rep.code(201).send({ dados: r.dados })
   })
 
   app.post('/api/sincronizar', { preHandler: exigirLogin }, async (req, rep) => {
     const m = esquema.mudancas.parse(req.body)
-    const ok = await comUsuario(pool, req.usuarioId!, async (c) => {
+    const r = await comUsuario(pool, req.usuarioId!, async (c) => {
+      const acesso = await lerAcesso(c)
+      const bloqueio = bloqueioDeGravacao(acesso)
+      if (bloqueio) return { codigo: 403, erro: bloqueio }
+      if (m.atendimentos && (m.atendimentos.salvar.length || m.atendimentos.excluir.length) && !acesso.assinatura.modulos.includes('agenda'))
+        return { codigo: 403, erro: 'A agenda não faz parte do seu plano.' }
       const empresaId = await empresaDaSessao(c)
-      if (!empresaId) return false
+      if (!empresaId) return { codigo: 409, erro: 'Faça a configuração inicial do negócio primeiro.' }
       await aplicarMudancas(c, empresaId, m)
-      return true
+      return null
     })
-    if (!ok) return rep.code(409).send({ erro: 'Faça a configuração inicial do negócio primeiro.' })
+    if (r) return rep.code(r.codigo).send({ erro: r.erro, bloqueado: r.codigo === 403 })
     return { ok: true }
   })
 
@@ -149,13 +160,16 @@ export async function criarApp(pool: pg.Pool, opcoes: { site?: boolean; logger?:
     const assinatura = dados.subarray(0, 4).toString('hex')
     const confere = { 'application/pdf': '25504446', 'image/jpeg': 'ffd8', 'image/png': '89504e47', 'image/webp': '52494646' }[d.tipo]
     if (!assinatura.startsWith(confere)) return rep.code(400).send({ erro: 'O arquivo não parece ser uma foto ou um PDF.' })
-    const ok = await comUsuario(pool, req.usuarioId!, async (c) => {
+    const r = await comUsuario(pool, req.usuarioId!, async (c) => {
+      const acesso = await lerAcesso(c)
+      const bloqueio = bloqueioDeGravacao(acesso) ?? (acesso.assinatura.modulos.includes('comprovantes') ? undefined : 'Comprovantes não fazem parte do seu plano.')
+      if (bloqueio) return { codigo: 403, erro: bloqueio }
       const empresaId = await empresaDaSessao(c)
-      if (!empresaId) return false
+      if (!empresaId) return { codigo: 409, erro: 'Faça a configuração inicial do negócio primeiro.' }
       await gravarComprovante(c, empresaId, { id: d.id, nome: d.nome, tipo: d.tipo, dados })
-      return true
+      return null
     })
-    if (!ok) return rep.code(409).send({ erro: 'Faça a configuração inicial do negócio primeiro.' })
+    if (r) return rep.code(r.codigo).send({ erro: r.erro, bloqueado: r.codigo === 403 })
     return rep.code(201).send({ ok: true })
   })
 
@@ -170,6 +184,8 @@ export async function criarApp(pool: pg.Pool, opcoes: { site?: boolean; logger?:
       .header('x-content-type-options', 'nosniff')
       .send(comp.dados)
   })
+
+  await rotasAdmin(app, pool, exigirLogin)
 
   app.all('/api/*', async (_req, rep) => rep.code(404).send({ erro: 'Endereço não encontrado.' }))
 

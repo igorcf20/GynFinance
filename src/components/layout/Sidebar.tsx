@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
 import { useStore } from '../../data/store'
 import { Logo } from './Logo'
-import { estaAtivo, NAV_MAIS, NAV_PRINCIPAL, type ItemNav } from './navegacao'
+import { doPlano, estaAtivo, NAV_ADMIN, NAV_MAIS, NAV_PRINCIPAL, type ItemNav } from './navegacao'
 
 const ATIVIDADE: Record<string, string> = { comercio: 'Comércio', servico: 'Serviços', industria: 'Indústria', misto: 'Comércio e serviços' }
 
@@ -33,12 +33,14 @@ function Item({ item, caminho, compacto }: { item: ItemNav; caminho: string; com
 /** Navegação lateral: expandida acima de 1200px e só com ícones no tablet. */
 export function Sidebar() {
   const { pathname } = useLocation()
-  const { dados, modo, servidor, conta } = useStore()
+  const { dados, modo, servidor, conta, modulos } = useStore()
   const [maisAberto, setMaisAberto] = useState(false)
   useEffect(() => {
     if (NAV_MAIS.some((i) => estaAtivo(i, pathname))) setMaisAberto(true)
   }, [pathname])
   const e = dados.empresa
+  // Superadmin: quem o servidor reconhece, e todo mundo na demonstração (para conhecer o painel).
+  const maisDoPlano = [...doPlano(NAV_MAIS, modulos), ...(conta?.admin || servidor === 'sem' ? [NAV_ADMIN] : [])]
 
   return (
     <aside className="sticky top-0 hidden h-dvh w-[76px] shrink-0 flex-col border-r border-[#e3e9f1] bg-gradient-to-b from-[#fbfcfe] to-[#f2f6fb] px-3 py-6 shadow-[1px_0_0_rgba(255,255,255,0.8)] md:flex xl:w-[240px] xl:px-4">
@@ -52,7 +54,7 @@ export function Sidebar() {
       </Link>
 
       <nav aria-label="Principal" className="flex flex-col gap-1">
-        {NAV_PRINCIPAL.filter((i) => i.para !== '/mei' || e.ehMei).map((i) => (
+        {doPlano(NAV_PRINCIPAL, modulos).filter((i) => i.para !== '/mei' || e.ehMei).map((i) => (
           <span key={i.para}>
             <span className="xl:hidden">
               <Item item={i} caminho={pathname} compacto />
@@ -77,7 +79,7 @@ export function Sidebar() {
         </button>
         {maisAberto && (
           <div className="anim-aparecer flex flex-col gap-1">
-            {NAV_MAIS.map((i) => (
+            {maisDoPlano.map((i) => (
               <span key={i.para}>
                 <span className="xl:hidden">
                   <Item item={i} caminho={pathname} compacto />

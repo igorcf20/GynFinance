@@ -1,7 +1,22 @@
 import { X } from 'lucide-react'
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 
-export function Modal({ aberto, onFechar, titulo, children, rodape }: { aberto: boolean; onFechar: () => void; titulo: string; children: ReactNode; rodape?: ReactNode }) {
+export function Modal({
+  aberto,
+  onFechar,
+  titulo,
+  children,
+  rodape,
+  larga,
+}: {
+  aberto: boolean
+  onFechar: () => void
+  titulo: string
+  children: ReactNode
+  rodape?: ReactNode
+  /** Janela mais larga (fichas com muitos campos). */
+  larga?: boolean
+}) {
   const ref = useRef<HTMLDivElement>(null)
   // Guarda o onFechar num ref para o foco não voltar ao primeiro botão a cada renderização.
   const fechar = useRef(onFechar)
@@ -27,7 +42,7 @@ export function Modal({ aberto, onFechar, titulo, children, rodape }: { aberto: 
         aria-modal="true"
         aria-label={titulo}
         onMouseDown={(e) => e.stopPropagation()}
-        className="anim-janela max-h-[92dvh] w-full max-w-md overflow-y-auto overscroll-contain rounded-t-[22px] bg-surface p-6 shadow-[var(--shadow-pop)] md:rounded-[20px]"
+        className={`anim-janela max-h-[92dvh] w-full ${larga ? 'max-w-2xl' : 'max-w-md'} overflow-y-auto overscroll-contain rounded-t-[22px] bg-surface p-6 shadow-[var(--shadow-pop)] md:rounded-[20px]`}
       >
         <div className="mb-3 flex items-start justify-between gap-4">
           <h2 className="text-[16px] font-semibold">{titulo}</h2>

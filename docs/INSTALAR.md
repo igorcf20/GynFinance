@@ -55,6 +55,10 @@ openssl rand -hex 24   # APP_DB_PASSWORD
 nano .env
 ```
 
+No mesmo `.env`, `ADMIN_EMAILS` diz quem entra no painel de superadmin (`/app/#/admin`): planos,
+mensalidades, assinantes, textos e imagens do site. Quem estiver nessa lista cria a conta normalmente
+no sistema com esse e-mail. Depois de mudar o `.env`, rode `docker compose up -d app` para valer.
+
 ## 4. Subir
 
 ```bash

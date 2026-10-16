@@ -32,3 +32,23 @@ export async function comUsuario<T>(pool: pg.Pool, usuarioId: string, fn: (c: Cl
     c.release()
   }
 }
+
+/**
+ * Transação do painel de superadmin: liga app.superadmin só aqui dentro. Nunca usar nos pedidos
+ * normais, porque as consultas do cliente contam com as regras de acesso para ver só o que é dele.
+ */
+export async function comAdmin<T>(pool: pg.Pool, fn: (c: Cliente) => Promise<T>): Promise<T> {
+  const c = await pool.connect()
+  try {
+    await c.query('begin')
+    await c.query("select set_config('app.superadmin', 'on', true)")
+    const r = await fn(c)
+    await c.query('commit')
+    return r
+  } catch (e) {
+    await c.query('rollback').catch(() => {})
+    throw e
+  } finally {
+    c.release()
+  }
+}

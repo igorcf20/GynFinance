@@ -32,6 +32,7 @@ services:
     restart: unless-stopped
     environment:
       APP_DATABASE_URL: postgres://gynfinance_app:${APP_DB_PASSWORD}@banco:5432/gynfinance
+      ADMIN_EMAILS: ${ADMIN_EMAILS:-}
     # Só dentro da VPS: para um nginx ou painel que já exista encaminhar para cá.
     ports:
       - '127.0.0.1:${PORTA_APP:-3000}:3000'

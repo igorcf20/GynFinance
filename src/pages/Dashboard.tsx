@@ -15,6 +15,7 @@ import { alertas, fraseSobrou, gastosPorCategoria, proximos7Dias, reservaPendent
 import { useStore } from '../data/store'
 import { addDias, addMeses, brl, nomeMes, pct } from '../lib/format'
 import { ValorAnimado } from '../components/ui/ValorAnimado'
+import { temModulo } from '../domain/planos'
 
 function saudacao(): string {
   const h = new Date().getHours()
@@ -22,7 +23,7 @@ function saudacao(): string {
 }
 
 export function Dashboard() {
-  const { dados, hoje, mes, separarReserva, dispensarAviso } = useStore()
+  const { dados, hoje, mes, separarReserva, dispensarAviso, modulos } = useStore()
   const toast = useToast()
   const [confirmarReserva, setConfirmarReserva] = useState(false)
 
@@ -51,11 +52,13 @@ export function Dashboard() {
         subtitulo={`${dados.empresa.nomeFantasia} · ${dados.empresa.ehMei ? 'MEI' : 'Empresa'}`}
         periodo
         acoes={
+          temModulo(modulos, 'extrato') && (
           <span className="hidden lg:inline-flex">
             <ButtonLink to="/importar" variante="secundario" icone={<FileUp size={16} />}>
               Importar extrato
             </ButtonLink>
           </span>
+          )
         }
       />
 
