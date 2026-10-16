@@ -37,7 +37,10 @@ export function MainLayout() {
       <Sidebar />
       <main className="min-w-0 flex-1 px-4 pt-5 pb-28 md:px-7 md:pt-8 md:pb-10 xl:px-10">
         <div key={pathname} ref={ref} className="mx-auto max-w-[1240px]">
-          <ProtecaoDeErro acao={<Button onClick={() => navigate('/')}>Voltar ao início</Button>}>
+          <ProtecaoDeErro
+            acao={<Button onClick={() => navigate('/')}>Voltar ao início</Button>}
+            onSuporte={(pagina) => navigate(`/suporte?novo=1&erro=1&de=${encodeURIComponent(pagina)}`)}
+          >
             <AvisosDoPlano />
             <Outlet />
           </ProtecaoDeErro>
