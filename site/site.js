@@ -74,6 +74,67 @@
   window.addEventListener('resize', secaoAtual);
   secaoAtual();
 
+  // Barra de leitura no cabeçalho
+  var barra = document.querySelector('.progresso span');
+  if (barra) {
+    var pendente = false;
+    var medir = function () {
+      pendente = false;
+      var total = document.documentElement.scrollHeight - window.innerHeight;
+      barra.style.transform = 'scaleX(' + (total > 0 ? Math.min(1, window.scrollY / total) : 0) + ')';
+    };
+    window.addEventListener('scroll', function () {
+      if (!pendente) { pendente = true; requestAnimationFrame(medir); }
+    }, { passive: true });
+    medir();
+  }
+
+  // Recursos: painel com as telas. Abre ao passar o mouse (com pequena espera para fechar),
+  // ao clicar na seta/no item ou pelo teclado; fecha com Esc, clique fora ou ao escolher uma tela.
+  var grupo = document.querySelector('.nav-grupo');
+  if (grupo) {
+    var abreMega = grupo.querySelector('.nav-abre');
+    var timer = null;
+    var mouseFino = window.matchMedia && window.matchMedia('(hover: hover)').matches;
+    var abrirMega = function (sim) {
+      clearTimeout(timer);
+      grupo.classList.toggle('aberto', sim);
+      abreMega.setAttribute('aria-expanded', sim ? 'true' : 'false');
+    };
+    if (mouseFino) {
+      grupo.addEventListener('mouseenter', function () { clearTimeout(timer); timer = setTimeout(function () { abrirMega(true); }, 80); });
+      grupo.addEventListener('mouseleave', function () { clearTimeout(timer); timer = setTimeout(function () { abrirMega(false); }, 180); });
+    }
+    abreMega.addEventListener('click', function (e) {
+      // Sem mouse (toque), o primeiro toque abre o painel; com o painel aberto, vai para a seção.
+      if (!grupo.classList.contains('aberto')) { e.preventDefault(); abrirMega(true); }
+      else abrirMega(false);
+    });
+    abreMega.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault(); abrirMega(true);
+        var primeiro = grupo.querySelector('.mega-item');
+        if (primeiro) primeiro.focus();
+      }
+    });
+    grupo.querySelectorAll('.mega a').forEach(function (a) { a.addEventListener('click', function () { abrirMega(false); }); });
+    grupo.addEventListener('focusout', function (e) { if (!grupo.contains(e.relatedTarget)) abrirMega(false); });
+    document.addEventListener('click', function (e) { if (!grupo.contains(e.target)) abrirMega(false); });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && grupo.classList.contains('aberto')) { abrirMega(false); abreMega.focus(); }
+    });
+  }
+
+  // Celular: Recursos abre a lista das telas
+  var abreSub = document.querySelector('.item-abre');
+  var sub = document.getElementById('sub-recursos');
+  if (abreSub && sub) {
+    abreSub.addEventListener('click', function () {
+      var aberto = sub.classList.toggle('aberto');
+      abreSub.setAttribute('aria-expanded', aberto ? 'true' : 'false');
+    });
+  }
+
   // Menu do celular
   function fecharMenu() {
     raiz.classList.remove('menu-aberto');
