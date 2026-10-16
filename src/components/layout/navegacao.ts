@@ -1,6 +1,6 @@
 import type { IdModulo } from '../../domain/planos'
 import { temModulo } from '../../domain/planos'
-import { CalendarCheck, LifeBuoy, CalendarDays, ChartSpline, FileUp, FileChartColumn, FileText, House, ReceiptText, Settings, ShieldCheck, Store, type LucideIcon } from 'lucide-react'
+import { CalendarCheck, LifeBuoy, CalendarDays, ChartSpline, FileUp, FileChartColumn, FileText, House, ReceiptText, Settings, ShieldCheck, Store, Users, type LucideIcon } from 'lucide-react'
 
 export interface ItemNav {
   para: string
@@ -24,6 +24,7 @@ export const NAV_PRINCIPAL: ItemNav[] = [
   { para: '/lancamentos', rotulo: 'Lançamentos', icone: ReceiptText, tambem: ['/lancar'] },
   { para: '/contas', rotulo: 'Contas', icone: FileText, selo: 'atrasadas' },
   { para: '/agenda', rotulo: 'Agenda', icone: CalendarDays, modulo: 'agenda' },
+  { para: '/clientes', rotulo: 'Clientes', icone: Users, modulo: 'clientes' },
   { para: '/mei', rotulo: 'Meu MEI', icone: Store, modulo: 'mei' },
   { para: '/relatorios', rotulo: 'Relatórios', icone: FileChartColumn },
 ]
@@ -44,7 +45,7 @@ const nav = (para: string) => [...NAV_PRINCIPAL, ...NAV_MAIS].find((i) => i.para
 export const GRUPOS_NAV: GrupoNav[] = [
   { itens: [nav('/')] },
   { titulo: 'Dinheiro', itens: ['/lancamentos', '/contas', '/fluxo', '/importar'].map(nav) },
-  { titulo: 'Negócio', itens: ['/agenda', '/mei', '/relatorios', '/fechamento'].map(nav) },
+  { titulo: 'Negócio', itens: ['/agenda', '/clientes', '/mei', '/relatorios', '/fechamento'].map(nav) },
   { titulo: 'Ajustes', itens: ['/configuracoes', '/suporte'].map(nav) },
 ]
 

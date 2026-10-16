@@ -21,6 +21,8 @@ import { MEI } from './pages/MEI'
 import { MonthlyClosing } from './pages/MonthlyClosing'
 import { More } from './pages/More'
 import { NewTransaction } from './pages/NewTransaction'
+import { Parceiros } from './pages/Parceiros'
+import { FichaParceiro } from './pages/FichaParceiro'
 import { Onboarding } from './pages/Onboarding'
 import { Reports } from './pages/Reports'
 import { Settings } from './pages/Settings'
@@ -82,6 +84,8 @@ export default function App() {
                 <Route path="lancar" element={<NewTransaction />} />
                 <Route path="contas" element={<Accounts />} />
                 <Route path="agenda" element={<SoNoPlano modulo="agenda"><Agenda /></SoNoPlano>} />
+                <Route path="clientes" element={<SoNoPlano modulo="clientes"><Parceiros /></SoNoPlano>} />
+                <Route path="clientes/:id" element={<SoNoPlano modulo="clientes"><FichaParceiro /></SoNoPlano>} />
                 <Route path="importar" element={<SoNoPlano modulo="extrato"><ImportarExtrato /></SoNoPlano>} />
                 <Route path="mei" element={<SoNoPlano modulo="mei"><MEI /></SoNoPlano>} />
                 <Route path="relatorios" element={<Reports />} />

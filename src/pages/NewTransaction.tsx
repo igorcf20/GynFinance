@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUpRight, Bell, CircleCheck, Calendar, Check, ChevronDown, CreditCard, ExternalLink, ImagePlus, Repeat, UserRound, Wallet, X } from 'lucide-react'
+import { ArrowDown, ArrowUpRight, Bell, CircleCheck, Calendar, Check, ChevronDown, CreditCard, ExternalLink, FileText, ImagePlus, Repeat, UserRound, Wallet, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Header } from '../components/layout/Header'
@@ -8,6 +8,9 @@ import { Input, Label, Select, Toggle } from '../components/ui/Field'
 import { Modal, useToast } from '../components/ui/Modal'
 import { Chips, Segmentado } from '../components/ui/Tabs'
 import { LINKS } from '../domain/parametros'
+import { EscolherParceiro } from '../components/parceiros/EscolherParceiro'
+import { parceiroPeloNome } from '../domain/parceiros'
+import { temModulo } from '../domain/planos'
 import type { FormaPagamento, Lancamento, NotaEmitida, SeFimDeSemana } from '../domain/types'
 import { FORMAS } from '../data/formas'
 import { useStore, type NovoLancamento } from '../data/store'
@@ -55,18 +58,27 @@ function valorInicial(l?: Pick<Lancamento, 'valor'>) {
 }
 
 export function NewTransaction() {
-  const { dados, hoje, salvarLancamento, excluirLancamento, recorrenciaDe } = useStore()
+  const { dados, hoje, salvarLancamento, excluirLancamento, recorrenciaDe, modulos, salvarParceiro } = useStore()
+  const comFichas = temModulo(modulos, 'clientes')
   const [confirmarExclusao, setConfirmarExclusao] = useState(false)
   const toast = useToast()
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const editando = dados.lancamentos.find((l) => l.id === params.get('id'))
   const contaNova = params.get('conta') // "pagar" | "receber"
+  // Vindo da ficha de um cliente ou fornecedor: já começa com ele escolhido.
+  const daFicha = (dados.parceiros ?? []).find((p) => p.id === params.get('parceiro'))
+  const tipoPedido = params.get('tipo')
 
-  const [tipo, setTipo] = useState<Tipo>(editando?.natureza === 'entrada' || contaNova === 'receber' ? 'entrada' : editando || contaNova ? 'saida' : 'entrada')
+  const [tipo, setTipo] = useState<Tipo>(editando?.natureza === 'entrada' || contaNova === 'receber' || (!editando && tipoPedido === 'entrada') ? 'entrada' : editando || contaNova || tipoPedido === 'saida' ? 'saida' : 'entrada')
   const [modo, setModo] = useState<Modo>(editando?.natureza === 'retirada' || params.get('atalho') === 'retirada' ? 'retirada' : 'normal')
   const [valorTxt, setValorTxt] = useState(valorInicial(editando))
   const [categoriaId, setCategoriaId] = useState(editando?.categoriaId ?? (tipo === 'entrada' ? 'vendas' : ''))
+  const [cadastrarNovo, setCadastrarNovo] = useState(true)
+  const [numeroFatura, setNumeroFatura] = useState(editando?.numeroFatura ?? '')
+  const [numeroProforma, setNumeroProforma] = useState(editando?.numeroProforma ?? '')
+  const [numeroOrcamento, setNumeroOrcamento] = useState(editando?.numeroOrcamento ?? '')
+  const [avancado, setAvancado] = useState(!!(editando?.numeroFatura || editando?.numeroProforma || editando?.numeroOrcamento))
   const [data, setData] = useState(editando?.dataCompetencia ?? hoje)
   const [escolherData, setEscolherData] = useState(!!editando && editando.dataCompetencia !== hoje)
   const [forma, setForma] = useState<FormaPagamento>(editando?.formaPagamento ?? 'pix')
@@ -79,7 +91,7 @@ export function NewTransaction() {
   const [lembrete, setLembrete] = useState<string>(editando?.lembreteDias !== undefined ? String(editando.lembreteDias) : 'padrao')
   const [sugerido, setSugerido] = useState('')
   const [descricao, setDescricao] = useState(editando?.descricao ?? '')
-  const [contraparte, setContraparte] = useState(editando?.contraparte ?? '')
+  const [contraparte, setContraparte] = useState(editando?.contraparte ?? daFicha?.nome ?? '')
   const [nota, setNota] = useState<NotaEmitida>(editando?.notaEmitida === 'sim' ? 'sim' : 'nao')
   const [pessoal, setPessoal] = useState(!!editando?.pagoComDinheiroPessoal)
   const [comprovante, setComprovante] = useState<string>('')
@@ -143,6 +155,16 @@ export function NewTransaction() {
     }
     const natureza = modo === 'retirada' ? 'retirada' : tipo
     const previsto = aPrazo && modo === 'normal'
+    // Cliente ou fornecedor: a ficha com esse nome; nome novo vira ficha se a pessoa marcou.
+    const nomeParte = contraparte.trim()
+    const papel = (modo === 'retirada' ? 'fornecedor' : tipo === 'entrada' ? 'cliente' : 'fornecedor') as 'cliente' | 'fornecedor'
+    let parceiroId: string | undefined
+    if (comFichas && nomeParte && modo === 'normal') {
+      parceiroId = parceiroPeloNome(dados.parceiros, nomeParte, papel)?.id
+      if (!parceiroId && cadastrarNovo) parceiroId = salvarParceiro({ tipo: papel, nome: nomeParte, ativo: true })
+    } else if (!comFichas && editando?.parceiroId && editando.contraparte === nomeParte) {
+      parceiroId = editando.parceiroId
+    }
     const contaFinanceiraId = forma === 'dinheiro' ? (dados.contas.find((c) => c.tipo === 'caixa')?.id ?? dados.contas[0].id) : (dados.contas.find((c) => c.tipo === 'banco')?.id ?? dados.contas[0].id)
     const l: NovoLancamento = {
       natureza,
@@ -159,6 +181,10 @@ export function NewTransaction() {
       notaEmitida: natureza === 'entrada' ? nota : 'nao_se_aplica',
       pagoComDinheiroPessoal: natureza === 'saida' && !previsto && pessoal,
       lembreteDias: previsto && lembrete !== 'padrao' ? (Number(lembrete) as -1 | 0 | 1 | 3) : undefined,
+      parceiroId,
+      numeroFatura: numeroFatura.trim() || undefined,
+      numeroProforma: numeroProforma.trim() || undefined,
+      numeroOrcamento: numeroOrcamento.trim() || undefined,
     }
     setSalvando(true)
     // Feedback de processamento antes de confirmar (DESIGN.md, seção 10).
@@ -167,13 +193,16 @@ export function NewTransaction() {
       setSalvando(false)
       const oque = modo === 'retirada' ? 'Retirada' : previsto ? (tipo === 'entrada' ? 'Conta a receber' : 'Conta a pagar') : 'Lançamento'
       toast(`${oque} de ${brl(valor)} ${oque === 'Lançamento' ? 'salvo' : 'salva'}.`)
-      if (editando || contaNova) {
+      if (editando || contaNova || daFicha) {
         navigate(-1)
         return
       }
       setValorTxt('')
       setDescricao('')
       setContraparte('')
+      setNumeroFatura('')
+      setNumeroProforma('')
+      setNumeroOrcamento('')
       setComprovante('')
       setPessoal(false)
       setSugerido('')
@@ -380,23 +409,62 @@ export function NewTransaction() {
                     <option key={t} value={t} />
                   ))}
                 </datalist>
-                <Input
-                  label={tipo === 'entrada' ? 'Cliente (opcional)' : 'Fornecedor (opcional)'}
-                  placeholder={tipo === 'entrada' ? 'Ex.: João Silva' : 'Ex.: Atacadão'}
-                  list="hist-contraparte"
-                  autoComplete="off"
-                  value={contraparte}
-                  onChange={(e) => {
-                    setContraparte(e.target.value)
-                    if (historico.contrapartes.some((t) => t.toLowerCase() === e.target.value.toLowerCase())) aplicarHistorico('contraparte', e.target.value)
-                  }}
-                />
-                <datalist id="hist-contraparte">
-                  {historico.contrapartes.map((t) => (
-                    <option key={t} value={t} />
-                  ))}
-                </datalist>
+                {comFichas && modo === 'normal' ? (
+                  <EscolherParceiro
+                    label={tipo === 'entrada' ? 'Cliente (opcional)' : 'Fornecedor (opcional)'}
+                    placeholder={tipo === 'entrada' ? 'Ex.: João Silva' : 'Ex.: Atacadão'}
+                    papel={tipo === 'entrada' ? 'cliente' : 'fornecedor'}
+                    parceiros={dados.parceiros}
+                    historico={historico.contrapartes}
+                    nome={contraparte}
+                    cadastrarNovo={cadastrarNovo}
+                    onCadastrarNovo={setCadastrarNovo}
+                    onNome={(n) => {
+                      setContraparte(n)
+                      if (historico.contrapartes.some((t) => t.toLowerCase() === n.toLowerCase()) || parceiroPeloNome(dados.parceiros, n)) aplicarHistorico('contraparte', n)
+                    }}
+                  />
+                ) : (
+                  <>
+                    <Input
+                      label={tipo === 'entrada' ? 'Cliente (opcional)' : 'Fornecedor (opcional)'}
+                      placeholder={tipo === 'entrada' ? 'Ex.: João Silva' : 'Ex.: Atacadão'}
+                      list="hist-contraparte"
+                      autoComplete="off"
+                      value={contraparte}
+                      onChange={(e) => {
+                        setContraparte(e.target.value)
+                        if (historico.contrapartes.some((t) => t.toLowerCase() === e.target.value.toLowerCase())) aplicarHistorico('contraparte', e.target.value)
+                      }}
+                    />
+                    <datalist id="hist-contraparte">
+                      {historico.contrapartes.map((t) => (
+                        <option key={t} value={t} />
+                      ))}
+                    </datalist>
+                  </>
+                )}
                 {sugerido && <p className="anim-aparecer -mt-1 text-[12px] text-primary">{sugerido}</p>}
+              </div>
+            )}
+          </div>
+
+          <div className="-mt-2">
+            <button
+              onClick={() => setAvancado((v) => !v)}
+              aria-expanded={avancado}
+              className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-primary hover:underline"
+            >
+              <FileText size={15} aria-hidden />
+              {avancado ? 'Esconder modo avançado' : 'Modo avançado: nº da fatura, pro forma e orçamento'}
+              <ChevronDown size={15} className={`transition-transform duration-150 ${avancado ? 'rotate-180' : ''}`} aria-hidden />
+            </button>
+            {avancado && (
+              <div className="anim-subir mt-4 grid grid-cols-1 gap-4 rounded-[16px] border border-[#e3ebf6] bg-gradient-to-b from-[#f7faff] to-[#f1f6fd] p-4 sm:grid-cols-3">
+                <Input label="Nº da fatura" value={numeroFatura} maxLength={60} onChange={(e) => setNumeroFatura(e.target.value)} placeholder="Ex.: FT 2026/118" />
+                <Input label="Nº da pro forma" value={numeroProforma} maxLength={60} onChange={(e) => setNumeroProforma(e.target.value)} placeholder="Ex.: PF-77" />
+                <Input label="Nº do orçamento" value={numeroOrcamento} maxLength={60} onChange={(e) => setNumeroOrcamento(e.target.value)} placeholder="Ex.: ORC-12" />
+                <p className="text-[12px] text-ink-2 sm:col-span-3">Ajudam a achar o documento depois: aparecem na ficha do {tipo === 'entrada' ? 'cliente' : 'fornecedor'}, na busca de Lançamentos e no CSV.</p>
               </div>
             )}
           </div>

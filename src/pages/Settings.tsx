@@ -1,4 +1,6 @@
-import { Bell, Building2, CreditCard, Landmark, LogOut, RotateCcw, Sparkles, Tags, Users, type LucideIcon } from 'lucide-react'
+import { Bell, Building2, CreditCard, Landmark, LogOut, Monitor, Moon, RotateCcw, Sparkles, Sun, Tags, Users, type LucideIcon } from 'lucide-react'
+import { useTema } from '../components/layout/BotaoTema'
+import type { Tema } from '../lib/tema'
 import { useState } from 'react'
 import { NavLink, useNavigate, useParams } from 'react-router-dom'
 import { NOMES_GRUPO } from '../data/categorias'
@@ -18,6 +20,7 @@ const SECOES: { id: string; rotulo: string; icone: LucideIcon }[] = [
   { id: 'categorias', rotulo: 'Categorias', icone: Tags },
   { id: 'contas', rotulo: 'Contas bancárias', icone: Landmark },
   { id: 'notificacoes', rotulo: 'Notificações', icone: Bell },
+  { id: 'aparencia', rotulo: 'Aparência', icone: Moon },
   { id: 'usuarios', rotulo: 'Usuários', icone: Users },
   { id: 'assinatura', rotulo: 'Assinatura', icone: CreditCard },
 ]
@@ -157,6 +160,39 @@ function Notificacoes() {
   )
 }
 
+function Aparencia() {
+  const { tema, trocar } = useTema()
+  const opcoes: { valor: Tema; rotulo: string; texto: string; icone: React.ReactNode }[] = [
+    { valor: 'claro', rotulo: 'Claro', texto: 'Fundo claro, o visual de sempre.', icone: <Sun size={20} /> },
+    { valor: 'escuro', rotulo: 'Escuro', texto: 'Descansa a vista à noite.', icone: <Moon size={20} /> },
+    { valor: 'sistema', rotulo: 'Igual ao aparelho', texto: 'Segue o modo do celular ou do computador.', icone: <Monitor size={20} /> },
+  ]
+  return (
+    <Card>
+      <CardTitulo>Aparência</CardTitulo>
+      <div role="radiogroup" aria-label="Tema" className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        {opcoes.map((o) => {
+          const ativo = tema === o.valor
+          return (
+            <button
+              key={o.valor}
+              role="radio"
+              aria-checked={ativo}
+              onClick={() => trocar(o.valor)}
+              className={`flex flex-col items-start gap-2 rounded-[16px] border p-4 text-left transition-all active:scale-[0.98] ${ativo ? 'border-primary bg-primary-soft ring-4 ring-primary/12' : 'border-line bg-surface hover:border-primary-line'}`}
+            >
+              <span className={`inline-flex size-10 items-center justify-center rounded-full ${ativo ? 'grad-primario text-white' : 'bg-hover text-navy'}`}>{o.icone}</span>
+              <span className="font-semibold text-ink">{o.rotulo}</span>
+              <span className="text-[12px] text-ink-2">{o.texto}</span>
+            </button>
+          )
+        })}
+      </div>
+      <p className="mt-3 text-[12px] text-ink-2">Fica guardado neste aparelho. Também dá para trocar pela lua no topo da tela.</p>
+    </Card>
+  )
+}
+
 function Usuarios() {
   const { dados } = useStore()
   return (
@@ -270,7 +306,7 @@ function Assinatura() {
   )
 }
 
-const CONTEUDO: Record<string, () => React.JSX.Element> = { empresa: Empresa, categorias: Categorias, contas: Contas, notificacoes: Notificacoes, usuarios: Usuarios, assinatura: Assinatura }
+const CONTEUDO: Record<string, () => React.JSX.Element> = { empresa: Empresa, categorias: Categorias, contas: Contas, notificacoes: Notificacoes, aparencia: Aparencia, usuarios: Usuarios, assinatura: Assinatura }
 
 export function Settings() {
   const { secao = 'empresa' } = useParams()
