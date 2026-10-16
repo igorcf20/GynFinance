@@ -110,11 +110,13 @@ async function sequencia<T extends readonly (() => Promise<unknown>)[]>(fns: T):
 // SVG pode levar script: só aceita se não tiver nada executável.
 const svgSeguro = (texto: string) => !/<script|on[a-z]+\s*=|javascript:|<foreignObject|<iframe|<embed|<object/i.test(texto)
 
-export async function rotasAdmin(
-  app: FastifyInstance,
-  pool: pg.Pool,
-  exigirLogin: (req: FastifyRequest, rep: FastifyReply) => Promise<unknown>,
-) {
+type Guarda = (req: FastifyRequest, rep: FastifyReply) => Promise<unknown>
+
+/**
+ * Porteiro do painel (só quem está em ADMIN_EMAILS) e o registro do que o admin mudou.
+ * Usado aqui e nas rotas de suporte (suporte.ts).
+ */
+export function guardaAdmin(pool: pg.Pool, exigirLogin: Guarda) {
   async function emailDe(usuarioId: string) {
     return (await pool.query<{ email: string }>('select email from usuario where id = $1', [usuarioId])).rows[0]?.email.toLowerCase() ?? ''
   }
@@ -128,6 +130,12 @@ export async function rotasAdmin(
   const registrar = async (c: Cliente, req: FastifyRequest, acao: string, detalhe = '') =>
     c.query('insert into admin_registro (admin_email, acao, detalhe) values ($1, $2, $3)', [await emailDe(req.usuarioId!), acao, detalhe.slice(0, 500)])
 
+  return { exigirAdmin, registrar }
+}
+export type GuardaAdmin = ReturnType<typeof guardaAdmin>
+
+export async function rotasAdmin(app: FastifyInstance, pool: pg.Pool, exigirLogin: Guarda, guarda: GuardaAdmin = guardaAdmin(pool, exigirLogin)) {
+  const { exigirAdmin, registrar } = guarda
   const so = { preHandler: exigirAdmin }
 
   // ---------- Público (site de venda) ----------

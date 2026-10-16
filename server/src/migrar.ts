@@ -36,6 +36,8 @@ export async function migrar(urlAdmin: string, senhaApp?: string): Promise<strin
       await c.query('grant usage on schema public to gynfinance_app')
       await c.query('grant select, insert, update, delete on all tables in schema public to gynfinance_app')
       await c.query('grant execute on all functions in schema public to gynfinance_app')
+      // Números de chamado (identity) usam sequência.
+      await c.query('grant usage on all sequences in schema public to gynfinance_app')
     }
   } finally {
     await c.end()

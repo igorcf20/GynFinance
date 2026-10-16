@@ -2,6 +2,7 @@
 // verificarServidor() responde "sem" e o app segue guardando tudo no navegador.
 
 import type { MinhaAssinatura } from '../domain/planos'
+import { registrarErro } from '../lib/erros'
 import { dentroDeMoldura } from '../lib/moldura'
 
 export interface Conta {
@@ -12,6 +13,8 @@ export interface Conta {
   assinatura?: MinhaAssinatura
   /** Aviso geral e manutenção, definidos no painel de superadmin. */
   sistema?: { aviso: string; manutencao: boolean; iaLigada: boolean }
+  /** Chamados de suporte com resposta que a pessoa ainda não leu. */
+  suporte?: { naoLidos: number }
 }
 
 export class ErroApi extends Error {
@@ -32,10 +35,15 @@ export async function api<T>(metodo: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
       body: corpo === undefined ? undefined : JSON.stringify(corpo),
     })
   } catch {
+    registrarErro('conexao', `${metodo} ${caminho}: sem conexão`)
     throw new ErroApi(0, 'Sem conexão com a internet. Confira e tente de novo.')
   }
   const json = (await r.json().catch(() => null)) as (T & { erro?: string }) | null
-  if (!r.ok) throw new ErroApi(r.status, json?.erro ?? 'Algo deu errado. Tente de novo.')
+  if (!r.ok) {
+    // Erro do servidor (5xx) vai para a lista que acompanha um chamado de suporte.
+    if (r.status >= 500) registrarErro('servidor', `${metodo} ${caminho.split('?')[0]}: ${r.status} ${json?.erro ?? ''}`.trim())
+    throw new ErroApi(r.status, json?.erro ?? 'Algo deu errado. Tente de novo.')
+  }
   return json as T
 }
 

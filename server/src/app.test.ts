@@ -45,7 +45,8 @@ describe.skipIf(!URL_ADMIN)('servidor', () => {
     await admin.connect()
     await admin.query('drop schema public cascade; create schema public')
     await admin.end()
-    await migrar(URL_ADMIN!, 'senha-de-teste')
+    // suporte.test roda junto e mexe no mesmo usuário do banco: se colidir, tenta de novo.
+    await migrar(URL_ADMIN!, 'senha-de-teste').catch(() => migrar(URL_ADMIN!, 'senha-de-teste'))
     const u = new URL(URL_ADMIN!)
     u.username = 'gynfinance_app'
     u.password = 'senha-de-teste'

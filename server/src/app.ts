@@ -9,11 +9,12 @@ import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify'
 import type pg from 'pg'
 import { z } from 'zod'
 import { config } from './config.ts'
-import { bloqueioDeGravacao, ehAdmin, lerAcesso, rotasAdmin } from './admin.ts'
+import { bloqueioDeGravacao, ehAdmin, guardaAdmin, lerAcesso, rotasAdmin } from './admin.ts'
 import { aplicarMudancas, criarNegocio, empresaDaSessao, ErroDeDados, gravarComprovante, lerComprovante, lerDados } from './dados.ts'
 import { comUsuario } from './db.ts'
 import { criarCarteiro, emailSenhaNova, type Carteiro } from './email.ts'
 import * as esquema from './esquemas.ts'
+import { contarNaoLidos, registrarErroServidor, rotasSuporte } from './suporte.ts'
 
 const COOKIE = 'gyn_sessao'
 const hash = (token: string) => createHash('sha256').update(token).digest('hex')
@@ -52,17 +53,20 @@ export async function criarApp(pool: pg.Pool, opcoes: { site?: boolean; logger?:
     return pool.query('insert into sessao (token_hash, usuario_id, expira_em) values ($1, $2, $3)', [hash(token), usuarioId, expira])
   }
 
-  async function exigirLogin(req: FastifyRequest, rep: FastifyReply) {
+  /** Quem está logado pelo cookie (ou undefined), sem recusar o pedido. */
+  async function lerSessao(req: FastifyRequest): Promise<string | undefined> {
     const token = req.cookies[COOKIE]
-    if (token) {
-      const r = await pool.query<{ usuario_id: string }>('select usuario_id from sessao where token_hash = $1 and expira_em > now()', [hash(token)])
-      if (r.rows[0]) {
-        req.usuarioId = r.rows[0].usuario_id
-        return
-      }
-    }
+    if (!token) return undefined
+    const r = await pool.query<{ usuario_id: string }>('select usuario_id from sessao where token_hash = $1 and expira_em > now()', [hash(token)])
+    if (r.rows[0]) req.usuarioId = r.rows[0].usuario_id
+    return r.rows[0]?.usuario_id
+  }
+
+  async function exigirLogin(req: FastifyRequest, rep: FastifyReply) {
+    if (await lerSessao(req)) return
     return rep.code(401).send({ erro: 'Entre na sua conta para continuar.' })
   }
+  const admin = guardaAdmin(pool, exigirLogin)
 
   // Erros de validação viram 400 com uma frase simples; o resto é 500 sem detalhes.
   app.setErrorHandler((erro, req, rep) => {
@@ -73,6 +77,8 @@ export async function criarApp(pool: pg.Pool, opcoes: { site?: boolean; logger?:
     if (codigo === '42501') return rep.code(403).send({ erro: 'Sem permissão para esses dados.' })
     if ((erro as { statusCode?: number }).statusCode === 429) return rep.code(429).send({ erro: 'Muitas tentativas. Espere um minuto e tente de novo.' })
     req.log.error(erro)
+    // Aparece também no painel (Erros do sistema), sem atrasar a resposta.
+    registrarErroServidor(pool, req, erro as Error)
     return rep.code(500).send({ erro: 'Algo deu errado no servidor. Tente de novo.' })
   })
 
@@ -149,8 +155,12 @@ export async function criarApp(pool: pg.Pool, opcoes: { site?: boolean; logger?:
 
   app.get('/api/conta', { preHandler: exigirLogin }, async (req) => {
     const u = (await pool.query<{ nome: string; email: string }>('select nome, email from usuario where id = $1', [req.usuarioId])).rows[0]
-    const { temNegocio, acesso } = await comUsuario(pool, req.usuarioId!, async (c) => ({ temNegocio: !!(await empresaDaSessao(c)), acesso: await lerAcesso(c) }))
-    return { usuario: u, temNegocio, admin: await ehAdmin(pool, req.usuarioId!), ...acesso }
+    const { temNegocio, acesso, naoLidos } = await comUsuario(pool, req.usuarioId!, async (c) => ({
+      temNegocio: !!(await empresaDaSessao(c)),
+      acesso: await lerAcesso(c),
+      naoLidos: await contarNaoLidos(c),
+    }))
+    return { usuario: u, temNegocio, admin: await ehAdmin(pool, req.usuarioId!), ...acesso, suporte: { naoLidos } }
   })
 
   app.get('/api/dados', { preHandler: exigirLogin }, async (req) => ({ dados: await comUsuario(pool, req.usuarioId!, lerDados) }))
@@ -218,7 +228,8 @@ export async function criarApp(pool: pg.Pool, opcoes: { site?: boolean; logger?:
       .send(comp.dados)
   })
 
-  await rotasAdmin(app, pool, exigirLogin)
+  await rotasAdmin(app, pool, exigirLogin, admin)
+  await rotasSuporte(app, pool, { exigirLogin, lerSessao, admin })
 
   app.all('/api/*', async (_req, rep) => rep.code(404).send({ erro: 'Endereço não encontrado.' }))
 
