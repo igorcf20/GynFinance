@@ -1,6 +1,6 @@
-import { Bell, Building2, CreditCard, Landmark, RotateCcw, Sparkles, Tags, Users, type LucideIcon } from 'lucide-react'
+import { Bell, Building2, CreditCard, Landmark, LogOut, RotateCcw, Sparkles, Tags, Users, type LucideIcon } from 'lucide-react'
 import { useState } from 'react'
-import { NavLink, useParams } from 'react-router-dom'
+import { NavLink, useNavigate, useParams } from 'react-router-dom'
 import { NOMES_GRUPO } from '../data/categorias'
 import { Header } from '../components/layout/Header'
 import { Badge } from '../components/ui/Badge'
@@ -176,7 +176,8 @@ function Usuarios() {
 }
 
 function Assinatura() {
-  const { restaurarDemo, modo } = useStore()
+  const { restaurarDemo, modo, conta, sair } = useStore()
+  const navigate = useNavigate()
   const toast = useToast()
   const [confirmar, setConfirmar] = useState(false)
   return (
@@ -208,7 +209,26 @@ function Assinatura() {
           </div>
         </Card>
       )}
-      {modo === 'real' && (
+      {modo === 'real' && conta && (
+        <Card>
+          <CardTitulo>Sua conta</CardTitulo>
+          <p className="mb-4 text-[13px] text-ink-2">
+            Você entrou como <b className="text-ink">{conta.usuario.email}</b>. Os dados do negócio ficam guardados no servidor do Gynfinance, e dá para acessar
+            do celular ou do computador.
+          </p>
+          <Button
+            variante="secundario"
+            icone={<LogOut size={16} />}
+            onClick={async () => {
+              await sair()
+              navigate('/entrar', { replace: true })
+            }}
+          >
+            Sair da conta
+          </Button>
+        </Card>
+      )}
+      {modo === 'real' && !conta && (
         <Card>
           <CardTitulo>Seus dados</CardTitulo>
           <p className="mb-4 text-[13px] text-ink-2">

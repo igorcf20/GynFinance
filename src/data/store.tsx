@@ -1,14 +1,16 @@
 // Estado do aplicativo. Nesta primeira versão os dados ficam no navegador (localStorage);
 // as ações abaixo são o contrato que o back-end vai implementar depois. No servidor, toda
 // consulta filtra pela empresa da sessão (nunca por um id vindo do navegador).
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { vencimentoDas } from '../domain/calc'
 import { parametroDoAno } from '../domain/parametros'
 import { gerarPrevistos } from '../domain/recorrencia'
 import type { Atividade, Centavos, Dados, DataISO, Empresa, Lancamento, MesISO, Preferencias, Recorrencia, SeFimDeSemana } from '../domain/types'
 import { hojeReal, mesDe, uid } from '../lib/format'
+import { api, ErroApi, verificarServidor, type Conta } from './api'
 import { categoriasDoNegocio } from './categorias'
 import { dadosDemo, DEMO_HOJE } from './demo'
+import { diferencas, juntar, paraNovoNegocio, type Mudancas } from './sincronizar'
 
 // v2: valores em centavos e contas fixas como Recorrencia.
 const CHAVE = 'gynfinance:v2'
@@ -16,6 +18,8 @@ const CHAVE = 'gynfinance:v2'
 interface Salvo {
   modo: 'demo' | 'real'
   dados: Dados
+  /** Dados do negócio vindos do servidor: cada mudança é enviada para lá, não fica no navegador. */
+  noServidor?: boolean
 }
 
 const hojeDo = (modo: Salvo['modo']) => (modo === 'demo' ? DEMO_HOJE : hojeReal())
@@ -32,7 +36,7 @@ function carregar(): Salvo {
     const bruto = localStorage.getItem(CHAVE)
     if (bruto) {
       const s = JSON.parse(bruto) as Salvo
-      return { ...s, dados: comPrevistos(s.dados, hojeDo(s.modo)) }
+      return { modo: s.modo, dados: comPrevistos(s.dados, hojeDo(s.modo)) }
     }
   } catch {
     /* sem armazenamento: segue com a demonstração */
@@ -92,11 +96,11 @@ export function dadosIniciais(c: ConfigInicial, hoje: DataISO): Dados {
       faturadoAntes: c.ehMei && c.faturadoAntes ? { ano, valor: c.faturadoAntes } : undefined,
       modulosAtivos: ['financeiro'],
     },
-    // Mesmos ids da demonstração: as telas escolhem a conta pela forma de pagamento.
+    // As telas escolhem a conta pelo tipo (dinheiro vai para o caixa; Pix, cartão e boleto para o banco).
     contas: [
-      { id: 'conta-pj', empresaId, nome: 'Conta da empresa', tipo: 'banco', saldoInicial: c.saldoBanco, ativa: true },
-      { id: 'caixa', empresaId, nome: 'Caixa (dinheiro)', tipo: 'caixa', saldoInicial: c.saldoCaixa, ativa: true },
-      { id: 'reserva', empresaId, nome: 'Reserva', tipo: 'reserva', saldoInicial: 0, ativa: true },
+      { id: uid(), empresaId, nome: 'Conta da empresa', tipo: 'banco', saldoInicial: c.saldoBanco, ativa: true },
+      { id: uid(), empresaId, nome: 'Caixa (dinheiro)', tipo: 'caixa', saldoInicial: c.saldoCaixa, ativa: true },
+      { id: uid(), empresaId, nome: 'Reserva', tipo: 'reserva', saldoInicial: 0, ativa: true },
     ],
     categorias: categoriasDoNegocio(c.atividade),
     lancamentos: [],
@@ -132,9 +136,17 @@ interface Store {
   atualizarEmpresa: (e: Partial<Empresa>) => void
   atualizarPreferencias: (p: Partial<Preferencias>) => void
   dispensarAviso: (id: string) => void
-  /** Sai da demonstração e começa com os dados do próprio negócio. */
-  comecar: (c: ConfigInicial) => void
+  /** Sai da demonstração e começa com os dados do próprio negócio (no servidor, quando há um). */
+  comecar: (c: ConfigInicial) => Promise<void>
   restaurarDemo: () => void
+  /** Há servidor (versão instalada) ou só o navegador (demonstração publicada)? */
+  servidor: 'verificando' | 'sem' | 'com'
+  conta: Conta | null
+  /** Situação do envio das mudanças ao servidor. */
+  salvamento: 'ok' | 'salvando' | 'erro'
+  entrar: (email: string, senha: string) => Promise<Conta>
+  criarConta: (nome: string, email: string, senha: string) => Promise<Conta>
+  sair: () => Promise<void>
 }
 
 const Ctx = createContext<Store | null>(null)
@@ -143,8 +155,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [salvo, setSalvo] = useState<Salvo>(carregar)
   const hoje = hojeDo(salvo.modo)
   const [mes, setMes] = useState<MesISO>(mesDe(hoje))
+  const [servidor, setServidor] = useState<Store['servidor']>('verificando')
+  const [conta, setConta] = useState<Conta | null>(null)
+  const [salvamento, setSalvamento] = useState<Store['salvamento']>('ok')
+  const salvoRef = useRef(salvo)
+  salvoRef.current = salvo
 
   useEffect(() => {
+    if (salvo.noServidor) return
     try {
       localStorage.setItem(CHAVE, JSON.stringify(salvo))
     } catch {
@@ -152,8 +170,105 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }, [salvo])
 
+  // ---------- Envio ao servidor ----------
+  // As mudanças entram numa fila e vão em lotes, uma de cada vez. Sem internet, juntam-se e
+  // tentam de novo a cada 5 segundos; nada se perde enquanto a página estiver aberta.
+  const fila = useRef<Mudancas | null>(null)
+  const enviando = useRef(false)
+  const enviar = useCallback(async () => {
+    if (enviando.current) return
+    enviando.current = true
+    while (fila.current) {
+      const lote = fila.current
+      fila.current = null
+      setSalvamento('salvando')
+      try {
+        await api('POST', 'sincronizar', lote)
+      } catch (e) {
+        const status = e instanceof ErroApi ? e.status : 0
+        if (status >= 400 && status < 500 && status !== 401 && status !== 408 && status !== 429) {
+          // O servidor recusou o lote: repetir não adianta. Fica registrado e a fila segue.
+          console.error('Mudança recusada pelo servidor', e, lote)
+          setSalvamento('erro')
+          continue
+        }
+        fila.current = fila.current ? juntar(lote, fila.current) : lote
+        setSalvamento('erro')
+        enviando.current = false
+        if (status === 401) setConta(null)
+        else window.setTimeout(() => void enviar(), 5000)
+        return
+      }
+    }
+    setSalvamento('ok')
+    enviando.current = false
+  }, [])
+  const enfileirar = useCallback(
+    (m: Mudancas | null) => {
+      if (!m) return
+      fila.current = fila.current ? juntar(fila.current, m) : m
+      void enviar()
+    },
+    [enviar],
+  )
+  useEffect(() => {
+    const aviso = (e: BeforeUnloadEvent) => {
+      if (fila.current || enviando.current) e.preventDefault()
+    }
+    window.addEventListener('beforeunload', aviso)
+    return () => window.removeEventListener('beforeunload', aviso)
+  }, [])
+
   // Toda mudança passa pelo gerador, para as contas fixas estarem sempre criadas.
-  const mudar = useCallback((f: (d: Dados) => Dados) => setSalvo((s) => ({ ...s, dados: comPrevistos(f(s.dados), hojeDo(s.modo)) })), [])
+  const mudar = useCallback(
+    (f: (d: Dados) => Dados) => {
+      const s = salvoRef.current
+      const dados = comPrevistos(f(s.dados), hojeDo(s.modo))
+      const novo = { ...s, dados }
+      salvoRef.current = novo
+      setSalvo(novo)
+      if (s.noServidor) enfileirar(diferencas(s.dados, dados))
+    },
+    [enfileirar],
+  )
+
+  const carregarDoServidor = useCallback(async () => {
+    const { dados } = await api<{ dados: Dados | null }>('GET', 'dados')
+    if (!dados) return
+    const h = hojeReal()
+    const atualizado = comPrevistos(dados, h)
+    setSalvo({ modo: 'real', dados: atualizado, noServidor: true })
+    setMes(mesDe(h))
+    // Contas fixas do mês que virou desde o último acesso: o servidor também guarda.
+    enfileirar(diferencas(dados, atualizado))
+  }, [enfileirar])
+
+  useEffect(() => {
+    void (async () => {
+      const s = await verificarServidor()
+      if (!s.tem) return setServidor('sem')
+      setConta(s.conta)
+      if (s.conta?.temNegocio) await carregarDoServidor().catch(() => {})
+      setServidor('com')
+    })()
+  }, [carregarDoServidor])
+
+  const entrar = useCallback(
+    async (email: string, senha: string) => {
+      const c = await api<Conta>('POST', 'conta/entrar', { email, senha })
+      // Mudanças que ficaram esperando porque a sessão tinha vencido vão antes de recarregar.
+      if (fila.current) await enviar()
+      if (c.temNegocio) await carregarDoServidor()
+      setConta(c)
+      return c
+    },
+    [carregarDoServidor, enviar],
+  )
+  const criarConta = useCallback(async (nome: string, email: string, senha: string) => {
+    const c = await api<Conta>('POST', 'conta/criar', { nome, email, senha, aceiteTermos: true })
+    setConta(c)
+    return c
+  }, [])
 
   const salvarLancamento = useCallback(
     (l: NovoLancamento, id?: string, opcoes?: OpcoesRepetir) => {
@@ -329,15 +444,32 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     (id: string) => mudar((d) => ({ ...d, avisosDispensados: [...(d.avisosDispensados ?? []), id] })),
     [mudar],
   )
-  const comecar = useCallback((c: ConfigInicial) => {
-    const hojeReal_ = hojeReal()
-    setSalvo({ modo: 'real', dados: dadosIniciais(c, hojeReal_) })
-    setMes(mesDe(hojeReal_))
-  }, [])
+  const comecar = useCallback(
+    async (c: ConfigInicial) => {
+      const h = hojeReal()
+      const dados = dadosIniciais(c, h)
+      if (servidor === 'com') {
+        const r = await api<{ dados: Dados }>('POST', 'negocio', paraNovoNegocio(dados))
+        fila.current = null
+        setSalvo({ modo: 'real', dados: r.dados, noServidor: true })
+        setConta((x) => x && { ...x, temNegocio: true })
+      } else {
+        setSalvo({ modo: 'real', dados })
+      }
+      setMes(mesDe(h))
+    },
+    [servidor],
+  )
   const restaurarDemo = useCallback(() => {
     setSalvo({ modo: 'demo', dados: dadosDemo() })
     setMes(mesDe(DEMO_HOJE))
   }, [])
+  const sair = useCallback(async () => {
+    await api('POST', 'conta/sair').catch(() => {})
+    fila.current = null
+    setConta(null)
+    restaurarDemo()
+  }, [restaurarDemo])
 
   const valor = useMemo<Store>(
     () => ({
@@ -357,8 +489,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       dispensarAviso,
       comecar,
       restaurarDemo,
+      servidor,
+      conta,
+      salvamento,
+      entrar,
+      criarConta,
+      sair,
     }),
-    [salvo, hoje, mes, salvarLancamento, excluirLancamento, marcarComoPago, marcarDasPago, separarReserva, recorrenciaDe, atualizarEmpresa, atualizarPreferencias, dispensarAviso, comecar, restaurarDemo],
+    [salvo, hoje, mes, salvarLancamento, excluirLancamento, marcarComoPago, marcarDasPago, separarReserva, recorrenciaDe, atualizarEmpresa, atualizarPreferencias, dispensarAviso, comecar, restaurarDemo, servidor, conta, salvamento, entrar, criarConta, sair],
   )
   return <Ctx.Provider value={valor}>{children}</Ctx.Provider>
 }

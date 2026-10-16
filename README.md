@@ -8,10 +8,20 @@ Responde todo mês: **quanto entrou, quanto saiu, quanto sobrou para o negócio 
 
 ```bash
 npm install
-npm run dev      # http://localhost:5173
-npm test         # regras de cálculo
-npm run build    # gera dist/, que roda em qualquer hospedagem estática
+npm run dev      # http://localhost:5173 (só o site, dados no navegador)
+npm test         # regras de cálculo (e o servidor, com TEST_DATABASE_URL)
+npm run build    # gera dist/
 ```
+
+Com o servidor (login e banco), num Postgres local:
+
+```bash
+DATABASE_URL=postgres://postgres@localhost/gynfinance APP_DB_PASSWORD=senha-local npm run migrar
+APP_DATABASE_URL=postgres://gynfinance_app:senha-local@localhost/gynfinance npm run servidor   # http://localhost:3000
+TEST_DATABASE_URL=postgres://postgres@localhost/gyn_teste npm test   # banco vazio só para os testes
+```
+
+Para instalar numa VPS com Docker, veja [docs/INSTALAR.md](docs/INSTALAR.md).
 
 ## O que já tem (módulo inicial)
 
@@ -28,25 +38,32 @@ npm run build    # gera dist/, que roda em qualquer hospedagem estática
 | Configurações | `#/configuracoes` |
 | Configuração inicial (primeiro acesso) | `#/comecar` |
 
-O app abre em **modo demonstração** com a "Doces da Ana" vista em 15/10/2026. Os dados ficam no navegador
+Sem servidor (o `dist/` sozinho, como na demonstração publicada), o app abre em **modo demonstração** com a "Doces da Ana" vista em 15/10/2026. Os dados ficam no navegador
 (localStorage). Em Configurações, Assinatura, dá para restaurar os dados de exemplo antes de uma apresentação.
 
 "Usar com o meu negócio" (menu lateral, Mais ou Configurações) abre a configuração inicial: nome, tipo de negócio,
 MEI, mês de abertura, saldo de hoje, pró-labore desejado e, para MEI, o que já vendeu no ano e se os DAS estão em dia.
 Ela troca a demonstração por um negócio vazio, com a data de hoje.
 
+Com o servidor, "Usar com o meu negócio" pede primeiro para criar a conta ou entrar. Os dados do negócio ficam no
+banco, e cada mudança feita no app vai para o servidor em seguida (`src/data/sincronizar.ts` calcula o que mudou;
+sem internet, as mudanças esperam e tentam de novo a cada 5 segundos). A demonstração continua só no navegador.
+
 ## Organização
 
 ```text
 src/
 ├── domain/        tipos, parâmetros do MEI por ano e regras de cálculo (testadas)
-├── data/          estado do app, categorias padrão e dados de demonstração
+├── data/          estado do app, conversa com o servidor, categorias padrão e dados de demonstração
 ├── components/
 │   ├── ui/        Button, Card, Badge, Field, Tabs, Modal e Toast
 │   ├── layout/    Sidebar, Header, MobileNavigation, MainLayout
 │   └── financial/ resumo, gráficos e linha de conta
 ├── pages/         uma por tela
 └── styles/        tokens.css (cores, raios e sombras do DESIGN.md)
+server/
+├── migrations/    tabelas do banco (Postgres), com as regras de acesso por empresa
+└── src/           servidor Fastify: conta, dados do negócio e o site (dist/)
 ```
 
 - Visual: segue o [DESIGN.md](docs/DESIGN.md) e a [imagem de referência](docs/telas-referencia.png). Cores só pelos tokens de `src/styles/tokens.css`; degradês em `grad-primario` e `grad-navy` (`src/index.css`).
@@ -67,9 +84,6 @@ src/
 
 ## Próximos passos
 
-- Login e banco de dados (as ações em `src/data/store.tsx` são o contrato para o back-end). O banco já está desenhado
-  para Supabase/Postgres em `supabase/migrations/0001_modulo_inicial.sql`: as tabelas do planejamento, valores em
-  centavos e regras de acesso (RLS) que deixam cada pessoa ver só as próprias empresas. Falta escolher e criar a conta
-  no serviço e ligar o `store.tsx` a ele.
-- Configuração inicial do negócio (primeiro acesso).
+- Contratar a VPS e o domínio e instalar seguindo [docs/INSTALAR.md](docs/INSTALAR.md).
+- Recuperar a senha por e-mail (precisa de um serviço de envio de e-mail).
 - Lembretes por e-mail e, depois, WhatsApp.

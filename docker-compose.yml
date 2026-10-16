@@ -1,0 +1,54 @@
+# Sobe o Gynfinance numa VPS: banco Postgres, servidor e HTTPS automático (Caddy).
+# Passo a passo em docs/INSTALAR.md. As senhas vêm do arquivo .env (copie de .env.example).
+services:
+  banco:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: gynfinance
+      POSTGRES_USER: gynfinance_admin
+      POSTGRES_PASSWORD: ${DB_ADMIN_PASSWORD:?defina DB_ADMIN_PASSWORD no .env}
+    volumes:
+      - banco:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U gynfinance_admin -d gynfinance']
+      interval: 5s
+      retries: 20
+
+  # Roda as migrações e cria o usuário do banco que o servidor usa; depois termina.
+  migrar:
+    build: .
+    command: ['node', 'server/src/migrar.ts']
+    environment:
+      DATABASE_URL: postgres://gynfinance_admin:${DB_ADMIN_PASSWORD}@banco:5432/gynfinance
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?defina APP_DB_PASSWORD no .env}
+    depends_on:
+      banco:
+        condition: service_healthy
+    restart: 'no'
+
+  app:
+    build: .
+    restart: unless-stopped
+    environment:
+      APP_DATABASE_URL: postgres://gynfinance_app:${APP_DB_PASSWORD}@banco:5432/gynfinance
+    depends_on:
+      migrar:
+        condition: service_completed_successfully
+
+  # HTTPS com certificado gratuito (Let's Encrypt), renovado sozinho.
+  https:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    command: caddy reverse-proxy --from ${DOMINIO:?defina DOMINIO no .env} --to app:3000
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - caddy:/data
+    depends_on:
+      - app
+
+volumes:
+  banco:
+  caddy:

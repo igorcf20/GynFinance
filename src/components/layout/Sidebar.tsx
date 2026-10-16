@@ -33,7 +33,7 @@ function Item({ item, caminho, compacto }: { item: ItemNav; caminho: string; com
 /** Navegação lateral: expandida acima de 1200px e só com ícones no tablet. */
 export function Sidebar() {
   const { pathname } = useLocation()
-  const { dados, modo } = useStore()
+  const { dados, modo, servidor, conta } = useStore()
   const [maisAberto, setMaisAberto] = useState(false)
   useEffect(() => {
     if (NAV_MAIS.some((i) => estaAtivo(i, pathname))) setMaisAberto(true)
@@ -101,6 +101,11 @@ export function Sidebar() {
             <span className="mt-1 flex items-center gap-1 font-bold">
               Usar com o meu negócio <ChevronRight size={14} className="transition-transform group-hover:translate-x-0.5" aria-hidden />
             </span>
+          </Link>
+        )}
+        {modo === 'demo' && servidor === 'com' && !conta && (
+          <Link to="/entrar" className="mb-3 hidden text-center text-[12px] font-semibold text-ink-2 hover:text-primary xl:block">
+            Já tem conta? Entrar
           </Link>
         )}
         <Link

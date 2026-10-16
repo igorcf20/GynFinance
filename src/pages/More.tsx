@@ -8,7 +8,7 @@ import { useStore } from '../data/store'
 
 /** No celular, tudo o que não cabe na barra inferior. */
 export function More() {
-  const { modo } = useStore()
+  const { modo, servidor, conta } = useStore()
   const itens = [{ para: '/relatorios', rotulo: 'Relatórios', icone: BarChart3 }, ...NAV_MAIS]
   return (
     <>
@@ -16,6 +16,11 @@ export function More() {
       {modo === 'demo' && (
         <div className="mb-4">
           <CartaoComecar />
+          {servidor === 'com' && !conta && (
+            <Link to="/entrar" className="mt-3 block text-center text-[13px] font-semibold text-ink-2">
+              Já tem conta? Entrar
+            </Link>
+          )}
         </div>
       )}
       <Card className="!p-2">

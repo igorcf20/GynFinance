@@ -101,6 +101,7 @@ export function prazo(venc: DataISO, hoje: DataISO, feminino = true): string {
   return d === -1 ? `${atrasad} há 1 dia` : `${atrasad} há ${-d} dias`
 }
 
+/** Id novo no formato UUID, o mesmo que o banco do servidor usa. */
 export function uid(): string {
-  return Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4)
+  return crypto.randomUUID()
 }

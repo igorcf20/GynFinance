@@ -1,8 +1,9 @@
--- Gynfinance: banco do módulo inicial (Postgres / Supabase).
+-- Gynfinance: banco do módulo inicial (Postgres 16, servidor próprio).
 -- Segue o "Modelo de dados" do planejamento e os tipos de src/domain/types.ts.
--- Dinheiro em centavos inteiros (bigint). Toda tabela de negócio tem empresa_id, e o acesso
--- é limitado pelas regras de segurança (RLS) no fim do arquivo: cada pessoa só lê e grava
--- os dados das empresas de que é dona, mesmo que o navegador mande outro id.
+-- Dinheiro em centavos inteiros (bigint). Toda tabela de negócio tem empresa_id. O servidor
+-- sempre filtra pela empresa da sessão e, por garantia, as regras de segurança (RLS) no fim
+-- do arquivo repetem isso no próprio banco: o servidor abre cada pedido com
+-- set_config('app.usuario_id', ...) e só enxerga as empresas daquela pessoa.
 
 create extension if not exists pgcrypto;
 
@@ -19,15 +20,27 @@ create type tipo_lembrete as enum ('conta', 'das', 'limite_mei', 'dasn', 'fecham
 create type canal_lembrete as enum ('app', 'email', 'whatsapp');
 create type status_lembrete as enum ('pendente', 'enviado', 'lido', 'dispensado');
 
--- ---------- Usuário (o login fica em auth.users do Supabase) ----------
+-- ---------- Login ----------
 create table usuario (
-  id uuid primary key references auth.users (id) on delete cascade,
+  id uuid primary key default gen_random_uuid(),
   nome text not null,
+  email text not null,
+  senha_hash text not null,
   telefone_whatsapp text,
-  aceite_termos_em timestamptz,
+  aceite_termos_em timestamptz not null,
   criado_em timestamptz not null default now(),
   atualizado_em timestamptz not null default now()
 );
+create unique index usuario_email on usuario (lower(email));
+
+-- Sessão do navegador: o cookie leva um código aleatório; aqui fica só o hash dele.
+create table sessao (
+  token_hash text primary key,
+  usuario_id uuid not null references usuario (id) on delete cascade,
+  criada_em timestamptz not null default now(),
+  expira_em timestamptz not null
+);
+create index on sessao (usuario_id);
 
 create table empresa (
   id uuid primary key default gen_random_uuid(),
@@ -87,6 +100,7 @@ create table categoria_desativada (
 
 create table recorrencia (
   id uuid primary key default gen_random_uuid(),
+  ordem bigint generated always as identity,
   empresa_id uuid not null references empresa (id) on delete cascade,
   natureza natureza not null,
   valor bigint not null check (valor > 0),
@@ -111,6 +125,8 @@ create index on recorrencia (empresa_id);
 -- O centro do modelo: uma conta a pagar é só um lançamento com situação "previsto".
 create table lancamento (
   id uuid primary key default gen_random_uuid(),
+  -- Ordem de criação, para o app receber os lançamentos na mesma ordem em que foram feitos.
+  ordem bigint generated always as identity,
   empresa_id uuid not null references empresa (id) on delete cascade,
   natureza natureza not null,
   valor bigint not null check (valor > 0),
@@ -187,32 +203,32 @@ create table aviso_dispensado (
 );
 
 -- ---------- Segurança: cada pessoa só enxerga as próprias empresas ----------
-create function minha_empresa(e uuid) returns boolean
-language sql stable security definer set search_path = public as $$
-  select exists (select 1 from empresa where id = e and usuario_id = auth.uid())
-$$;
+-- "force" vale também para o dono das tabelas. O servidor conecta com um usuário sem
+-- superpoderes (gynfinance_app, criado pelo script de migração), que não ignora RLS.
+create function app_usuario() returns uuid
+language sql stable as $$ select nullif(current_setting('app.usuario_id', true), '')::uuid $$;
 
-alter table usuario enable row level security;
-create policy "dono" on usuario for all using (id = auth.uid()) with check (id = auth.uid());
+create function minha_empresa(e uuid) returns boolean
+language sql stable as $$ select exists (select 1 from empresa where id = e and usuario_id = app_usuario()) $$;
 
 alter table empresa enable row level security;
-create policy "dono" on empresa for all using (usuario_id = auth.uid()) with check (usuario_id = auth.uid());
+alter table empresa force row level security;
+create policy "dono" on empresa for all using (usuario_id = app_usuario()) with check (usuario_id = app_usuario());
 
 do $$
 declare t text;
 begin
   foreach t in array array['conta_financeira', 'categoria_desativada', 'recorrencia', 'lancamento', 'pagamento_das', 'lembrete', 'aviso_dispensado'] loop
     execute format('alter table %I enable row level security', t);
+    execute format('alter table %I force row level security', t);
     execute format('create policy "da minha empresa" on %I for all using (minha_empresa(empresa_id)) with check (minha_empresa(empresa_id))', t);
   end loop;
 end $$;
 
 alter table categoria enable row level security;
+alter table categoria force row level security;
 create policy "padrao ou minha" on categoria for select using (empresa_id is null or minha_empresa(empresa_id));
 create policy "so as minhas" on categoria for all using (empresa_id is not null and minha_empresa(empresa_id)) with check (empresa_id is not null and minha_empresa(empresa_id));
-
-alter table parametro_mei enable row level security;
-create policy "leitura" on parametro_mei for select using (true);
 
 -- ---------- Dados do sistema ----------
 -- Valores de 2026 a confirmar com o Igor (iguais a src/domain/parametros.ts).

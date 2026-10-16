@@ -56,6 +56,7 @@ export function Segmentado<T extends string>({
         return (
           <button
             key={o.valor}
+            type="button"
             role="tab"
             aria-selected={ativo}
             onClick={() => onChange(o.valor)}
@@ -84,6 +85,7 @@ export function Chips<T extends string>({ opcoes, valor, onChange, rotulo }: { o
         return (
           <button
             key={o.valor}
+            type="button"
             role="radio"
             aria-checked={ativo}
             onClick={() => onChange(o.valor)}

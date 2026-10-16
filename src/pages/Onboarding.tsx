@@ -2,7 +2,7 @@
 // demonstração pelos dados do próprio negócio.
 import { ArrowLeft, ArrowRight, Briefcase, Building2, Check, Factory, Landmark, Package, PiggyBank, Store, UserRound, Wallet, X, type LucideIcon } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { Logo } from '../components/layout/Logo'
 import { Button } from '../components/ui/Button'
 import { Input, Label, Select } from '../components/ui/Field'
@@ -142,7 +142,7 @@ function Previa({ r }: { r: Respostas }) {
 }
 
 export function Onboarding() {
-  const { modo, comecar } = useStore()
+  const { modo, comecar, servidor, conta } = useStore()
   const navigate = useNavigate()
   const hoje = hojeReal()
   const [r, setR] = useState<Respostas>({
@@ -162,6 +162,8 @@ export function Onboarding() {
   const [passo, setPasso] = useState<Passo>('negocio')
   const [erros, setErros] = useState<Record<string, string>>({})
   const [pronto, setPronto] = useState<ConfigInicial | null>(null)
+  const [salvando, setSalvando] = useState(false)
+  const [erroEnvio, setErroEnvio] = useState('')
   const set = <K extends keyof Respostas>(k: K, v: Respostas[K]) => {
     setR((x) => ({ ...x, [k]: v }))
     setErros((e) => ({ ...e, [k]: '' }))
@@ -190,7 +192,7 @@ export function Onboarding() {
     return Object.values(e).every((x) => !x)
   }
 
-  function avancar() {
+  async function avancar() {
     if (!validar()) return
     if (!ultimo) {
       setPasso(passos[indice + 1])
@@ -211,10 +213,21 @@ export function Onboarding() {
       faturadoAntes: r.ehMei ? lerValor(r.faturadoAntes) || undefined : undefined,
       dasEmDia: r.ehMei ? !!r.dasEmDia : undefined,
     }
-    comecar(c)
-    setPronto(c)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    setSalvando(true)
+    setErroEnvio('')
+    try {
+      await comecar(c)
+      setPronto(c)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    } catch (e) {
+      setErroEnvio((e as Error).message)
+    } finally {
+      setSalvando(false)
+    }
   }
+
+  // Na versão instalada, o negócio fica na conta da pessoa: primeiro entrar ou criar a conta.
+  if (servidor === 'com' && !conta) return <Navigate to="/entrar?depois=comecar" replace />
 
   const TITULOS: Record<Passo, { titulo: string; texto: string }> = {
     negocio: { titulo: 'Vamos conhecer o seu negócio', texto: 'São 2 minutos. Com isso o Gynfinance já monta o seu painel.' },
@@ -272,7 +285,7 @@ export function Onboarding() {
       <div className="mx-auto flex max-w-[1040px] items-center justify-between gap-4">
         <Logo />
         <Link to="/" className="inline-flex h-10 items-center gap-1.5 rounded-full px-3 text-[13px] font-semibold text-ink-2 transition-colors hover:bg-white hover:text-ink">
-          <X size={16} aria-hidden /> {modo === 'demo' ? 'Voltar à demonstração' : 'Cancelar'}
+          <X size={16} aria-hidden /> {modo === 'demo' && !conta ? 'Voltar à demonstração' : 'Cancelar'}
         </Link>
       </div>
 
@@ -298,7 +311,7 @@ export function Onboarding() {
               className="card mt-6 flex flex-col gap-5 p-5 md:p-7"
               onSubmit={(e) => {
                 e.preventDefault()
-                avancar()
+                void avancar()
               }}
               noValidate
             >
@@ -378,6 +391,11 @@ export function Onboarding() {
                 </>
               )}
 
+              {erroEnvio && (
+                <p role="alert" className="rounded-[12px] bg-danger-soft px-3.5 py-2.5 text-[13px] text-[#9b1c2e]">
+                  {erroEnvio}
+                </p>
+              )}
               <div className="mt-1 flex flex-col-reverse gap-2.5 border-t border-line pt-5 sm:flex-row sm:justify-between">
                 {indice > 0 ? (
                   <Button type="button" variante="discreto" tamanho="lg" icone={<ArrowLeft size={17} />} onClick={() => setPasso(passos[indice - 1])}>
@@ -386,7 +404,7 @@ export function Onboarding() {
                 ) : (
                   <span />
                 )}
-                <Button type="submit" tamanho="lg" className="sm:min-w-[200px]">
+                <Button type="submit" tamanho="lg" className="sm:min-w-[200px]" carregando={salvando}>
                   {ultimo ? 'Concluir' : 'Continuar'}
                   {!ultimo && <ArrowRight size={17} aria-hidden />}
                 </Button>

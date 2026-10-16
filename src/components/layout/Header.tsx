@@ -1,6 +1,6 @@
-import { Bell, CalendarDays, ChevronDown, Menu } from 'lucide-react'
+import { Bell, CalendarDays, ChevronDown, CloudOff, LogOut, Menu, Settings } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { alertas } from '../../domain/calc'
 import { useStore } from '../../data/store'
 import { addMeses, mesAno } from '../../lib/format'
@@ -70,8 +70,77 @@ function Notificacoes() {
   )
 }
 
+/** Avatar: na versão instalada abre o menu da conta (configurações e sair). */
+function Perfil() {
+  const { dados, conta, sair } = useStore()
+  const navigate = useNavigate()
+  const [aberto, setAberto] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!aberto) return
+    const fora = (e: MouseEvent) => ref.current && !ref.current.contains(e.target as Node) && setAberto(false)
+    document.addEventListener('mousedown', fora)
+    return () => document.removeEventListener('mousedown', fora)
+  }, [aberto])
+  const classe =
+    'hidden size-11 items-center justify-center rounded-full bg-gradient-to-b from-[#eaf0f8] to-[#d9e3f0] text-[17px] font-extrabold text-navy ring-2 ring-white transition-transform hover:-translate-y-px md:inline-flex'
+  const inicial = dados.empresa.nomeDono.charAt(0).toUpperCase()
+  if (!conta) {
+    return (
+      <Link to="/configuracoes" aria-label="Perfil da empresa" className={classe}>
+        {inicial}
+      </Link>
+    )
+  }
+  return (
+    <div ref={ref} className="relative hidden md:block">
+      <button onClick={() => setAberto((v) => !v)} aria-label="Sua conta" aria-expanded={aberto} className={classe}>
+        {inicial}
+      </button>
+      {aberto && (
+        <div className="anim-janela absolute right-0 z-30 mt-2 w-64 rounded-[16px] border border-line bg-surface p-2 shadow-[var(--shadow-pop)]">
+          <div className="px-3 pt-2 pb-2.5">
+            <p className="truncate text-[14px] font-bold text-ink">{conta.usuario.nome}</p>
+            <p className="truncate text-[12px] text-ink-2">{conta.usuario.email}</p>
+          </div>
+          <Link to="/configuracoes" onClick={() => setAberto(false)} className="flex items-center gap-2.5 rounded-[10px] px-3 py-2.5 text-[13px] font-medium text-ink hover:bg-hover">
+            <Settings size={16} className="text-slate" aria-hidden /> Configurações
+          </Link>
+          <button
+            onClick={async () => {
+              await sair()
+              navigate('/entrar', { replace: true })
+            }}
+            className="flex w-full items-center gap-2.5 rounded-[10px] px-3 py-2.5 text-left text-[13px] font-medium text-danger hover:bg-danger-soft"
+          >
+            <LogOut size={16} aria-hidden /> Sair
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** Só aparece quando uma mudança ainda não chegou ao servidor. */
+function AvisoSalvamento() {
+  const { salvamento, conta } = useStore()
+  if (salvamento !== 'erro') return null
+  const classe = 'inline-flex h-9 items-center gap-1.5 rounded-full bg-warning-soft px-3 text-[12px] font-semibold text-[#7a3c07]'
+  if (!conta) {
+    return (
+      <Link to="/entrar" role="status" className={`${classe} hover:underline`}>
+        <CloudOff size={15} aria-hidden /> Entre de novo para salvar
+      </Link>
+    )
+  }
+  return (
+    <span role="status" className={classe}>
+      <CloudOff size={15} aria-hidden /> Sem conexão. Tentando salvar…
+    </span>
+  )
+}
+
 export function Header({ titulo, subtitulo, periodo, acoes }: { titulo: ReactNode; subtitulo?: ReactNode; periodo?: boolean; acoes?: ReactNode }) {
-  const { dados } = useStore()
   return (
     <header className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-3">
       <Link to="/" className="md:hidden" aria-label="Início">
@@ -88,14 +157,9 @@ export function Header({ titulo, subtitulo, periodo, acoes }: { titulo: ReactNod
             <SeletorMes />
           </span>
         )}
+        <AvisoSalvamento />
         <Notificacoes />
-        <Link
-          to="/configuracoes"
-          aria-label="Perfil da empresa"
-          className="hidden size-11 items-center justify-center rounded-full bg-gradient-to-b from-[#eaf0f8] to-[#d9e3f0] text-[17px] font-extrabold text-navy ring-2 ring-white md:inline-flex"
-        >
-          {dados.empresa.nomeDono.charAt(0).toUpperCase()}
-        </Link>
+        <Perfil />
         <Link to="/mais" aria-label="Mais opções" className="inline-flex size-10 items-center justify-center rounded-[10px] text-slate hover:bg-hover md:hidden">
           <Menu size={20} strokeWidth={1.7} />
         </Link>
