@@ -1,7 +1,7 @@
 // O que mudou entre dois estados do app, no formato que o servidor grava (POST /api/sincronizar).
 // As ações do store trocam objetos inteiros sem mexer nos antigos, então basta comparar
 // as referências para saber o que foi criado, alterado ou apagado.
-import type { Atendimento, Dados, Empresa, Lancamento, PagamentoDas, Preferencias, Recorrencia } from '../domain/types'
+import type { Atendimento, Dados, Empresa, Lancamento, PagamentoDas, Parceiro, Preferencias, Recorrencia } from '../domain/types'
 
 export interface Mudancas {
   empresa?: Omit<Empresa, 'id'>
@@ -10,6 +10,7 @@ export interface Mudancas {
   recorrencias?: { salvar: Recorrencia[] }
   pagamentosDas?: { salvar: PagamentoDas[] }
   atendimentos?: { salvar: Atendimento[]; excluir: string[] }
+  parceiros?: { salvar: Omit<Parceiro, 'empresaId'>[]; excluir: string[] }
   avisosDispensados?: string[]
 }
 
@@ -49,6 +50,13 @@ export function diferencas(antes: Dados, depois: Dados): Mudancas | null {
     const excluir = (antes.atendimentos ?? []).filter((a) => !novos.has(a.id)).map((a) => a.id)
     if (salvar.length || excluir.length) m.atendimentos = { salvar, excluir }
   }
+  if (antes.parceiros !== depois.parceiros) {
+    const velhos = porId(antes.parceiros ?? [], (p) => p.id)
+    const novos = porId(depois.parceiros ?? [], (p) => p.id)
+    const salvar = (depois.parceiros ?? []).filter((p) => velhos.get(p.id) !== p).map(({ empresaId: _, ...p }) => p)
+    const excluir = (antes.parceiros ?? []).filter((p) => !novos.has(p.id)).map((p) => p.id)
+    if (salvar.length || excluir.length) m.parceiros = { salvar, excluir }
+  }
   const dispensados = new Set(antes.avisosDispensados ?? [])
   const novosAvisos = (depois.avisosDispensados ?? []).filter((a) => !dispensados.has(a))
   if (novosAvisos.length) m.avisosDispensados = novosAvisos
@@ -74,6 +82,13 @@ export function juntar(a: Mudancas, b: Mudancas): Mudancas {
     r.atendimentos = {
       salvar: salvar.filter((x) => !(b.atendimentos?.excluir ?? []).includes(x.id)),
       excluir: [...new Set([...(a.atendimentos?.excluir ?? []), ...(b.atendimentos?.excluir ?? [])])],
+    }
+  }
+  if (a.parceiros || b.parceiros) {
+    const salvar = ultimoPorId([...(a.parceiros?.salvar ?? []), ...(b.parceiros?.salvar ?? [])], (x) => x.id)
+    r.parceiros = {
+      salvar: salvar.filter((x) => !(b.parceiros?.excluir ?? []).includes(x.id)),
+      excluir: [...new Set([...(a.parceiros?.excluir ?? []), ...(b.parceiros?.excluir ?? [])])],
     }
   }
   if (a.avisosDispensados || b.avisosDispensados) r.avisosDispensados = [...new Set([...(a.avisosDispensados ?? []), ...(b.avisosDispensados ?? [])])]

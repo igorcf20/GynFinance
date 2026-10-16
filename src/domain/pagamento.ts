@@ -118,5 +118,6 @@ export function reverterDados(atual: Dados, antes: Dados, depois: Dados): Dados 
     pagamentosDas: reverter(atual.pagamentosDas, antes.pagamentosDas, depois.pagamentosDas, (p) => p.competencia),
     recorrencias: reverter(atual.recorrencias, antes.recorrencias, depois.recorrencias, (r) => r.id),
     atendimentos: reverter(atual.atendimentos, antes.atendimentos, depois.atendimentos, (a) => a.id),
+    parceiros: antes.parceiros === depois.parceiros ? atual.parceiros : reverter(atual.parceiros ?? [], antes.parceiros ?? [], depois.parceiros ?? [], (p) => p.id),
   }
 }

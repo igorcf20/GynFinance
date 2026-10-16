@@ -5,6 +5,7 @@ import { CATEGORIAS_PADRAO } from './categorias'
 import { saldoCaixa } from '../domain/calc'
 import { parametroDoAno } from '../domain/parametros'
 import { gerarPrevistos } from '../domain/recorrencia'
+import { salvarParceiro, type NovoParceiro } from '../domain/parceiros'
 import type { Atendimento, Dados, Lancamento, PagamentoDas, Recorrencia } from '../domain/types'
 
 export const DEMO_HOJE = '2026-10-15'
@@ -199,7 +200,7 @@ export function dadosDemo(): Dados {
 
   const gerado = gerarPrevistos([REC_ALUGUEL, REC_INTERNET, REC_LUZ], lancamentos, DEMO_HOJE, () => id('l'))
 
-  return {
+  const base: Dados = {
     empresa: {
       id: EMPRESA,
       nomeDono: 'Ana',
@@ -219,9 +220,25 @@ export function dadosDemo(): Dados {
     recorrencias: gerado.recorrencias,
     pagamentosDas,
     atendimentos: atendimentosDemo(lancamentos),
+    parceiros: [],
     preferencias: { lembreteDias: 1, lembreteEmail: true, resumoMensal: true },
   }
+  // Fichas da Ana: ao cadastrar, o histórico com o mesmo nome entra na ficha. "Balcão" e alguns
+  // clientes da agenda ficam de fora para aparecerem como sugestão de cadastro.
+  return PARCEIROS.reduce((d, [criadoEm, p], i) => salvarParceiro(d, p, `parceiro-${i + 1}`, criadoEm), base)
 }
+
+const PARCEIROS: [string, NovoParceiro][] = [
+  ['2024-03-10', { tipo: 'cliente', nome: 'Buffet Estrela', documento: '23.456.789/0001-10', telefone: '(62) 3241-5566', email: 'eventos@buffetestrela.com.br', endereco: 'Av. T-63, 1200, Setor Bueno, Goiânia', observacao: 'Paga em até 15 dias depois do evento. Falar com a Sônia.', ativo: true }],
+  ['2024-05-02', { tipo: 'cliente', nome: 'Padaria Central', documento: '34.567.890/0001-21', telefone: '(62) 3215-7788', endereco: 'Rua 9, 410, Centro, Goiânia', observacao: 'Revende bolos no balcão. Entrega toda sexta.', ativo: true }],
+  ['2025-02-14', { tipo: 'cliente', nome: 'Maria Souza', telefone: '(62) 99876-1234', observacao: 'Cliente fiel. Gosta de brigadeiro de pistache.', ativo: true }],
+  ['2026-09-30', { tipo: 'cliente', nome: 'João Silva', telefone: '(62) 99654-7788', ativo: true }],
+  ['2024-03-01', { tipo: 'fornecedor', nome: 'Atacadão', documento: '75.315.333/0001-09', telefone: '(62) 3088-4000', observacao: 'Ingredientes. Compras às segundas.', ativo: true }],
+  ['2024-03-01', { tipo: 'fornecedor', nome: 'Embala Fácil', telefone: '(62) 99777-4455', email: 'vendas@embalafacil.com.br', observacao: 'Caixas e fitas. Boleto em 15 dias.', ativo: true }],
+  ['2024-03-01', { tipo: 'fornecedor', nome: 'Imobiliária Lar', telefone: '(62) 3091-2020', observacao: 'Aluguel da cozinha. Vence dia 16.', ativo: true }],
+  ['2024-03-01', { tipo: 'fornecedor', nome: 'NetGoiás', ativo: true }],
+  ['2026-10-01', { tipo: 'fornecedor', nome: 'Equatorial Goiás', ativo: true }],
+]
 
 /**
  * Agenda da Ana: retiradas, entregas e degustações. As que têm valor usam as contas a receber

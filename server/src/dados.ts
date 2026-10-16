@@ -1,6 +1,6 @@
 // Tradução entre as tabelas do banco e o formato Dados que o app usa (src/domain/types.ts).
 import type { z } from 'zod'
-import type { Atendimento, Categoria, Dados, Lancamento, PagamentoDas, Recorrencia } from '../../src/domain/types.ts'
+import type { Atendimento, Categoria, Dados, Lancamento, PagamentoDas, Parceiro, Recorrencia } from '../../src/domain/types.ts'
 import type { Cliente } from './db.ts'
 import type { mudancas as esquemaMudancas, novoNegocio as esquemaNovoNegocio } from './esquemas.ts'
 
@@ -20,7 +20,7 @@ export async function lerDados(c: Cliente): Promise<Dados | null> {
   const e = (await c.query<Linha>('select * from empresa order by criado_em limit 1')).rows[0]
   if (!e) return null
   const empresaId = e.id as string
-  const [contas, categorias, desligadas, lancamentos, recorrencias, das, avisos, atendimentos] = await Promise.all([
+  const [contas, categorias, desligadas, lancamentos, recorrencias, das, avisos, atendimentos, parceiros] = await Promise.all([
     c.query<Linha>('select * from conta_financeira where empresa_id = $1 order by criado_em', [empresaId]),
     c.query<Linha>('select * from categoria where empresa_id is null or empresa_id = $1', [empresaId]),
     c.query<{ categoria_id: string }>('select categoria_id from categoria_desativada where empresa_id = $1', [empresaId]),
@@ -34,6 +34,7 @@ export async function lerDados(c: Cliente): Promise<Dados | null> {
     c.query<Linha>("select *, to_char(competencia, 'YYYY-MM') as mes from pagamento_das where empresa_id = $1 order by competencia", [empresaId]),
     c.query<{ aviso_id: string }>('select aviso_id from aviso_dispensado where empresa_id = $1', [empresaId]),
     c.query<Linha>("select *, to_char(inicio, 'HH24:MI') as hora from atendimento where empresa_id = $1 order by data, inicio", [empresaId]),
+    c.query<Linha>("select *, to_char(criado_em, 'YYYY-MM-DD') as criado from parceiro where empresa_id = $1 order by nome", [empresaId]),
   ])
   const fora = new Set(desligadas.rows.map((r) => r.categoria_id))
   // Ordem das categorias padrão igual à do app.
@@ -103,6 +104,7 @@ export async function lerDados(c: Cliente): Promise<Dados | null> {
         parcela: r.parcela_total ? { numero: r.parcela_numero as number, total: r.parcela_total as number } : undefined,
         refExtrato: opc(r.ref_extrato as string | null),
         lembreteDias: opc(r.lembrete_dias as -1 | 0 | 1 | 3 | null),
+        parceiroId: opc(r.parceiro_id as string | null),
       }),
     ),
     recorrencias: recorrencias.rows.map(
@@ -118,6 +120,7 @@ export async function lerDados(c: Cliente): Promise<Dados | null> {
           descricao: opc(r.descricao as string | null),
           contraparte: opc(r.contraparte as string | null),
           lembreteDias: opc(r.lembrete_dias as -1 | 0 | 1 | 3 | null),
+          parceiroId: opc(r.parceiro_id as string | null),
         },
         frequencia: 'mensal',
         diaVencimento: r.dia_vencimento as number,
@@ -153,6 +156,22 @@ export async function lerDados(c: Cliente): Promise<Dados | null> {
         situacao: r.situacao as Atendimento['situacao'],
         observacao: opc(r.observacao as string | null),
         lancamentoId: opc(r.lancamento_id as string | null),
+        parceiroId: opc(r.parceiro_id as string | null),
+      }),
+    ),
+    parceiros: parceiros.rows.map(
+      (r): Parceiro => ({
+        id: r.id as string,
+        empresaId,
+        tipo: r.tipo as Parceiro['tipo'],
+        nome: r.nome as string,
+        documento: opc(r.documento as string | null),
+        telefone: opc(r.telefone as string | null),
+        email: opc(r.email as string | null),
+        endereco: opc(r.endereco as string | null),
+        observacao: opc(r.observacao as string | null),
+        ativo: r.ativo as boolean,
+        criadoEm: r.criado as string,
       }),
     ),
     preferencias: { lembreteDias: e.lembrete_dias as 0 | 1 | 3, lembreteEmail: e.lembrete_email as boolean, resumoMensal: e.resumo_mensal as boolean },
@@ -219,18 +238,35 @@ export async function aplicarMudancas(c: Cliente, empresaId: string, m: z.infer<
     for (const i of ids) if (i && !contas.has(i)) throw new ErroDeDados('Conta financeira desconhecida.')
   }
 
+  // Fichas antes dos lançamentos que apontam para elas; as apagadas saem só no fim.
+  for (const p of m.parceiros?.salvar ?? []) {
+    await c.query(
+      `insert into parceiro (id, empresa_id, tipo, nome, documento, telefone, email, endereco, observacao, ativo, criado_em)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+       on conflict (id) do update set tipo = excluded.tipo, nome = excluded.nome, documento = excluded.documento, telefone = excluded.telefone,
+         email = excluded.email, endereco = excluded.endereco, observacao = excluded.observacao, ativo = excluded.ativo, atualizado_em = now()
+       where parceiro.empresa_id = excluded.empresa_id`,
+      [p.id, empresaId, p.tipo, p.nome, p.documento || null, p.telefone || null, p.email || null, p.endereco || null, p.observacao || null, p.ativo, p.criadoEm],
+    )
+  }
+  const parceiros = new Set((await c.query<{ id: string }>('select id from parceiro where empresa_id = $1', [empresaId])).rows.map((r) => r.id))
+  const conferePar = (i: string | undefined) => {
+    if (i && !parceiros.has(i)) throw new ErroDeDados('Cliente ou fornecedor desconhecido.')
+  }
+
   for (const r of m.recorrencias?.salvar ?? []) {
     confere(r.modelo.contaFinanceiraId)
+    conferePar(r.modelo.parceiroId)
     await c.query(
       `insert into recorrencia (id, empresa_id, natureza, valor, categoria_id, conta_financeira_id, forma_pagamento, descricao, contraparte,
-         frequencia, dia_vencimento, inicio, fim, se_fim_de_semana, valor_varia, ativa, ultima_geracao, lembrete_dias)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'mensal', $10, $11, $12, $13, $14, $15, $16, $17)
+         frequencia, dia_vencimento, inicio, fim, se_fim_de_semana, valor_varia, ativa, ultima_geracao, lembrete_dias, parceiro_id)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'mensal', $10, $11, $12, $13, $14, $15, $16, $17, $18)
        on conflict (id) do update set natureza = excluded.natureza, valor = excluded.valor, categoria_id = excluded.categoria_id,
          conta_financeira_id = excluded.conta_financeira_id, forma_pagamento = excluded.forma_pagamento, descricao = excluded.descricao,
          contraparte = excluded.contraparte, dia_vencimento = excluded.dia_vencimento, inicio = excluded.inicio, fim = excluded.fim,
          se_fim_de_semana = excluded.se_fim_de_semana, valor_varia = excluded.valor_varia, ativa = excluded.ativa,
-         ultima_geracao = excluded.ultima_geracao, lembrete_dias = excluded.lembrete_dias, atualizado_em = now()`,
-      [r.id, empresaId, r.modelo.natureza, r.modelo.valor, r.modelo.categoriaId ?? null, r.modelo.contaFinanceiraId, r.modelo.formaPagamento, r.modelo.descricao ?? null, r.modelo.contraparte ?? null, r.diaVencimento, r.inicio, r.fim ?? null, r.seFimDeSemana, r.valorVaria, r.ativa, r.ultimaGeracao ?? null, r.modelo.lembreteDias ?? null],
+         ultima_geracao = excluded.ultima_geracao, lembrete_dias = excluded.lembrete_dias, parceiro_id = excluded.parceiro_id, atualizado_em = now()`,
+      [r.id, empresaId, r.modelo.natureza, r.modelo.valor, r.modelo.categoriaId ?? null, r.modelo.contaFinanceiraId, r.modelo.formaPagamento, r.modelo.descricao ?? null, r.modelo.contraparte ?? null, r.diaVencimento, r.inicio, r.fim ?? null, r.seFimDeSemana, r.valorVaria, r.ativa, r.ultimaGeracao ?? null, r.modelo.lembreteDias ?? null, r.modelo.parceiroId ?? null],
     )
   }
 
@@ -240,6 +276,7 @@ export async function aplicarMudancas(c: Cliente, empresaId: string, m: z.infer<
   }
   for (const l of m.lancamentos?.salvar ?? []) {
     confere(l.contaFinanceiraId, l.contaDestinoId)
+    conferePar(l.parceiroId)
     // O banco só mostra comprovantes da própria empresa: id de outra empresa não passa daqui.
     if (l.comprovante && !(await c.query('select 1 from comprovante where id = $1', [l.comprovante.id])).rowCount) {
       throw new ErroDeDados('Comprovante não encontrado. Anexe de novo.')
@@ -247,8 +284,8 @@ export async function aplicarMudancas(c: Cliente, empresaId: string, m: z.infer<
     await c.query(
       `insert into lancamento (id, empresa_id, natureza, valor, categoria_id, conta_financeira_id, conta_destino_id, situacao, data_competencia,
          data_vencimento, data_pagamento, forma_pagamento, descricao, contraparte, nota_emitida, recorrencia_id, pago_com_dinheiro_pessoal, espelho_de,
-         comprovante_id, observacao, parcela_de, parcela_numero, parcela_total, ref_extrato, lembrete_dias)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)
+         comprovante_id, observacao, parcela_de, parcela_numero, parcela_total, ref_extrato, lembrete_dias, parceiro_id)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26)
        on conflict (id) do update set natureza = excluded.natureza, valor = excluded.valor, categoria_id = excluded.categoria_id,
          conta_financeira_id = excluded.conta_financeira_id, conta_destino_id = excluded.conta_destino_id, situacao = excluded.situacao,
          data_competencia = excluded.data_competencia, data_vencimento = excluded.data_vencimento, data_pagamento = excluded.data_pagamento,
@@ -256,8 +293,8 @@ export async function aplicarMudancas(c: Cliente, empresaId: string, m: z.infer<
          nota_emitida = excluded.nota_emitida, recorrencia_id = excluded.recorrencia_id,
          pago_com_dinheiro_pessoal = excluded.pago_com_dinheiro_pessoal, espelho_de = excluded.espelho_de,
          comprovante_id = excluded.comprovante_id, observacao = excluded.observacao, parcela_de = excluded.parcela_de,
-         parcela_numero = excluded.parcela_numero, parcela_total = excluded.parcela_total, ref_extrato = excluded.ref_extrato, lembrete_dias = excluded.lembrete_dias, atualizado_em = now()`,
-      [l.id, empresaId, l.natureza, l.valor, l.categoriaId ?? null, l.contaFinanceiraId, l.contaDestinoId ?? null, l.situacao, l.dataCompetencia, l.dataVencimento ?? null, l.dataPagamento ?? null, l.formaPagamento, l.descricao ?? null, l.contraparte ?? null, l.notaEmitida, l.recorrenciaId ?? null, !!l.pagoComDinheiroPessoal, l.espelhoDe ?? null, l.comprovante?.id ?? null, l.observacao ?? null, l.parcelaDe ?? null, l.parcela?.numero ?? null, l.parcela?.total ?? null, l.refExtrato ?? null, l.lembreteDias ?? null],
+         parcela_numero = excluded.parcela_numero, parcela_total = excluded.parcela_total, ref_extrato = excluded.ref_extrato, lembrete_dias = excluded.lembrete_dias, parceiro_id = excluded.parceiro_id, atualizado_em = now()`,
+      [l.id, empresaId, l.natureza, l.valor, l.categoriaId ?? null, l.contaFinanceiraId, l.contaDestinoId ?? null, l.situacao, l.dataCompetencia, l.dataVencimento ?? null, l.dataPagamento ?? null, l.formaPagamento, l.descricao ?? null, l.contraparte ?? null, l.notaEmitida, l.recorrenciaId ?? null, !!l.pagoComDinheiroPessoal, l.espelhoDe ?? null, l.comprovante?.id ?? null, l.observacao ?? null, l.parcelaDe ?? null, l.parcela?.numero ?? null, l.parcela?.total ?? null, l.refExtrato ?? null, l.lembreteDias ?? null, l.parceiroId ?? null],
     )
   }
 
@@ -269,16 +306,20 @@ export async function aplicarMudancas(c: Cliente, empresaId: string, m: z.infer<
     if (a.lancamentoId && !(await c.query('select 1 from lancamento where id = $1 and empresa_id = $2', [a.lancamentoId, empresaId])).rowCount) {
       throw new ErroDeDados('Conta a receber do atendimento não encontrada.')
     }
+    conferePar(a.parceiroId)
     await c.query(
-      `insert into atendimento (id, empresa_id, cliente, telefone, servico, data, inicio, duracao_min, valor, situacao, observacao, lancamento_id)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      `insert into atendimento (id, empresa_id, cliente, telefone, servico, data, inicio, duracao_min, valor, situacao, observacao, lancamento_id, parceiro_id)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
        on conflict (id) do update set cliente = excluded.cliente, telefone = excluded.telefone, servico = excluded.servico, data = excluded.data,
          inicio = excluded.inicio, duracao_min = excluded.duracao_min, valor = excluded.valor, situacao = excluded.situacao,
-         observacao = excluded.observacao, lancamento_id = excluded.lancamento_id, atualizado_em = now()`,
-      [a.id, empresaId, a.cliente, a.telefone ?? null, a.servico ?? null, a.data, a.inicio, a.duracaoMin, a.valor ?? null, a.situacao, a.observacao ?? null, a.lancamentoId ?? null],
+         observacao = excluded.observacao, lancamento_id = excluded.lancamento_id, parceiro_id = excluded.parceiro_id, atualizado_em = now()`,
+      [a.id, empresaId, a.cliente, a.telefone ?? null, a.servico ?? null, a.data, a.inicio, a.duracaoMin, a.valor ?? null, a.situacao, a.observacao ?? null, a.lancamentoId ?? null, a.parceiroId ?? null],
     )
   }
 
+  if (m.parceiros?.excluir.length) {
+    await c.query('delete from parceiro where empresa_id = $1 and id = any($2::uuid[])', [empresaId, m.parceiros.excluir])
+  }
   if (m.pagamentosDas) await gravarDas(c, empresaId, m.pagamentosDas.salvar)
   for (const a of m.avisosDispensados ?? []) {
     await c.query('insert into aviso_dispensado (empresa_id, aviso_id) values ($1, $2) on conflict do nothing', [empresaId, a])

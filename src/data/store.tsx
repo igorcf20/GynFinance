@@ -8,6 +8,7 @@ import { excluirAtendimento as tirarAtendimento, salvarAtendimento as gravarAten
 import { aplicarImportacao, type LinhaImportacao } from '../domain/extrato'
 import { aplicarPagamento, reverterDados, type DetalhesPagamento } from '../domain/pagamento'
 import { gerarPrevistos } from '../domain/recorrencia'
+import { cadastrarSugeridos as gravarSugeridos, excluirParceiro as tirarParceiro, salvarParceiro as gravarParceiro, vincularLancamentos as vincular, type NomeSugerido, type NovoParceiro } from '../domain/parceiros'
 import type { IdModulo } from '../domain/planos'
 import type { Atividade, Centavos, Comprovante, Dados, DataISO, Empresa, Lancamento, MesISO, Preferencias, Recorrencia, SeFimDeSemana } from '../domain/types'
 import { hojeReal, mesDe, uid } from '../lib/format'
@@ -114,6 +115,7 @@ export function dadosIniciais(c: ConfigInicial, hoje: DataISO): Dados {
     recorrencias: [],
     pagamentosDas,
     atendimentos: [],
+    parceiros: [],
     preferencias: { lembreteDias: 1, lembreteEmail: true, resumoMensal: true },
     avisosDispensados: [],
   }
@@ -148,6 +150,13 @@ interface Store {
   /** Marca ou altera um atendimento; com valor e gerarConta, cria a conta a receber junto. */
   salvarAtendimento: (a: NovoAtendimento, id: string | undefined, gerarConta: boolean) => Desfazer
   excluirAtendimento: (id: string) => Desfazer
+  /** Cadastra (sem id) ou altera um cliente ou fornecedor; devolve o id. */
+  salvarParceiro: (p: NovoParceiro, id?: string) => string
+  excluirParceiro: (id: string) => Desfazer
+  /** Atribui lançamentos a um cliente ou fornecedor (vazio tira da ficha). */
+  vincularLancamentos: (ids: string[], parceiroId: string | undefined) => Desfazer
+  /** Cadastra os nomes já usados nos lançamentos e na agenda, ligando o histórico. */
+  cadastrarSugeridos: (nomes: NomeSugerido[]) => Desfazer
   /** Grava as linhas escolhidas de um extrato importado na conta indicada. */
   importarExtrato: (contaId: string, linhas: LinhaImportacao[]) => Desfazer
   atualizarEmpresa: (e: Partial<Empresa>) => void
@@ -345,6 +354,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             descricao: l.descricao,
             contraparte: l.contraparte,
             lembreteDias: l.lembreteDias,
+            parceiroId: l.parceiroId,
           }
           const dia = Number(l.dataCompetencia.slice(8, 10))
           if (recorrenciaId) {
@@ -505,6 +515,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [desfazivel],
   )
   const excluirAtendimento = useCallback((id: string) => desfazivel((d) => tirarAtendimento(d, id)), [desfazivel])
+  const salvarParceiro = useCallback(
+    (p: NovoParceiro, id?: string) => {
+      const novoId = id ?? uid()
+      mudar((d) => gravarParceiro(d, p, novoId, hojeDo(salvoRef.current.modo)))
+      return novoId
+    },
+    [mudar],
+  )
+  const excluirParceiro = useCallback((id: string) => desfazivel((d) => tirarParceiro(d, id)), [desfazivel])
+  const vincularLancamentos = useCallback((ids: string[], parceiroId: string | undefined) => desfazivel((d) => vincular(d, ids, parceiroId)), [desfazivel])
+  const cadastrarSugeridos = useCallback((nomes: NomeSugerido[]) => desfazivel((d) => gravarSugeridos(d, nomes, hojeDo(salvoRef.current.modo), uid)), [desfazivel])
   const importarExtrato = useCallback(
     (contaId: string, linhas: LinhaImportacao[]) => desfazivel((d) => aplicarImportacao(d, contaId, linhas, uid)),
     [desfazivel],
@@ -565,6 +586,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       recorrenciaDe,
       salvarAtendimento,
       excluirAtendimento,
+      salvarParceiro,
+      excluirParceiro,
+      vincularLancamentos,
+      cadastrarSugeridos,
       importarExtrato,
       atualizarEmpresa,
       atualizarPreferencias,
@@ -581,7 +606,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       redefinirSenha,
       sair,
     }),
-    [salvo, hoje, mes, salvarLancamento, excluirLancamento, marcarComoPago, registrarPagamento, anexarComprovante, marcarDasPago, separarReserva, recorrenciaDe, salvarAtendimento, excluirAtendimento, importarExtrato, atualizarEmpresa, atualizarPreferencias, dispensarAviso, comecar, restaurarDemo, servidor, conta, salvamento, bloqueio, entrar, criarConta, redefinirSenha, sair],
+    [salvo, hoje, mes, salvarLancamento, excluirLancamento, marcarComoPago, registrarPagamento, anexarComprovante, marcarDasPago, separarReserva, recorrenciaDe, salvarAtendimento, excluirAtendimento, salvarParceiro, excluirParceiro, vincularLancamentos, cadastrarSugeridos, importarExtrato, atualizarEmpresa, atualizarPreferencias, dispensarAviso, comecar, restaurarDemo, servidor, conta, salvamento, bloqueio, entrar, criarConta, redefinirSenha, sair],
   )
   return <Ctx.Provider value={valor}>{children}</Ctx.Provider>
 }

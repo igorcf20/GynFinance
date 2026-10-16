@@ -71,6 +71,7 @@ export const lancamento = z.object({
   parcela: z.object({ numero: z.number().int().min(1).max(60), total: z.number().int().min(2).max(60) }).optional(),
   refExtrato: texto(200).optional(),
   lembreteDias: z.union([z.literal(-1), z.literal(0), z.literal(1), z.literal(3)]).optional(),
+  parceiroId: id.optional(),
 })
 
 export const atendimento = z.object({
@@ -85,6 +86,20 @@ export const atendimento = z.object({
   situacao: z.enum(['agendado', 'confirmado', 'concluido', 'faltou', 'cancelado']),
   observacao: texto(300).optional(),
   lancamentoId: id.optional(),
+  parceiroId: id.optional(),
+})
+
+export const parceiro = z.object({
+  id,
+  tipo: z.enum(['cliente', 'fornecedor', 'ambos']),
+  nome: texto(120).min(1),
+  documento: texto(30).optional(),
+  telefone: texto(40).optional(),
+  email: texto(200).optional(),
+  endereco: texto(300).optional(),
+  observacao: texto(500).optional(),
+  ativo: z.boolean(),
+  criadoEm: data,
 })
 
 export const TIPOS_COMPROVANTE = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'] as const
@@ -107,6 +122,7 @@ export const recorrencia = z.object({
     descricao: texto(200).optional(),
     contraparte: texto(120).optional(),
     lembreteDias: z.union([z.literal(-1), z.literal(0), z.literal(1), z.literal(3)]).optional(),
+    parceiroId: id.optional(),
   }),
   frequencia: z.literal('mensal'),
   diaVencimento: z.number().int().min(1).max(31),
@@ -133,6 +149,7 @@ export const mudancas = z.object({
   recorrencias: z.object({ salvar: z.array(recorrencia).max(500) }).optional(),
   pagamentosDas: z.object({ salvar: z.array(pagamentoDas).max(200) }).optional(),
   atendimentos: z.object({ salvar: z.array(atendimento).max(2000), excluir: z.array(id).max(2000) }).optional(),
+  parceiros: z.object({ salvar: z.array(parceiro).max(2000), excluir: z.array(id).max(2000) }).optional(),
   avisosDispensados: z.array(texto(300)).max(200).optional(),
 })
 

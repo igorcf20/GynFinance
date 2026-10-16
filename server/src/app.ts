@@ -185,6 +185,8 @@ export async function criarApp(pool: pg.Pool, opcoes: { site?: boolean; logger?:
       if (bloqueio) return { codigo: 403, erro: bloqueio }
       if (m.atendimentos && (m.atendimentos.salvar.length || m.atendimentos.excluir.length) && !acesso.assinatura.modulos.includes('agenda'))
         return { codigo: 403, erro: 'A agenda não faz parte do seu plano.' }
+      if (m.parceiros && (m.parceiros.salvar.length || m.parceiros.excluir.length) && !acesso.assinatura.modulos.includes('clientes'))
+        return { codigo: 403, erro: 'Clientes e fornecedores não fazem parte do seu plano.' }
       const empresaId = await empresaDaSessao(c)
       if (!empresaId) return { codigo: 409, erro: 'Faça a configuração inicial do negócio primeiro.' }
       await aplicarMudancas(c, empresaId, m)

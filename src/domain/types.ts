@@ -93,6 +93,8 @@ export interface Lancamento {
   refExtrato?: string
   /** Lembrete desta conta: dias antes do vencimento (-1 = sem lembrete). Vazio = o padrão de Configurações. */
   lembreteDias?: -1 | 0 | 1 | 3
+  /** Cliente ou fornecedor cadastrado (módulo Clientes e fornecedores). O nome fica também em contraparte. */
+  parceiroId?: string
 }
 
 /** Arquivo anexado a um pagamento. No servidor, o conteúdo fica guardado à parte (só o id vem aqui). */
@@ -114,7 +116,7 @@ export interface Recorrencia {
   id: string
   empresaId: string
   /** Cópia dos campos do lançamento que se repetem. */
-  modelo: Pick<Lancamento, 'natureza' | 'valor' | 'categoriaId' | 'contaFinanceiraId' | 'formaPagamento' | 'descricao' | 'contraparte' | 'lembreteDias'>
+  modelo: Pick<Lancamento, 'natureza' | 'valor' | 'categoriaId' | 'contaFinanceiraId' | 'formaPagamento' | 'descricao' | 'contraparte' | 'lembreteDias' | 'parceiroId'>
   frequencia: 'mensal'
   diaVencimento: number
   inicio: DataISO
@@ -172,6 +174,28 @@ export interface Atendimento {
   observacao?: string
   /** Conta a receber criada junto com o atendimento. */
   lancamentoId?: string
+  /** Ficha do cliente, quando o nome é de um cliente cadastrado. */
+  parceiroId?: string
+}
+
+export type TipoParceiro = 'cliente' | 'fornecedor' | 'ambos'
+
+/** Cliente ou fornecedor (módulo Clientes e fornecedores). Lançamentos e atendimentos apontam para ele por parceiroId. */
+export interface Parceiro {
+  id: string
+  empresaId: string
+  tipo: TipoParceiro
+  nome: string
+  /** CPF ou CNPJ, como a pessoa digitou. */
+  documento?: string
+  telefone?: string
+  email?: string
+  endereco?: string
+  observacao?: string
+  /** Arquivado: some da lista e das sugestões, mas o histórico fica. */
+  ativo: boolean
+  /** Dia do cadastro. */
+  criadoEm: DataISO
 }
 
 export interface Dados {
@@ -182,6 +206,8 @@ export interface Dados {
   recorrencias: Recorrencia[]
   pagamentosDas: PagamentoDas[]
   atendimentos: Atendimento[]
+  /** Clientes e fornecedores cadastrados. Vazio em dados gravados antes do módulo. */
+  parceiros?: Parceiro[]
   preferencias: Preferencias
   /** Avisos que o usuário dispensou (o id do aviso já traz o mês ou a conta). */
   avisosDispensados?: string[]
