@@ -2,6 +2,7 @@ import { Bell, CalendarDays, ChevronDown, CloudOff, LogOut, Menu, Settings } fro
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { alertas } from '../../domain/calc'
+import { useSelosNav } from './Sidebar'
 import { useStore } from '../../data/store'
 import { addMeses, mesAno } from '../../lib/format'
 import { LogoMarca } from './Logo'
@@ -140,6 +141,22 @@ function AvisoSalvamento() {
   )
 }
 
+/** No celular abre o menu completo; o ponto mostra que há contas atrasadas ou resposta do suporte. */
+function BotaoMenu() {
+  const selos = useSelosNav()
+  const aviso = selos.atrasadas + selos.suporte > 0
+  return (
+    <Link
+      to="/mais"
+      aria-label={aviso ? 'Menu, com avisos' : 'Menu'}
+      className="relative inline-flex size-10 items-center justify-center rounded-[10px] text-slate hover:bg-hover md:hidden"
+    >
+      <Menu size={20} strokeWidth={1.7} />
+      {aviso && <span aria-hidden className="absolute top-2 right-2 size-2 rounded-full bg-danger ring-2 ring-[#f5f7fa]" />}
+    </Link>
+  )
+}
+
 export function Header({ titulo, subtitulo, periodo, acoes }: { titulo: ReactNode; subtitulo?: ReactNode; periodo?: boolean; acoes?: ReactNode }) {
   return (
     <header className="mb-6 flex flex-wrap items-center gap-x-3 gap-y-3 md:gap-x-4">
@@ -161,9 +178,7 @@ export function Header({ titulo, subtitulo, periodo, acoes }: { titulo: ReactNod
         <AvisoSalvamento />
         <Notificacoes />
         <Perfil />
-        <Link to="/mais" aria-label="Mais opções" className="inline-flex size-10 items-center justify-center rounded-[10px] text-slate hover:bg-hover md:hidden">
-          <Menu size={20} strokeWidth={1.7} />
-        </Link>
+        <BotaoMenu />
       </div>
       {periodo && (
         <div className="w-full sm:hidden">

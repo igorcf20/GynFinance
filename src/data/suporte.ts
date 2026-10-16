@@ -32,7 +32,7 @@ const NOMES: [RegExp, string][] = [
   [/^\/fluxo/, 'Fluxo de caixa'],
   [/^\/fechamento/, 'Fechamento do mês'],
   [/^\/configuracoes/, 'Configurações'],
-  [/^\/mais/, 'Mais'],
+  [/^\/mais/, 'Menu'],
   [/^\/admin/, 'Superadmin'],
   [/^\/comecar/, 'Configuração inicial'],
   [/^\/entrar/, 'Entrar'],

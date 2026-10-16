@@ -1,21 +1,19 @@
-import { BarChart3, CalendarDays, ChevronRight } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { doPlano, NAV_ADMIN, NAV_MAIS, NAV_PRINCIPAL } from '../components/layout/navegacao'
 import { Header } from '../components/layout/Header'
+import { SeloNav, useGruposNav, useSelosNav } from '../components/layout/Sidebar'
 import { Card } from '../components/ui/Card'
 import { CartaoComecar } from '../components/layout/CartaoComecar'
 import { useStore } from '../data/store'
 
-/** No celular, tudo o que não cabe na barra inferior. */
+/** No celular, o menu completo: os mesmos grupos do menu lateral do computador. */
 export function More() {
-  const { modo, servidor, conta, modulos } = useStore()
-  const itens = [
-    ...doPlano([{ ...NAV_PRINCIPAL.find((i) => i.para === '/agenda')!, icone: CalendarDays }, { para: '/relatorios', rotulo: 'Relatórios', icone: BarChart3 }, ...NAV_MAIS], modulos),
-    ...(conta?.admin || servidor === 'sem' ? [NAV_ADMIN] : []),
-  ]
+  const { modo, servidor, conta } = useStore()
+  const grupos = useGruposNav()
+  const selos = useSelosNav()
   return (
     <>
-      <Header titulo="Mais" />
+      <Header titulo="Menu" />
       {modo === 'demo' && (
         <div className="mb-4">
           <CartaoComecar />
@@ -26,19 +24,33 @@ export function More() {
           )}
         </div>
       )}
-      <Card className="!p-2">
-        <ul>
-          {itens.map((i) => (
-            <li key={i.para}>
-              <Link to={i.para} className="flex items-center gap-3 rounded-[12px] px-3 py-3.5 text-ink hover:bg-hover">
-                <i.icone size={20} strokeWidth={1.7} className="text-slate" aria-hidden />
-                <span className="flex-1 font-medium">{i.rotulo}</span>
-                <ChevronRight size={17} className="text-slate" aria-hidden />
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </Card>
+      <div className="flex flex-col gap-4">
+        {grupos.map((g, n) => (
+          <section key={g.titulo ?? n} aria-label={g.titulo ?? 'Início'}>
+            {g.titulo && <h2 className="mb-1.5 px-1 text-[11px] font-bold tracking-[0.08em] text-slate uppercase">{g.titulo}</h2>}
+            <Card className="!p-1.5">
+              <ul>
+                {g.itens.map((i) => {
+                  const selo = i.selo ? selos[i.selo] : 0
+                  return (
+                    <li key={i.para}>
+                      <Link to={i.para} className="flex items-center gap-3 rounded-[12px] px-3 py-3 text-ink transition-colors hover:bg-hover active:bg-hover">
+                        <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-[10px] bg-primary-soft text-primary">
+                          <i.icone size={19} strokeWidth={1.9} aria-hidden />
+                        </span>
+                        <span className="flex-1 font-medium">{i.rotulo}</span>
+                        <SeloNav item={i} n={selo} />
+                        {selo > 0 && <span className="sr-only">({selo})</span>}
+                        <ChevronRight size={17} className="text-slate" aria-hidden />
+                      </Link>
+                    </li>
+                  )
+                })}
+              </ul>
+            </Card>
+          </section>
+        ))}
+      </div>
     </>
   )
 }
