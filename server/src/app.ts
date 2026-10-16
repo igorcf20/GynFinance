@@ -12,6 +12,7 @@ import { config } from './config.ts'
 import { bloqueioDeGravacao, ehAdmin, lerAcesso, rotasAdmin } from './admin.ts'
 import { aplicarMudancas, criarNegocio, empresaDaSessao, ErroDeDados, gravarComprovante, lerComprovante, lerDados } from './dados.ts'
 import { comUsuario } from './db.ts'
+import { criarCarteiro, emailSenhaNova, type Carteiro } from './email.ts'
 import * as esquema from './esquemas.ts'
 
 const COOKIE = 'gyn_sessao'
@@ -25,7 +26,8 @@ declare module 'fastify' {
   }
 }
 
-export async function criarApp(pool: pg.Pool, opcoes: { site?: boolean; logger?: boolean } = {}) {
+export async function criarApp(pool: pg.Pool, opcoes: { site?: boolean; logger?: boolean; carteiro?: Carteiro } = {}) {
+  const carteiro = opcoes.carteiro ?? criarCarteiro()
   // O sistema abre em /app/ e chama api/... relativo: /app/api/x vira /api/x.
   const app = Fastify({
     logger: opcoes.logger ?? false,
@@ -105,6 +107,37 @@ export async function criarApp(pool: pg.Pool, opcoes: { site?: boolean; logger?:
     await abrirSessao(rep, u.id)
     const temNegocio = await comUsuario(pool, u.id, async (c) => !!(await empresaDaSessao(c)))
     return { usuario: { nome: u.nome, email: u.email }, temNegocio }
+  })
+
+  // Esqueci minha senha: a resposta é sempre a mesma, exista ou não a conta (não revela quem é cliente).
+  app.post('/api/conta/esqueci', limite, async (req) => {
+    const { email } = esquema.esqueci.parse(req.body)
+    const u = (await pool.query<{ id: string; nome: string; email: string }>('select id, nome, email from usuario where lower(email) = lower($1)', [email.trim()])).rows[0]
+    if (u) {
+      const token = randomBytes(32).toString('base64url')
+      await pool.query("delete from senha_redefinicao where usuario_id = $1 or expira_em < now() - interval '1 day'", [u.id])
+      await pool.query("insert into senha_redefinicao (token_hash, usuario_id, expira_em) values ($1, $2, now() + interval '1 hour')", [hash(token), u.id])
+      const link = `${config.urlSistema()}/app/#/redefinir-senha?codigo=${token}`
+      await carteiro.enviar(emailSenhaNova(u.email, u.nome, link)).catch((e) => req.log.error(e, 'E-mail de senha nova não saiu'))
+    }
+    return { ok: true, emailLigado: carteiro.ligado }
+  })
+
+  app.post('/api/conta/redefinir', limite, async (req, rep) => {
+    const d = esquema.redefinir.parse(req.body)
+    const r = await pool.query<{ usuario_id: string }>(
+      'update senha_redefinicao set usado_em = now() where token_hash = $1 and usado_em is null and expira_em > now() returning usuario_id',
+      [hash(d.codigo)],
+    )
+    const usuarioId = r.rows[0]?.usuario_id
+    if (!usuarioId) return rep.code(400).send({ erro: 'Este link já foi usado ou venceu. Peça um novo em "Esqueci minha senha".' })
+    await pool.query('update usuario set senha_hash = $2, atualizado_em = now() where id = $1', [usuarioId, await bcrypt.hash(d.senha, 12)])
+    // Quem estava logado com a senha antiga sai de todos os aparelhos.
+    await pool.query('delete from sessao where usuario_id = $1', [usuarioId])
+    await abrirSessao(rep, usuarioId)
+    const u = (await pool.query<{ nome: string; email: string }>('select nome, email from usuario where id = $1', [usuarioId])).rows[0]
+    const temNegocio = await comUsuario(pool, usuarioId, async (c) => !!(await empresaDaSessao(c)))
+    return { usuario: u, temNegocio }
   })
 
   app.post('/api/conta/sair', async (req, rep) => {

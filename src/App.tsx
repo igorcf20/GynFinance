@@ -9,6 +9,7 @@ import { ToastProvider } from './components/ui/Modal'
 import { StoreProvider, useStore } from './data/store'
 import { dentroDeMoldura, rotaInicial } from './lib/moldura'
 import { Entrar } from './pages/Entrar'
+import { RedefinirSenha } from './pages/RedefinirSenha'
 import { Accounts } from './pages/Accounts'
 import { Agenda } from './pages/Agenda'
 import { Admin } from './pages/admin/Admin'
@@ -41,7 +42,7 @@ function Portao({ children }: { children: ReactNode }) {
     )
   }
   // O superadmin entra no painel mesmo sem ter configurado um negócio próprio.
-  if (conta && !conta.temNegocio && pathname !== '/comecar' && !(conta.admin && pathname === '/admin')) return <Navigate to="/comecar" replace />
+  if (conta && !conta.temNegocio && pathname !== '/comecar' && pathname !== '/redefinir-senha' && !(conta.admin && pathname === '/admin')) return <Navigate to="/comecar" replace />
   return <>{children}</>
 }
 
@@ -69,6 +70,7 @@ export default function App() {
           <Portao>
             <Routes>
               <Route path="entrar" element={<Entrar />} />
+              <Route path="redefinir-senha" element={<RedefinirSenha />} />
               <Route path="comecar" element={<Onboarding />} />
               <Route element={<MainLayout />}>
                 <Route index element={<Dashboard />} />

@@ -16,6 +16,7 @@ import { MODULOS } from '../../src/domain/planos'
 import { maisUmMes } from './admin.ts'
 import { MODULOS_SERVIDOR } from './modulos.ts'
 import { migrar } from './migrar.ts'
+import { enviarLembretes, agoraBrasilia, type Carteiro, type Email } from './email.ts'
 
 const URL_ADMIN = process.env.TEST_DATABASE_URL
 
@@ -31,6 +32,10 @@ const config: ConfigInicial = {
   dasEmDia: true,
 }
 
+// Carteiro de teste: guarda os e-mails em vez de enviar.
+const caixa: Email[] = []
+const carteiro: Carteiro = { ligado: true, enviar: async (e) => void caixa.push(e) }
+
 describe.skipIf(!URL_ADMIN)('servidor', () => {
   let pool: pg.Pool
   let app: Awaited<ReturnType<typeof criarApp>>
@@ -45,7 +50,7 @@ describe.skipIf(!URL_ADMIN)('servidor', () => {
     u.username = 'gynfinance_app'
     u.password = 'senha-de-teste'
     pool = criarPool(u.toString())
-    app = await criarApp(pool, { site: false })
+    app = await criarApp(pool, { site: false, carteiro })
   })
   afterAll(async () => {
     await app?.close()
@@ -329,6 +334,68 @@ describe.skipIf(!URL_ADMIN)('servidor', () => {
     await pedir(igor, 'PUT', '/api/admin/config', { ...cfg, cadastroAberto: true, aviso: '' })
     expect((await pedir(igor, 'GET', '/api/admin/registro')).json().registro.length).toBeGreaterThan(2)
   })
+
+  it('esqueci minha senha: link por e-mail, uma vez só, e derruba as sessões antigas', async () => {
+    const velha = await criarConta('esqueci@exemplo.com')
+    const nada = await app.inject({ method: 'POST', url: '/api/conta/esqueci', payload: { email: 'ninguem@exemplo.com' } })
+    expect(nada.json()).toEqual({ ok: true, emailLigado: true })
+    const antes = caixa.length
+    await app.inject({ method: 'POST', url: '/api/conta/esqueci', payload: { email: 'Esqueci@Exemplo.com' } })
+    expect(caixa.length).toBe(antes + 1)
+    const email = caixa.at(-1)!
+    expect(email.para).toBe('esqueci@exemplo.com')
+    const codigo = /codigo=([\w-]+)/.exec(email.texto)![1]
+    const curta = await app.inject({ method: 'POST', url: '/api/conta/redefinir', payload: { codigo, senha: '123' } })
+    expect(curta.statusCode).toBe(400)
+    const ok = await app.inject({ method: 'POST', url: '/api/conta/redefinir', payload: { codigo, senha: 'senha-nova-123' } })
+    expect(ok.statusCode).toBe(200)
+    expect((await pedir(velha, 'GET', '/api/conta')).statusCode).toBe(401)
+    const de_novo = await app.inject({ method: 'POST', url: '/api/conta/redefinir', payload: { codigo, senha: 'outra-senha-123' } })
+    expect(de_novo.statusCode).toBe(400)
+    const entra = await app.inject({ method: 'POST', url: '/api/conta/entrar', payload: { email: 'esqueci@exemplo.com', senha: 'senha-nova-123' } })
+    expect(entra.statusCode).toBe(200)
+  })
+
+  it('lembretes por e-mail: conta no dia escolhido, sem lembrete, a receber e DAS, sem repetir', async () => {
+    const ana = await criarConta('lembra@exemplo.com')
+    const inicial = dadosIniciais(config, '2026-10-16')
+    await pedir(ana, 'POST', '/api/negocio', paraNovoNegocio(inicial))
+    const banco = inicial.contas.find((k) => k.tipo === 'banco')!.id
+    const conta = (valor: number, venc: string, extra: Partial<Lancamento> = {}): Lancamento => ({
+      id: uid(), empresaId: inicial.empresa.id, natureza: 'saida', valor, categoriaId: 'aluguel', contaFinanceiraId: banco, situacao: 'previsto',
+      dataCompetencia: venc, dataVencimento: venc, formaPagamento: 'boleto', notaEmitida: 'nao_se_aplica', descricao: `Conta ${valor}`, ...extra,
+    })
+    const depois: Dados = {
+      ...inicial,
+      lancamentos: [
+        conta(10000, '2026-11-16'), // padrão do negócio: 1 dia antes (dia 15)
+        conta(20000, '2026-11-18', { lembreteDias: 3 }), // 3 dias antes: dia 15
+        conta(30000, '2026-11-15', { lembreteDias: -1 }), // sem lembrete
+        conta(40000, '2026-11-15', { natureza: 'entrada', categoriaId: 'vendas', contraparte: 'Maria', descricao: undefined }),
+      ],
+    }
+    expect((await pedir(ana, 'POST', '/api/sincronizar', diferencas(inicial, depois))).statusCode).toBe(200)
+    const antes = caixa.length
+    // Dia 15: além das contas, o DAS de novembro (não pago) vence dia 20.
+    expect(await enviarLembretes(pool, carteiro, '2026-11-15')).toBeGreaterThanOrEqual(1)
+    const meu = caixa.slice(antes).find((e) => e.para === 'lembra@exemplo.com')!
+    expect(meu.texto).toContain('Vence amanhã: Conta 10000, R$ 100.')
+    expect(meu.texto).toContain('Vence em 3 dias (18/11): Conta 20000, R$ 200.')
+    expect(meu.texto).not.toContain('Conta 30000')
+    expect(meu.texto).toContain('Maria paga hoje: R$ 400.')
+    expect(meu.texto).toContain('DAS de 11/2026 vence dia 20')
+    // Rodar de novo no mesmo dia não manda outra vez.
+    const n = caixa.length
+    await enviarLembretes(pool, carteiro, '2026-11-15')
+    expect(caixa.slice(n).some((e) => e.para === 'lembra@exemplo.com')).toBe(false)
+    // Aviso por e-mail desligado em Configurações: nada sai.
+    await pedir(ana, 'POST', '/api/sincronizar', { preferencias: { lembreteDias: 1, lembreteEmail: false, resumoMensal: true } })
+    const m = caixa.length
+    await enviarLembretes(pool, carteiro, '2026-11-17')
+    expect(caixa.slice(m).some((e) => e.para === 'lembra@exemplo.com')).toBe(false)
+    // O servidor (sem login) não lê lançamentos fora dessas funções.
+    expect((await pool.query('select count(*)::int as n from lancamento')).rows[0].n).toBe(0)
+  })
 })
 
 describe('superadmin sem banco', () => {
@@ -338,5 +405,8 @@ describe('superadmin sem banco', () => {
   it('vencimento anda um mês', () => {
     expect(maisUmMes('2026-01-31')).toBe('2026-02-28')
     expect(maisUmMes('2026-12-10')).toBe('2027-01-10')
+  })
+  it('hora de Brasília', () => {
+    expect(agoraBrasilia(new Date('2026-10-16T02:30:00Z'))).toEqual({ hoje: '2026-10-15', hora: 23 })
   })
 })

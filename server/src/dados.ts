@@ -102,6 +102,7 @@ export async function lerDados(c: Cliente): Promise<Dados | null> {
         parcelaDe: opc(r.parcela_de as string | null),
         parcela: r.parcela_total ? { numero: r.parcela_numero as number, total: r.parcela_total as number } : undefined,
         refExtrato: opc(r.ref_extrato as string | null),
+        lembreteDias: opc(r.lembrete_dias as -1 | 0 | 1 | 3 | null),
       }),
     ),
     recorrencias: recorrencias.rows.map(
@@ -116,6 +117,7 @@ export async function lerDados(c: Cliente): Promise<Dados | null> {
           formaPagamento: r.forma_pagamento as Lancamento['formaPagamento'],
           descricao: opc(r.descricao as string | null),
           contraparte: opc(r.contraparte as string | null),
+          lembreteDias: opc(r.lembrete_dias as -1 | 0 | 1 | 3 | null),
         },
         frequencia: 'mensal',
         diaVencimento: r.dia_vencimento as number,
@@ -221,14 +223,14 @@ export async function aplicarMudancas(c: Cliente, empresaId: string, m: z.infer<
     confere(r.modelo.contaFinanceiraId)
     await c.query(
       `insert into recorrencia (id, empresa_id, natureza, valor, categoria_id, conta_financeira_id, forma_pagamento, descricao, contraparte,
-         frequencia, dia_vencimento, inicio, fim, se_fim_de_semana, valor_varia, ativa, ultima_geracao)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'mensal', $10, $11, $12, $13, $14, $15, $16)
+         frequencia, dia_vencimento, inicio, fim, se_fim_de_semana, valor_varia, ativa, ultima_geracao, lembrete_dias)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'mensal', $10, $11, $12, $13, $14, $15, $16, $17)
        on conflict (id) do update set natureza = excluded.natureza, valor = excluded.valor, categoria_id = excluded.categoria_id,
          conta_financeira_id = excluded.conta_financeira_id, forma_pagamento = excluded.forma_pagamento, descricao = excluded.descricao,
          contraparte = excluded.contraparte, dia_vencimento = excluded.dia_vencimento, inicio = excluded.inicio, fim = excluded.fim,
          se_fim_de_semana = excluded.se_fim_de_semana, valor_varia = excluded.valor_varia, ativa = excluded.ativa,
-         ultima_geracao = excluded.ultima_geracao, atualizado_em = now()`,
-      [r.id, empresaId, r.modelo.natureza, r.modelo.valor, r.modelo.categoriaId ?? null, r.modelo.contaFinanceiraId, r.modelo.formaPagamento, r.modelo.descricao ?? null, r.modelo.contraparte ?? null, r.diaVencimento, r.inicio, r.fim ?? null, r.seFimDeSemana, r.valorVaria, r.ativa, r.ultimaGeracao ?? null],
+         ultima_geracao = excluded.ultima_geracao, lembrete_dias = excluded.lembrete_dias, atualizado_em = now()`,
+      [r.id, empresaId, r.modelo.natureza, r.modelo.valor, r.modelo.categoriaId ?? null, r.modelo.contaFinanceiraId, r.modelo.formaPagamento, r.modelo.descricao ?? null, r.modelo.contraparte ?? null, r.diaVencimento, r.inicio, r.fim ?? null, r.seFimDeSemana, r.valorVaria, r.ativa, r.ultimaGeracao ?? null, r.modelo.lembreteDias ?? null],
     )
   }
 
@@ -245,8 +247,8 @@ export async function aplicarMudancas(c: Cliente, empresaId: string, m: z.infer<
     await c.query(
       `insert into lancamento (id, empresa_id, natureza, valor, categoria_id, conta_financeira_id, conta_destino_id, situacao, data_competencia,
          data_vencimento, data_pagamento, forma_pagamento, descricao, contraparte, nota_emitida, recorrencia_id, pago_com_dinheiro_pessoal, espelho_de,
-         comprovante_id, observacao, parcela_de, parcela_numero, parcela_total, ref_extrato)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
+         comprovante_id, observacao, parcela_de, parcela_numero, parcela_total, ref_extrato, lembrete_dias)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)
        on conflict (id) do update set natureza = excluded.natureza, valor = excluded.valor, categoria_id = excluded.categoria_id,
          conta_financeira_id = excluded.conta_financeira_id, conta_destino_id = excluded.conta_destino_id, situacao = excluded.situacao,
          data_competencia = excluded.data_competencia, data_vencimento = excluded.data_vencimento, data_pagamento = excluded.data_pagamento,
@@ -254,8 +256,8 @@ export async function aplicarMudancas(c: Cliente, empresaId: string, m: z.infer<
          nota_emitida = excluded.nota_emitida, recorrencia_id = excluded.recorrencia_id,
          pago_com_dinheiro_pessoal = excluded.pago_com_dinheiro_pessoal, espelho_de = excluded.espelho_de,
          comprovante_id = excluded.comprovante_id, observacao = excluded.observacao, parcela_de = excluded.parcela_de,
-         parcela_numero = excluded.parcela_numero, parcela_total = excluded.parcela_total, ref_extrato = excluded.ref_extrato, atualizado_em = now()`,
-      [l.id, empresaId, l.natureza, l.valor, l.categoriaId ?? null, l.contaFinanceiraId, l.contaDestinoId ?? null, l.situacao, l.dataCompetencia, l.dataVencimento ?? null, l.dataPagamento ?? null, l.formaPagamento, l.descricao ?? null, l.contraparte ?? null, l.notaEmitida, l.recorrenciaId ?? null, !!l.pagoComDinheiroPessoal, l.espelhoDe ?? null, l.comprovante?.id ?? null, l.observacao ?? null, l.parcelaDe ?? null, l.parcela?.numero ?? null, l.parcela?.total ?? null, l.refExtrato ?? null],
+         parcela_numero = excluded.parcela_numero, parcela_total = excluded.parcela_total, ref_extrato = excluded.ref_extrato, lembrete_dias = excluded.lembrete_dias, atualizado_em = now()`,
+      [l.id, empresaId, l.natureza, l.valor, l.categoriaId ?? null, l.contaFinanceiraId, l.contaDestinoId ?? null, l.situacao, l.dataCompetencia, l.dataVencimento ?? null, l.dataPagamento ?? null, l.formaPagamento, l.descricao ?? null, l.contraparte ?? null, l.notaEmitida, l.recorrenciaId ?? null, !!l.pagoComDinheiroPessoal, l.espelhoDe ?? null, l.comprovante?.id ?? null, l.observacao ?? null, l.parcelaDe ?? null, l.parcela?.numero ?? null, l.parcela?.total ?? null, l.refExtrato ?? null, l.lembreteDias ?? null],
     )
   }
 

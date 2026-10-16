@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUpRight, CircleCheck, Calendar, Check, ChevronDown, CreditCard, ExternalLink, ImagePlus, Repeat, UserRound, Wallet, X } from 'lucide-react'
+import { ArrowDown, ArrowUpRight, Bell, CircleCheck, Calendar, Check, ChevronDown, CreditCard, ExternalLink, ImagePlus, Repeat, UserRound, Wallet, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Header } from '../components/layout/Header'
@@ -11,6 +11,8 @@ import { LINKS } from '../domain/parametros'
 import type { FormaPagamento, Lancamento, NotaEmitida, SeFimDeSemana } from '../domain/types'
 import { FORMAS } from '../data/formas'
 import { useStore, type NovoLancamento } from '../data/store'
+
+const ROTULO_LEMBRETE = { 0: 'no dia', 1: '1 dia antes', 3: '3 dias antes' } as const
 import { addDias, brl, centavosParaTexto, diasEntre, lerValor } from '../lib/format'
 
 
@@ -74,6 +76,7 @@ export function NewTransaction() {
   const [repetir, setRepetir] = useState(!!recEditando?.ativa)
   const [seFimDeSemana, setSeFimDeSemana] = useState<SeFimDeSemana>(recEditando?.seFimDeSemana ?? 'manter')
   const [valorVaria, setValorVaria] = useState(!!recEditando?.valorVaria)
+  const [lembrete, setLembrete] = useState<string>(editando?.lembreteDias !== undefined ? String(editando.lembreteDias) : 'padrao')
   const [sugerido, setSugerido] = useState('')
   const [descricao, setDescricao] = useState(editando?.descricao ?? '')
   const [contraparte, setContraparte] = useState(editando?.contraparte ?? '')
@@ -155,6 +158,7 @@ export function NewTransaction() {
       contraparte: contraparte.trim() || undefined,
       notaEmitida: natureza === 'entrada' ? nota : 'nao_se_aplica',
       pagoComDinheiroPessoal: natureza === 'saida' && !previsto && pessoal,
+      lembreteDias: previsto && lembrete !== 'padrao' ? (Number(lembrete) as -1 | 0 | 1 | 3) : undefined,
     }
     setSalvando(true)
     // Feedback de processamento antes de confirmar (DESIGN.md, seção 10).
@@ -310,6 +314,19 @@ export function NewTransaction() {
           {aPrazo && modo === 'normal' && (
             <div className="anim-subir grid grid-cols-1 items-end gap-4 rounded-[16px] border border-[#e3ebf6] bg-gradient-to-b from-[#f7faff] to-[#f1f6fd] p-4 sm:grid-cols-2">
               <Input label="Vencimento" type="date" value={vencimento} onChange={(e) => setVencimento(e.target.value || hoje)} />
+              <Select
+                label="Lembrete"
+                icone={<Bell size={16} />}
+                value={lembrete}
+                onChange={(e) => setLembrete(e.target.value)}
+                opcoes={[
+                  { valor: 'padrao', rotulo: `Padrão (${ROTULO_LEMBRETE[dados.preferencias.lembreteDias]})` },
+                  { valor: '0', rotulo: 'No dia do vencimento' },
+                  { valor: '1', rotulo: '1 dia antes' },
+                  { valor: '3', rotulo: '3 dias antes' },
+                  { valor: '-1', rotulo: 'Sem lembrete' },
+                ]}
+              />
               <label className="flex h-11 cursor-pointer items-center gap-2.5 text-[14px] font-medium text-ink">
                 <input id="repetir" type="checkbox" checked={repetir} onChange={(e) => setRepetir(e.target.checked)} className="size-[18px] accent-[#3478F6]" />
                 <Repeat size={15} className="text-slate" aria-hidden />

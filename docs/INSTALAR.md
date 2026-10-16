@@ -59,6 +59,12 @@ No mesmo `.env`, `ADMIN_EMAILS` diz quem entra no painel de superadmin (`/app/#/
 mensalidades, assinantes, textos e imagens do site. Quem estiver nessa lista cria a conta normalmente
 no sistema com esse e-mail. Depois de mudar o `.env`, rode `docker compose up -d app` para valer.
 
+Para o sistema mandar e-mail ("Esqueci minha senha" e os lembretes do dia: contas vencendo, DAS,
+fechamento do mês e declaração anual do MEI), preencha `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`,
+`SMTP_PASS` e `EMAIL_REMETENTE` com os dados do provedor de e-mail. Sem eles tudo funciona, só não sai
+e-mail. Os lembretes saem uma vez por dia, a partir das 8h de Brasília, só para quem deixou os avisos
+por e-mail ligados em Configurações.
+
 ## 4. Subir
 
 ```bash
