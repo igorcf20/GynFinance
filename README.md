@@ -67,6 +67,9 @@ src/
 
 ## Próximos passos
 
-- Login e banco de dados (as ações em `src/data/store.tsx` são o contrato para o back-end).
+- Login e banco de dados (as ações em `src/data/store.tsx` são o contrato para o back-end). O banco já está desenhado
+  para Supabase/Postgres em `supabase/migrations/0001_modulo_inicial.sql`: as tabelas do planejamento, valores em
+  centavos e regras de acesso (RLS) que deixam cada pessoa ver só as próprias empresas. Falta escolher e criar a conta
+  no serviço e ligar o `store.tsx` a ele.
 - Configuração inicial do negócio (primeiro acesso).
 - Lembretes por e-mail e, depois, WhatsApp.
