@@ -85,5 +85,5 @@ server/
 ## Próximos passos
 
 - Contratar a VPS e o domínio e instalar seguindo [docs/INSTALAR.md](docs/INSTALAR.md).
-- Recuperar a senha por e-mail (precisa de um serviço de envio de e-mail).
-- Lembretes por e-mail e, depois, WhatsApp.
+- Ligar o envio de e-mail (recuperar senha e lembretes já estão prontos; falta o provedor SMTP no `.env`).
+- Lembretes por WhatsApp.

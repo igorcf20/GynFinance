@@ -167,6 +167,8 @@ interface Store {
   bloqueio: string | null
   entrar: (email: string, senha: string) => Promise<Conta>
   criarConta: (nome: string, email: string, senha: string) => Promise<Conta>
+  /** Senha nova pelo link do e-mail; já entra na conta. */
+  redefinirSenha: (codigo: string, senha: string) => Promise<Conta>
   sair: () => Promise<void>
 }
 
@@ -304,6 +306,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     },
     [carregarDoServidor, enviar],
   )
+  const redefinirSenha = useCallback(
+    async (codigo: string, senha: string) => {
+      await api<Conta>('POST', 'conta/redefinir', { codigo, senha })
+      const c = await api<Conta>('GET', 'conta')
+      if (c.temNegocio) await carregarDoServidor()
+      setConta(c)
+      return c
+    },
+    [carregarDoServidor],
+  )
   const criarConta = useCallback(async (nome: string, email: string, senha: string) => {
     const criada = await api<Conta>('POST', 'conta/criar', { nome, email, senha, aceiteTermos: true })
     const c = await api<Conta>('GET', 'conta').catch(() => criada)
@@ -332,6 +344,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             formaPagamento: l.formaPagamento,
             descricao: l.descricao,
             contraparte: l.contraparte,
+            lembreteDias: l.lembreteDias,
           }
           const dia = Number(l.dataCompetencia.slice(8, 10))
           if (recorrenciaId) {
@@ -565,9 +578,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       bloqueio,
       entrar,
       criarConta,
+      redefinirSenha,
       sair,
     }),
-    [salvo, hoje, mes, salvarLancamento, excluirLancamento, marcarComoPago, registrarPagamento, anexarComprovante, marcarDasPago, separarReserva, recorrenciaDe, salvarAtendimento, excluirAtendimento, importarExtrato, atualizarEmpresa, atualizarPreferencias, dispensarAviso, comecar, restaurarDemo, servidor, conta, salvamento, bloqueio, entrar, criarConta, sair],
+    [salvo, hoje, mes, salvarLancamento, excluirLancamento, marcarComoPago, registrarPagamento, anexarComprovante, marcarDasPago, separarReserva, recorrenciaDe, salvarAtendimento, excluirAtendimento, importarExtrato, atualizarEmpresa, atualizarPreferencias, dispensarAviso, comecar, restaurarDemo, servidor, conta, salvamento, bloqueio, entrar, criarConta, redefinirSenha, sair],
   )
   return <Ctx.Provider value={valor}>{children}</Ctx.Provider>
 }
