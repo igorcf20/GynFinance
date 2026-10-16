@@ -32,7 +32,7 @@ export function AbaConfig({ fonte, planos }: { fonte: FonteAdmin; planos: PlanoA
       <Card>
         <CardTitulo>Cadastro de clientes</CardTitulo>
         <div className="divide-y divide-line">
-          <Toggle checked={c.cadastroAberto} onChange={(v) => muda('cadastroAberto', v)} label="Aceitar novos cadastros" descricao="Desligado, o botão Criar conta avisa que os cadastros estão fechados." />
+          <Toggle checked={c.cadastroAberto} onChange={(v) => muda('cadastroAberto', v)} label="Aceitar novos cadastros" descricao="Desligado, o site troca &quot;Criar minha conta&quot; por &quot;Quero ser avisado&quot;, que abre o WhatsApp para entrar na lista de espera." />
           <div className="grid grid-cols-1 gap-4 py-4 sm:grid-cols-2">
             <Input label="Dias de teste grátis" type="number" min={0} max={365} value={c.diasTeste} onChange={(e) => muda('diasTeste', Math.max(0, Math.min(365, Number(e.target.value) || 0)))} />
             <Select label="Plano de quem se cadastra" value={c.planoPadrao} onChange={(e) => muda('planoPadrao', e.target.value)} opcoes={planos.map((p) => ({ valor: p.id, rotulo: p.nome }))} />

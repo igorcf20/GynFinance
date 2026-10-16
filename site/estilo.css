@@ -251,6 +251,10 @@ ul { margin: 0; padding: 0; list-style: none; }
 .hero-ctas { display: flex; flex-direction: column; gap: 12px; margin: 30px auto 0; max-width: 360px; }
 .hero-note { margin-top: 16px; font-size: 14px; color: var(--ink-2); display: inline-flex; align-items: center; gap: 8px; }
 .hero-note .icon { width: 17px; height: 17px; color: var(--success); stroke-width: 2.2; }
+/* Oferta de lançamento (só com os cadastros fechados e o texto preenchido no superadmin). */
+.hero-oferta { display: flex; align-items: center; gap: 8px; width: fit-content; max-width: 100%; margin: 14px auto 0; padding: 8px 16px; border-radius: 999px; background: var(--primary-soft); color: var(--primary-deep); font-size: 14px; font-weight: 600; text-align: left; }
+.hero-oferta[hidden] { display: none; }
+.hero-oferta .icon { flex: none; width: 17px; height: 17px; color: var(--primary); stroke-width: 2.2; }
 /* Celular: a frase quebra em duas linhas; o ✓ acompanha o texto em vez de ficar sozinho no canto. */
 @media (max-width: 520px) {
   .hero-note { display: block; }
