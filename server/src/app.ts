@@ -137,7 +137,16 @@ export async function criarApp(pool: pg.Pool, opcoes: { site?: boolean; logger?:
   app.all('/api/*', async (_req, rep) => rep.code(404).send({ erro: 'Endereço não encontrado.' }))
 
   if (opcoes.site !== false && existsSync(config.pastaSite)) {
-    await app.register(fastifyStatic, { root: config.pastaSite, index: 'index.html', maxAge: '1h' })
+    // Arquivos em assets/ têm o hash no nome: podem ficar no cache por um ano. O index.html é
+    // conferido a cada visita, para uma atualização chegar na hora.
+    await app.register(fastifyStatic, {
+      root: config.pastaSite,
+      index: 'index.html',
+      cacheControl: false,
+      setHeaders: (res, caminho) => {
+        res.header('cache-control', /[\\/]assets[\\/]/.test(caminho) ? 'public, max-age=31536000, immutable' : 'no-cache')
+      },
+    })
   }
   return app
 }

@@ -26,7 +26,11 @@ export function MainLayout() {
   const { pathname } = useLocation()
   const ref = useCascata(pathname)
   const navigate = useNavigate()
-  useEffect(() => window.scrollTo(0, 0), [pathname])
+  // Chaves de propósito: no Chrome novo scrollTo devolve uma Promise, e o React a trataria como
+  // limpeza do efeito ("is not a function") ao trocar de tela, derrubando o app.
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [pathname])
   return (
     <div className="flex min-h-dvh">
       <Sidebar />
