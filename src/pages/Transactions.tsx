@@ -13,7 +13,7 @@ import Papa from 'papaparse'
 import type { Categoria, Lancamento, Natureza } from '../domain/types'
 import { useStore } from '../data/store'
 import { brl, dataBR, diaMes, mesDe } from '../lib/format'
-import { FORMAS } from './NewTransaction'
+import { FORMAS } from '../data/formas'
 
 type Filtro = 'todos' | 'entradas' | 'saidas'
 type Ordem = { campo: 'data' | 'valor'; desc: boolean }

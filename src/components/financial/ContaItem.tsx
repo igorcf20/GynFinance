@@ -1,10 +1,12 @@
-import { FileText, Home, Lightbulb, MessageCircle, Package, Receipt, Repeat, UserRound, Wifi, Zap, type LucideIcon } from 'lucide-react'
+import { FileText, Home, Lightbulb, MessageCircle, Package, Receipt, Repeat, SlidersHorizontal, UserRound, Wifi, Zap, type LucideIcon } from 'lucide-react'
 import { descricaoConta, grupoPrazo } from '../../domain/calc'
 import type { DataISO, Lancamento } from '../../domain/types'
-import { brl, centavosParaTexto, dataBR, lerValor } from '../../lib/format'
-import { useRef, useState } from 'react'
+import { brl, dataBR } from '../../lib/format'
+import { useState } from 'react'
 import { useStore } from '../../data/store'
-import { Modal, useToast } from '../ui/Modal'
+import { useToast } from '../ui/Modal'
+import { RegistrarPagamento } from './RegistrarPagamento'
+import type { DetalhesPagamento } from '../../domain/pagamento'
 import { Button } from '../ui/Button'
 import { IconeBox, type TomIcone } from '../ui/Card'
 
@@ -40,12 +42,10 @@ export function estadoConta(l: Lancamento, hoje: DataISO): { tom: 'vermelho' | '
 
 /** Linha de conta a pagar ou a receber, com a ação de baixa. */
 export function ContaItem({ conta, compacto, mostrarCobrar }: { conta: Lancamento; compacto?: boolean; mostrarCobrar?: boolean }) {
-  const { hoje, marcarComoPago, dados, recorrenciaDe } = useStore()
+  const { hoje, marcarComoPago, registrarPagamento, dados, recorrenciaDe } = useStore()
   const toast = useToast()
   const varia = !!recorrenciaDe(conta)?.valorVaria
-  const [confirmando, setConfirmando] = useState(false)
-  const [valorTxt, setValorTxt] = useState('')
-  const refValor = useRef<HTMLInputElement>(null)
+  const [detalhando, setDetalhando] = useState(false)
   const Icone = iconeConta(conta)
   const receber = conta.natureza === 'entrada'
   const prazo = grupoPrazo(conta.dataVencimento!, hoje)
@@ -54,20 +54,27 @@ export function ContaItem({ conta, compacto, mostrarCobrar }: { conta: Lancament
   const tom: TomIcone = atrasada ? 'vermelho' : receber ? 'verde' : 'laranja'
   const corLinha = atrasada ? 'text-danger' : prazo === 'semana' ? 'text-[#e8640c]' : 'text-ink-2'
   const [saindo, setSaindo] = useState(false)
-  // A linha desliza para fora antes de sumir, para a pessoa ver que a conta saiu da lista.
-  const baixar = (valorReal = conta.valor) => {
+  // A linha desliza para fora antes de sumir; o aviso traz o Desfazer com a contagem.
+  const baixar = (acao: () => () => void, valor: number, texto?: string) => {
     setSaindo(true)
     setTimeout(() => {
-      marcarComoPago(conta.id, valorReal)
-      toast(receber ? `Recebimento de ${brl(valorReal)} registrado.` : `Pagamento de ${brl(valorReal)} registrado.`)
+      const desfazer = acao()
+      setSaindo(false)
+      toast(texto ?? (receber ? `Recebimento de ${brl(valor)} registrado.` : `Pagamento de ${brl(valor)} registrado.`), { desfazer })
     }, 300)
   }
-  // Conta de valor variável: confirma o valor real antes de baixar.
-  const aoTocar = () => {
-    if (!varia) return baixar()
-    setValorTxt(centavosParaTexto(conta.valor))
-    setConfirmando(true)
-    setTimeout(() => refValor.current?.select(), 50)
+  // Conta de valor variável: abre o registro com detalhes para conferir o valor real.
+  const aoTocar = () => (varia ? setDetalhando(true) : baixar(() => marcarComoPago(conta.id), conta.valor))
+  const comDetalhes = (d: DetalhesPagamento) => {
+    setDetalhando(false)
+    const valor = d.modo === 'parcelado' ? 0 : d.valorPago
+    const texto =
+      d.modo === 'parcial'
+        ? `${brl(d.valorPago)} ${receber ? 'recebidos' : 'pagos'}. O resto ficou para ${dataBR(d.restanteVence!)}.`
+        : d.modo === 'parcelado'
+          ? `Dividido em ${d.parcelas} parcelas.`
+          : undefined
+    baixar(() => registrarPagamento(conta.id, d), valor, texto)
   }
   const nome = receber ? conta.contraparte || conta.descricao : conta.descricao || conta.contraparte
 
@@ -100,56 +107,22 @@ export function ContaItem({ conta, compacto, mostrarCobrar }: { conta: Lancament
             Cobrar
           </a>
         )}
-        <Button variante="contorno" tamanho="sm" onClick={aoTocar} className="!h-10 min-w-[84px] md:min-w-[96px]">
-          {receber ? 'Recebi' : 'Paguei'}
-        </Button>
+        <div className="flex">
+          <Button variante="contorno" tamanho="sm" onClick={aoTocar} className="!h-10 min-w-[78px] !rounded-r-none md:min-w-[90px]">
+            {receber ? 'Recebi' : 'Paguei'}
+          </Button>
+          <button
+            type="button"
+            onClick={() => setDetalhando(true)}
+            aria-label={`${receber ? 'Receber' : 'Pagar'} com detalhes: comprovante, parcial ou parcelado`}
+            title="Comprovante, parcial ou parcelado"
+            className="-ml-[1.5px] inline-flex h-10 w-9 items-center justify-center rounded-r-[12px] border-[1.5px] border-primary-line bg-surface text-primary transition-colors hover:border-primary hover:bg-primary-soft/60"
+          >
+            <SlidersHorizontal size={15} aria-hidden />
+          </button>
+        </div>
       </div>
-      <Modal
-        aberto={confirmando}
-        onFechar={() => setConfirmando(false)}
-        titulo={`Quanto veio ${nome ? `de ${nome.toLowerCase()}` : 'esta conta'}?`}
-        rodape={
-          <>
-            <Button variante="secundario" onClick={() => setConfirmando(false)}>
-              Cancelar
-            </Button>
-            <Button
-              onClick={() => {
-                const v = lerValor(valorTxt)
-                if (v <= 0) return refValor.current?.focus()
-                setConfirmando(false)
-                baixar(v)
-              }}
-            >
-              {receber ? 'Confirmar recebimento' : 'Confirmar pagamento'}
-            </Button>
-          </>
-        }
-      >
-        <p className="mb-3">Esta conta muda de valor todo mês. Confira o valor real antes de confirmar.</p>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault()
-            const v = lerValor(valorTxt)
-            if (v > 0) {
-              setConfirmando(false)
-              baixar(v)
-            }
-          }}
-          className="flex items-baseline gap-2 border-b border-line pb-1 focus-within:border-primary"
-        >
-          <span className="text-[20px] font-bold text-ink-2">R$</span>
-          <input
-            id={`valor-real-${conta.id}`}
-            ref={refValor}
-            aria-label="Valor real"
-            inputMode="decimal"
-            value={valorTxt}
-            onChange={(e) => setValorTxt(e.target.value.replace(/[^\d.,]/g, ''))}
-            className="num w-full bg-transparent text-[28px] font-bold text-ink focus:outline-none"
-          />
-        </form>
-      </Modal>
+      <RegistrarPagamento conta={conta} aberto={detalhando} onFechar={() => setDetalhando(false)} onConfirmar={comDetalhes} />
     </li>
   )
 }

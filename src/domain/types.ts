@@ -81,6 +81,26 @@ export interface Lancamento {
   pagoComDinheiroPessoal?: boolean
   /** Liga a despesa ao aporte espelho criado por "paguei com dinheiro pessoal". */
   espelhoDe?: string
+  /** Comprovante do pagamento (foto ou PDF). */
+  comprovante?: Comprovante
+  /** Observação do pagamento (ex.: "pago com juros", "combinado com o fornecedor"). */
+  observacao?: string
+  /** Parte que ficou para depois num pagamento parcial ou parcelado: aponta a conta de origem. */
+  parcelaDe?: string
+  /** Parcela "2 de 3" de um pagamento parcelado. */
+  parcela?: { numero: number; total: number }
+}
+
+/** Arquivo anexado a um pagamento. No servidor, o conteúdo fica guardado à parte (só o id vem aqui). */
+export interface Comprovante {
+  id: string
+  nome: string
+  /** Tipo do arquivo: image/jpeg, image/png, application/pdf... */
+  tipo: string
+  /** Tamanho em bytes. */
+  tamanho: number
+  /** Conteúdo como data URL, só quando não há servidor (demonstração ou uso no navegador). */
+  dados?: string
 }
 
 export type SeFimDeSemana = 'manter' | 'antecipar' | 'adiar'

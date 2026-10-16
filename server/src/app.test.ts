@@ -146,6 +146,42 @@ describe.skipIf(!URL_ADMIN)('servidor', () => {
     expect((await pedir(bia, 'GET', '/api/dados')).json().dados.lancamentos).toEqual([])
   })
 
+  it('comprovante: guarda, liga ao pagamento e só a empresa dona abre', async () => {
+    const ana = await criarConta('ana5@exemplo.com')
+    const inicial = dadosIniciais(config, '2026-10-16')
+    await pedir(ana, 'POST', '/api/negocio', paraNovoNegocio(inicial))
+    const png = Buffer.from('89504e470d0a1a0a0000000d4948445200000001000000010806000000', 'hex')
+    const comp = { id: uid(), nome: 'recibo luz.png', tipo: 'image/png', dados: png.toString('base64') }
+    expect((await pedir(ana, 'POST', '/api/comprovantes', comp)).statusCode).toBe(201)
+    // Conteúdo que não é foto nem PDF é recusado, mesmo dizendo que é.
+    const falso = await pedir(ana, 'POST', '/api/comprovantes', { ...comp, id: uid(), tipo: 'application/pdf', dados: Buffer.from('<script>').toString('base64') })
+    expect(falso.statusCode).toBe(400)
+
+    const banco = inicial.contas.find((c) => c.tipo === 'banco')!.id
+    const pago: Lancamento = {
+      id: uid(), empresaId: inicial.empresa.id, natureza: 'saida', valor: 9000, categoriaId: 'luz', contaFinanceiraId: banco, situacao: 'realizado',
+      dataCompetencia: '2026-10-10', dataVencimento: '2026-10-10', dataPagamento: '2026-10-12', formaPagamento: 'pix', notaEmitida: 'nao_se_aplica',
+      comprovante: { id: comp.id, nome: comp.nome, tipo: comp.tipo, tamanho: png.length }, observacao: 'pago com juros', parcela: { numero: 1, total: 2 },
+    }
+    const resto: Lancamento = { ...pago, id: uid(), situacao: 'previsto', dataPagamento: undefined, comprovante: undefined, observacao: undefined, parcelaDe: pago.id, parcela: { numero: 2, total: 2 }, dataVencimento: '2026-11-10' }
+    expect((await pedir(ana, 'POST', '/api/sincronizar', { lancamentos: { salvar: [pago, resto], excluir: [] } })).statusCode).toBe(200)
+    const lido: Dados = (await pedir(ana, 'GET', '/api/dados')).json().dados
+    expect(lido.lancamentos).toEqual([pago, resto])
+
+    const arquivo = await pedir(ana, 'GET', `/api/comprovantes/${comp.id}`)
+    expect(arquivo.statusCode).toBe(200)
+    expect(arquivo.headers['content-type']).toBe('image/png')
+    expect(arquivo.rawPayload.equals(png)).toBe(true)
+
+    const bia = await criarConta('bia2@exemplo.com')
+    const outro = dadosIniciais({ ...config, nomeFantasia: 'Bia Modas' }, '2026-10-16')
+    await pedir(bia, 'POST', '/api/negocio', paraNovoNegocio(outro))
+    expect((await pedir(bia, 'GET', `/api/comprovantes/${comp.id}`)).statusCode).toBe(404)
+    const contaBia = outro.contas[0].id
+    const pegar = await pedir(bia, 'POST', '/api/sincronizar', { lancamentos: { salvar: [{ ...pago, id: uid(), empresaId: outro.empresa.id, contaFinanceiraId: contaBia }], excluir: [] } })
+    expect(pegar.statusCode).toBe(400)
+  })
+
   it('recusa pedido de outro site e dados inválidos', async () => {
     const ana = await criarConta('ana4@exemplo.com')
     const r = await app.inject({ method: 'POST', url: '/api/sincronizar', cookies: ana, headers: { origin: 'https://site-malicioso.com', host: 'app.gynfinance.com.br' }, payload: {} })

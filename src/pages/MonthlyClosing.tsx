@@ -178,9 +178,9 @@ export function MonthlyClosing() {
             </Button>
             <Button
               onClick={() => {
-                separarReserva(reserva, mes)
+                const desfazer = separarReserva(reserva, mes)
                 setConfirmar(false)
-                toast(`${brl(reserva)} separados para a reserva.`)
+                toast(`${brl(reserva)} separados para a reserva.`, { desfazer })
               }}
             >
               Separar {brl(reserva)}

@@ -4,11 +4,13 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { vencimentoDas } from '../domain/calc'
 import { parametroDoAno } from '../domain/parametros'
+import { aplicarPagamento, reverterDados, type DetalhesPagamento } from '../domain/pagamento'
 import { gerarPrevistos } from '../domain/recorrencia'
-import type { Atividade, Centavos, Dados, DataISO, Empresa, Lancamento, MesISO, Preferencias, Recorrencia, SeFimDeSemana } from '../domain/types'
+import type { Atividade, Centavos, Comprovante, Dados, DataISO, Empresa, Lancamento, MesISO, Preferencias, Recorrencia, SeFimDeSemana } from '../domain/types'
 import { hojeReal, mesDe, uid } from '../lib/format'
 import { api, ErroApi, verificarServidor, type Conta } from './api'
 import { categoriasDoNegocio } from './categorias'
+import { lerComprovante } from './comprovante'
 import { dadosDemo, DEMO_HOJE } from './demo'
 import { diferencas, juntar, paraNovoNegocio, type Mudancas } from './sincronizar'
 
@@ -36,7 +38,8 @@ function carregar(): Salvo {
     const bruto = localStorage.getItem(CHAVE)
     if (bruto) {
       const s = JSON.parse(bruto) as Salvo
-      return { modo: s.modo, dados: comPrevistos(s.dados, hojeDo(s.modo)) }
+      // A demonstração nunca fica gravada: cada visita começa com os dados de exemplo.
+      if (s.modo !== 'demo') return { modo: s.modo, dados: comPrevistos(s.dados, hojeDo(s.modo)) }
     }
   } catch {
     /* sem armazenamento: segue com a demonstração */
@@ -127,11 +130,15 @@ interface Store {
   setMes: (m: MesISO) => void
   salvarLancamento: (l: NovoLancamento, id?: string, repetir?: OpcoesRepetir) => string
   excluirLancamento: (id: string) => void
-  /** Baixa uma conta prevista; em conta de valor variável, recebe o valor real. */
-  marcarComoPago: (id: string, valorReal?: Centavos) => void
-  marcarDasPago: (competencia: MesISO) => void
+  /** Baixa uma conta prevista com os dados de hoje. Devolve a função que desfaz. */
+  marcarComoPago: (id: string, valorReal?: Centavos) => Desfazer
+  /** Baixa com detalhes: valor, data, conta, forma, comprovante, parcial ou parcelado. */
+  registrarPagamento: (id: string, detalhes: DetalhesPagamento) => Desfazer
+  /** Lê (e, com servidor, envia) a foto ou PDF de um comprovante. */
+  anexarComprovante: (arquivo: File) => Promise<Comprovante>
+  marcarDasPago: (competencia: MesISO) => Desfazer
   /** Separa para a reserva a sobra de um mês (competência); a transferência acontece hoje. */
-  separarReserva: (valor: Centavos, mes: MesISO) => void
+  separarReserva: (valor: Centavos, mes: MesISO) => Desfazer
   recorrenciaDe: (l: Lancamento) => Recorrencia | undefined
   atualizarEmpresa: (e: Partial<Empresa>) => void
   atualizarPreferencias: (p: Partial<Preferencias>) => void
@@ -149,6 +156,8 @@ interface Store {
   sair: () => Promise<void>
 }
 
+export type Desfazer = () => void
+
 const Ctx = createContext<Store | null>(null)
 
 export function StoreProvider({ children }: { children: ReactNode }) {
@@ -164,7 +173,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (salvo.noServidor) return
     try {
-      localStorage.setItem(CHAVE, JSON.stringify(salvo))
+      if (salvo.modo === 'demo') localStorage.removeItem(CHAVE)
+      else localStorage.setItem(CHAVE, JSON.stringify(salvo))
     } catch {
       /* ignora: o app funciona sem persistir */
     }
@@ -230,6 +240,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (s.noServidor) enfileirar(diferencas(s.dados, dados))
     },
     [enfileirar],
+  )
+
+  /** Roda uma mudança e devolve como desfazê-la, sem perder o que mudou depois em outros registros. */
+  const desfazivel = useCallback(
+    (f: (d: Dados) => Dados): Desfazer => {
+      const antes = salvoRef.current.dados
+      mudar(f)
+      const depois = salvoRef.current.dados
+      return () => mudar((d) => reverterDados(d, antes, depois))
+    },
+    [mudar],
   )
 
   const carregarDoServidor = useCallback(async () => {
@@ -371,18 +392,31 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const marcarComoPago = useCallback(
     (id: string, valorReal?: Centavos) =>
-      mudar((d) => ({
+      desfazivel((d) => ({
         ...d,
         lancamentos: d.lancamentos.map((l) =>
           l.id === id ? { ...l, situacao: 'realizado' as const, dataPagamento: hoje, valor: valorReal && valorReal > 0 ? valorReal : l.valor } : l,
         ),
       })),
-    [mudar, hoje],
+    [desfazivel, hoje],
+  )
+
+  const anexarComprovante = useCallback(async (arquivo: File) => {
+    const c = await lerComprovante(arquivo)
+    if (!salvoRef.current.noServidor) return c
+    // Com servidor, o arquivo vai na hora; o lançamento guarda só o id, o nome e o tamanho.
+    await api('POST', 'comprovantes', { id: c.id, nome: c.nome, tipo: c.tipo, dados: c.dados!.slice(c.dados!.indexOf(',') + 1) })
+    return { id: c.id, nome: c.nome, tipo: c.tipo, tamanho: c.tamanho }
+  }, [])
+
+  const registrarPagamento = useCallback(
+    (id: string, detalhes: DetalhesPagamento) => desfazivel((d) => aplicarPagamento(d, id, detalhes, uid)),
+    [desfazivel],
   )
 
   const marcarDasPago = useCallback(
     (competencia: MesISO) =>
-      mudar((d) => {
+      desfazivel((d) => {
         const valor = parametroDoAno(Number(competencia.slice(0, 4))).dasValorPorAtividade[d.empresa.atividade]
         const lanc: Lancamento = {
           id: uid(),
@@ -404,12 +438,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           : [...d.pagamentosDas, { empresaId: d.empresa.id, competencia, valor, vencimento: vencimentoDas(competencia), lancamentoId: lanc.id }]
         return { ...d, lancamentos: [...d.lancamentos, lanc], pagamentosDas }
       }),
-    [mudar, hoje],
+    [desfazivel, hoje],
   )
 
   const separarReserva = useCallback(
     (valor: Centavos, mesRef: MesISO) =>
-      mudar((d) => {
+      desfazivel((d) => {
         const competencia = mesRef === mesDe(hoje) ? hoje : `${mesRef}-28`
         const origem = d.contas.find((c) => c.tipo === 'banco') ?? d.contas[0]
         const destino = d.contas.find((c) => c.tipo === 'reserva')
@@ -430,7 +464,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         }
         return { ...d, lancamentos: [...d.lancamentos, t] }
       }),
-    [mudar, hoje],
+    [desfazivel, hoje],
   )
 
   const recorrenciaDe = useCallback((l: Lancamento) => (l.recorrenciaId ? salvo.dados.recorrencias.find((r) => r.id === l.recorrenciaId) : undefined), [salvo.dados.recorrencias])
@@ -481,6 +515,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       salvarLancamento,
       excluirLancamento,
       marcarComoPago,
+      registrarPagamento,
+      anexarComprovante,
       marcarDasPago,
       separarReserva,
       recorrenciaDe,
@@ -496,7 +532,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       criarConta,
       sair,
     }),
-    [salvo, hoje, mes, salvarLancamento, excluirLancamento, marcarComoPago, marcarDasPago, separarReserva, recorrenciaDe, atualizarEmpresa, atualizarPreferencias, dispensarAviso, comecar, restaurarDemo, servidor, conta, salvamento, entrar, criarConta, sair],
+    [salvo, hoje, mes, salvarLancamento, excluirLancamento, marcarComoPago, registrarPagamento, anexarComprovante, marcarDasPago, separarReserva, recorrenciaDe, atualizarEmpresa, atualizarPreferencias, dispensarAviso, comecar, restaurarDemo, servidor, conta, salvamento, entrar, criarConta, sair],
   )
   return <Ctx.Provider value={valor}>{children}</Ctx.Provider>
 }

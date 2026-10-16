@@ -9,7 +9,7 @@ import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify'
 import type pg from 'pg'
 import { z } from 'zod'
 import { config } from './config.ts'
-import { aplicarMudancas, criarNegocio, empresaDaSessao, ErroDeDados, lerDados } from './dados.ts'
+import { aplicarMudancas, criarNegocio, empresaDaSessao, ErroDeDados, gravarComprovante, lerComprovante, lerDados } from './dados.ts'
 import { comUsuario } from './db.ts'
 import * as esquema from './esquemas.ts'
 
@@ -132,6 +132,37 @@ export async function criarApp(pool: pg.Pool, opcoes: { site?: boolean; logger?:
     })
     if (!ok) return rep.code(409).send({ erro: 'Faça a configuração inicial do negócio primeiro.' })
     return { ok: true }
+  })
+
+  // Comprovantes: até 5 MB por arquivo (em base64 o corpo fica cerca de 1/3 maior).
+  app.post('/api/comprovantes', { preHandler: exigirLogin, bodyLimit: 8 * 1024 * 1024 }, async (req, rep) => {
+    const d = esquema.novoComprovante.parse(req.body)
+    const dados = Buffer.from(d.dados, 'base64')
+    if (!dados.length || dados.length > 5 * 1024 * 1024) return rep.code(400).send({ erro: 'O arquivo precisa ter até 5 MB.' })
+    // Confere o conteúdo, não só o tipo informado: PDF começa com %PDF, JPEG com FFD8, PNG com 89504E47, WebP com RIFF.
+    const assinatura = dados.subarray(0, 4).toString('hex')
+    const confere = { 'application/pdf': '25504446', 'image/jpeg': 'ffd8', 'image/png': '89504e47', 'image/webp': '52494646' }[d.tipo]
+    if (!assinatura.startsWith(confere)) return rep.code(400).send({ erro: 'O arquivo não parece ser uma foto ou um PDF.' })
+    const ok = await comUsuario(pool, req.usuarioId!, async (c) => {
+      const empresaId = await empresaDaSessao(c)
+      if (!empresaId) return false
+      await gravarComprovante(c, empresaId, { id: d.id, nome: d.nome, tipo: d.tipo, dados })
+      return true
+    })
+    if (!ok) return rep.code(409).send({ erro: 'Faça a configuração inicial do negócio primeiro.' })
+    return rep.code(201).send({ ok: true })
+  })
+
+  app.get('/api/comprovantes/:id', { preHandler: exigirLogin }, async (req, rep) => {
+    const { id } = z.object({ id: z.uuid() }).parse(req.params)
+    const comp = await comUsuario(pool, req.usuarioId!, (c) => lerComprovante(c, id))
+    if (!comp) return rep.code(404).send({ erro: 'Comprovante não encontrado.' })
+    return rep
+      .header('content-type', comp.tipo)
+      .header('content-disposition', `inline; filename*=UTF-8''${encodeURIComponent(comp.nome)}`)
+      .header('cache-control', 'private, max-age=86400')
+      .header('x-content-type-options', 'nosniff')
+      .send(comp.dados)
   })
 
   app.all('/api/*', async (_req, rep) => rep.code(404).send({ erro: 'Endereço não encontrado.' }))

@@ -9,17 +9,10 @@ import { Modal, useToast } from '../components/ui/Modal'
 import { Chips, Segmentado } from '../components/ui/Tabs'
 import { LINKS } from '../domain/parametros'
 import type { FormaPagamento, Lancamento, NotaEmitida, SeFimDeSemana } from '../domain/types'
+import { FORMAS } from '../data/formas'
 import { useStore, type NovoLancamento } from '../data/store'
 import { addDias, brl, centavosParaTexto, diasEntre, lerValor } from '../lib/format'
 
-export const FORMAS: { valor: FormaPagamento; rotulo: string }[] = [
-  { valor: 'pix', rotulo: 'Pix' },
-  { valor: 'dinheiro', rotulo: 'Dinheiro' },
-  { valor: 'debito', rotulo: 'Débito' },
-  { valor: 'credito', rotulo: 'Crédito' },
-  { valor: 'boleto', rotulo: 'Boleto' },
-  { valor: 'outro', rotulo: 'Outro' },
-]
 
 type Tipo = 'entrada' | 'saida'
 type Modo = 'normal' | 'retirada'

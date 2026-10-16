@@ -68,6 +68,7 @@ export function Toggle({ checked, onChange, label, descricao }: { checked: boole
       </div>
       <button
         id={id}
+        type="button"
         role="switch"
         aria-checked={checked}
         onClick={() => onChange(!checked)}

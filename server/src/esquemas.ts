@@ -59,6 +59,20 @@ export const lancamento = z.object({
   recorrenciaId: id.optional(),
   pagoComDinheiroPessoal: z.boolean().optional(),
   espelhoDe: id.optional(),
+  // O conteúdo do comprovante vai antes, por /api/comprovantes; aqui só a referência.
+  comprovante: z.object({ id, nome: texto(200), tipo: texto(60), tamanho: z.number().int().positive() }).optional(),
+  observacao: texto(300).optional(),
+  parcelaDe: id.optional(),
+  parcela: z.object({ numero: z.number().int().min(1).max(60), total: z.number().int().min(2).max(60) }).optional(),
+})
+
+export const TIPOS_COMPROVANTE = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'] as const
+export const novoComprovante = z.object({
+  id,
+  nome: texto(200),
+  tipo: z.enum(TIPOS_COMPROVANTE),
+  /** Conteúdo em base64 (até 5 MB depois de decodificado). */
+  dados: z.string().min(4).max(7_000_000),
 })
 
 export const recorrencia = z.object({

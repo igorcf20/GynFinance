@@ -132,9 +132,9 @@ function DASCard() {
             </Button>
             <Button
               onClick={() => {
-                marcarDasPago(mes)
+                const desfazer = marcarDasPago(mes)
                 setConfirmar(false)
-                toast(`DAS de ${nomeMes(mes)} marcado como pago.`)
+                toast(`DAS de ${nomeMes(mes)} marcado como pago.`, { desfazer })
               }}
             >
               Confirmar
