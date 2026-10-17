@@ -6,6 +6,7 @@ import { useSelosNav } from './Sidebar'
 import { useStore } from '../../data/store'
 import { addMeses, mesAno } from '../../lib/format'
 import { LogoMarca } from './Logo'
+import { BotaoTema } from './BotaoTema'
 
 export function SeletorMes({ className = '' }: { className?: string }) {
   const { mes, setMes, hoje } = useStore()
@@ -176,6 +177,7 @@ export function Header({ titulo, subtitulo, periodo, acoes }: { titulo: ReactNod
           </span>
         )}
         <AvisoSalvamento />
+        <BotaoTema />
         <Notificacoes />
         <Perfil />
         <BotaoMenu />

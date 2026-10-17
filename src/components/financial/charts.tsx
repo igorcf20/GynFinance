@@ -2,6 +2,7 @@ import { useId } from 'react'
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type { ResumoMes } from '../../domain/calc'
 import { brl, nomeMesCurto } from '../../lib/format'
+import { useTema } from '../layout/BotaoTema'
 
 const AZUL = '#3478F6'
 
@@ -25,6 +26,7 @@ export function SobrouMesesChart({ serie, altura = 150, discreto }: { serie: Res
   const dados = serie.map((r) => ({ mes: nomeMesCurto(r.mes), Sobrou: Math.max(0, r.sobrou) }))
   const n = dados.length
   const id = useId().replace(/:/g, '')
+  const { escuro } = useTema()
   return (
     <div style={{ height: altura }} role="img" aria-label={`Sobrou por mês: ${serie.map((r) => `${nomeMesCurto(r.mes)} ${brl(r.sobrou)}`).join(', ')}`}>
       <ResponsiveContainer width="100%" height="100%">
@@ -37,11 +39,11 @@ export function SobrouMesesChart({ serie, altura = 150, discreto }: { serie: Res
             {dados.map((_, i) => {
               // Do cinza-azulado (mais antigo) ao azul claro (mês anterior).
               const t = n > 1 ? i / (n - 1) : 1
-              const topo = discreto ? `rgba(148,170,200,${0.35 + t * 0.45})` : `rgb(${Math.round(214 - t * 64)},${Math.round(225 - t * 33)},${Math.round(240 + t * 12)})`
+              const topo = discreto ? `rgba(148,170,200,${0.35 + t * 0.45})` : escuro ? `rgba(77,141,255,${0.22 + t * 0.3})` : `rgb(${Math.round(214 - t * 64)},${Math.round(225 - t * 33)},${Math.round(240 + t * 12)})`
               return (
                 <linearGradient key={i} id={`${id}b${i}`} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor={topo} />
-                  <stop offset="100%" stopColor={discreto ? 'rgba(148,170,200,0.25)' : '#E9F0F9'} />
+                  <stop offset="100%" stopColor={discreto ? 'rgba(148,170,200,0.25)' : escuro ? 'rgba(77,141,255,0.08)' : '#E9F0F9'} />
                 </linearGradient>
               )
             })}
@@ -49,16 +51,16 @@ export function SobrouMesesChart({ serie, altura = 150, discreto }: { serie: Res
           {!discreto && (
             <XAxis
               dataKey="mes"
-              axisLine={{ stroke: '#E7ECF3' }}
+              axisLine={{ stroke: 'var(--color-line)' }}
               tickLine={false}
               tick={({ x, y, payload, index }) => (
-                <text x={x} y={Number(y) + 14} textAnchor="middle" fontSize={12} fontWeight={index === n - 1 ? 700 : 500} fill={index === n - 1 ? '#13213D' : '#5B6B82'}>
+                <text x={x} y={Number(y) + 14} textAnchor="middle" fontSize={12} fontWeight={index === n - 1 ? 700 : 500} fill={index === n - 1 ? 'var(--color-ink)' : 'var(--color-ink-2)'}>
                   {payload.value}
                 </text>
               )}
             />
           )}
-          <Tooltip cursor={{ fill: '#F1F5FB', radius: 8 }} content={<DicaValor />} />
+          <Tooltip cursor={{ fill: 'var(--color-hover)', radius: 8 }} content={<DicaValor />} />
           <Bar dataKey="Sobrou" radius={[7, 7, 3, 3]} maxBarSize={30} animationBegin={150} animationDuration={900} animationEasing="ease-out">
             {dados.map((_, i) => (
               <Cell key={i} fill={i === n - 1 && !discreto ? `url(#${id}f)` : `url(#${id}b${i})`} />
@@ -111,11 +113,11 @@ export function FluxoChart({ serie }: { serie: ResumoMes[] }) {
               <stop offset="100%" stopColor="#A3B4CA" />
             </linearGradient>
           </defs>
-          <CartesianGrid vertical={false} stroke="#EDF1F6" />
-          <XAxis dataKey="mes" axisLine={false} tickLine={false} tick={{ fontSize: 13, fill: '#3D5170', fontWeight: 600 }} dy={6} />
-          <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#5B6B82' }} tickFormatter={k} width={74} />
-          <Tooltip cursor={{ fill: '#F1F5FB', radius: 8 }} content={<DicaValor />} />
-          <Legend align="right" verticalAlign="top" iconType="square" iconSize={11} wrapperStyle={{ fontSize: 13, fontWeight: 600, color: '#3D5170', paddingBottom: 16 }} />
+          <CartesianGrid vertical={false} stroke="var(--color-line)" />
+          <XAxis dataKey="mes" axisLine={false} tickLine={false} tick={{ fontSize: 13, fill: 'var(--color-ink-2)', fontWeight: 600 }} dy={6} />
+          <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--color-ink-2)' }} tickFormatter={k} width={74} />
+          <Tooltip cursor={{ fill: 'var(--color-hover)', radius: 8 }} content={<DicaValor />} />
+          <Legend align="right" verticalAlign="top" iconType="square" iconSize={11} wrapperStyle={{ fontSize: 13, fontWeight: 600, color: 'var(--color-ink-2)', paddingBottom: 16 }} />
           <Bar dataKey="Entradas" fill="url(#gEntradas)" radius={[6, 6, 2, 2]} maxBarSize={30} animationDuration={900} animationEasing="ease-out" />
           <Bar dataKey="Saídas" fill="url(#gSaidas)" radius={[6, 6, 2, 2]} maxBarSize={30} animationBegin={120} animationDuration={900} animationEasing="ease-out" />
         </BarChart>
@@ -143,5 +145,38 @@ export function BarrasHorizontais({ itens }: { itens: { nome: string; valor: num
         </li>
       ))}
     </ul>
+  )
+}
+
+/** Recebido e pago mês a mês com um cliente ou fornecedor (ficha). */
+export function ParceiroChart({ serie, mostrar }: { serie: { mes: string; recebido: number; pago: number }[]; mostrar: { recebido: boolean; pago: boolean } }) {
+  const dados = serie.map((p) => ({ mes: nomeMesCurto(p.mes), Recebido: p.recebido, Pago: p.pago }))
+  const k = (centavos: number) => {
+    const v = centavos / 100
+    return v >= 1000 ? `${(v / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} mil` : `${v}`
+  }
+  return (
+    <div className="h-[240px]" role="img" aria-label={`Por mês: ${serie.map((p) => `${nomeMesCurto(p.mes)} recebido ${brl(p.recebido)}, pago ${brl(p.pago)}`).join('; ')}`}>
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={dados} margin={{ top: 8, right: 4, bottom: 0, left: 0 }} barGap={4} barCategoryGap="26%">
+          <defs>
+            <linearGradient id="gRecebido" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#3FC58A" />
+              <stop offset="100%" stopColor="#12925A" />
+            </linearGradient>
+            <linearGradient id="gPago" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#FFB26B" />
+              <stop offset="100%" stopColor="#F08A24" />
+            </linearGradient>
+          </defs>
+          <CartesianGrid vertical={false} stroke="var(--color-line)" />
+          <XAxis dataKey="mes" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--color-ink-2)', fontWeight: 600 }} dy={6} />
+          <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'var(--color-ink-2)' }} tickFormatter={k} width={46} />
+          <Tooltip cursor={{ fill: 'var(--color-hover)', radius: 8 }} content={<DicaValor />} />
+          {mostrar.recebido && <Bar dataKey="Recebido" fill="url(#gRecebido)" radius={[6, 6, 2, 2]} maxBarSize={24} animationDuration={900} animationEasing="ease-out" />}
+          {mostrar.pago && <Bar dataKey="Pago" fill="url(#gPago)" radius={[6, 6, 2, 2]} maxBarSize={24} animationBegin={120} animationDuration={900} animationEasing="ease-out" />}
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
   )
 }

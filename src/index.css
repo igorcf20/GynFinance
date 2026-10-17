@@ -1,5 +1,10 @@
 @import 'tailwindcss';
 @import './styles/tokens.css';
+@import './styles/escuro.css' layer(utilities);
+@import './styles/escuro-cores.css' layer(utilities);
+
+/* escuro:classe vale só no modo escuro (ver src/lib/tema.ts). */
+@custom-variant escuro (&:where(.escuro, .escuro *));
 
 @layer base {
   html {

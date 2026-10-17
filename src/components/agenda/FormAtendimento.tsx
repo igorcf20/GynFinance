@@ -1,5 +1,7 @@
 import { AlertTriangle, Phone, UserRound } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import { parceiroPeloNome } from '../../domain/parceiros'
+import { temModulo } from '../../domain/planos'
 import { conflitos, somarMinutos, SITUACOES, type NovoAtendimento } from '../../domain/agenda'
 import type { Atendimento, DataISO, SituacaoAtendimento } from '../../domain/types'
 import { useStore } from '../../data/store'
@@ -22,7 +24,9 @@ export interface PedidoForm {
 
 /** Marcar ou alterar um atendimento. Com valor, a conta a receber nasce junto (e aparece em Contas). */
 export function FormAtendimento({ pedido, onFechar }: { pedido: PedidoForm | null; onFechar: () => void }) {
-  const { dados, hoje, salvarAtendimento } = useStore()
+  const { dados, hoje, salvarAtendimento, salvarParceiro, modulos } = useStore()
+  const comFichas = temModulo(modulos, 'clientes')
+  const [cadastrar, setCadastrar] = useState(true)
   const toast = useToast()
   const e = pedido?.editando
   const [cliente, setCliente] = useState('')
@@ -56,10 +60,11 @@ export function FormAtendimento({ pedido, onFechar }: { pedido: PedidoForm | nul
   // Clientes de antes (agenda e contas a receber) para completar o nome e o telefone.
   const clientes = useMemo(() => {
     const m = new Map<string, string | undefined>()
+    for (const p of dados.parceiros ?? []) if (p.ativo && p.tipo !== 'fornecedor') m.set(p.nome, p.telefone)
     for (const a of [...dados.atendimentos].reverse()) if (!m.has(a.cliente)) m.set(a.cliente, a.telefone)
     for (const l of dados.lancamentos) if (l.natureza === 'entrada' && l.contraparte && !m.has(l.contraparte)) m.set(l.contraparte, undefined)
     return m
-  }, [dados.atendimentos, dados.lancamentos])
+  }, [dados.atendimentos, dados.lancamentos, dados.parceiros])
   const servicos = useMemo(() => [...new Set(dados.atendimentos.map((a) => a.servico).filter((s): s is string => !!s))].slice(-30), [dados.atendimentos])
 
   const valor = lerValor(valorTxt)
@@ -73,7 +78,11 @@ export function FormAtendimento({ pedido, onFechar }: { pedido: PedidoForm | nul
       setErro({ cliente: 'Digite o nome do cliente.' })
       return
     }
+    // Cliente com ficha: o atendimento e a conta a receber vão para ela.
+    let parceiroId = comFichas ? parceiroPeloNome(dados.parceiros, cliente, 'cliente')?.id : e?.cliente === cliente.trim() ? e?.parceiroId : undefined
+    if (comFichas && !parceiroId && cadastrar) parceiroId = salvarParceiro({ tipo: 'cliente', nome: cliente.trim(), telefone: telefone.trim() || undefined, ativo: true })
     const a: NovoAtendimento = {
+      parceiroId,
       cliente: cliente.trim(),
       telefone: telefone.trim() || undefined,
       servico: servico.trim() || undefined,
@@ -120,6 +129,14 @@ export function FormAtendimento({ pedido, onFechar }: { pedido: PedidoForm | nul
           }}
           placeholder="Nome de quem vem"
         />
+        {comFichas && cliente.trim() && (parceiroPeloNome(dados.parceiros, cliente, 'cliente') ? (
+          <p className="-mt-2 text-[12px] text-success">Vai para a ficha de {parceiroPeloNome(dados.parceiros, cliente, 'cliente')!.nome}.</p>
+        ) : (
+          <label className="-mt-2 flex cursor-pointer items-center gap-2 text-[13px] text-ink">
+            <input type="checkbox" checked={cadastrar} onChange={(ev) => setCadastrar(ev.target.checked)} className="size-4 accent-[#3478F6]" />
+            Cadastrar {cliente.trim()} em Clientes
+          </label>
+        ))}
         <datalist id="gyn-clientes">
           {[...clientes.keys()].slice(0, 50).map((c) => (
             <option key={c} value={c} />

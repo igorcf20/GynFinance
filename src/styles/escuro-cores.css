@@ -1,0 +1,155 @@
+/* Gerado por scripts/gerar-tema-escuro.py. Não editar à mão. */
+:root.escuro .bg-\[\#9cc2ff\]\/70 { background-color: rgba(39, 63, 102, 0.70); }
+:root.escuro .bg-\[\#a9b6c8\] { background-color: #404f64; }
+:root.escuro .bg-\[\#c3cddb\] { background-color: #344256; }
+:root.escuro .bg-\[\#d5dde7\] { background-color: #293647; }
+:root.escuro .bg-\[\#d9e7fd\] { background-color: #192941; }
+:root.escuro .bg-\[\#dfe6ef\] { background-color: #202e41; }
+:root.escuro .bg-\[\#e3eaf3\] { background-color: #1b2b3f; }
+:root.escuro .bg-\[\#e7ecf3\] { background-color: #1d293a; }
+:root.escuro .bg-\[\#e8eef6\] { background-color: #17273c; }
+:root.escuro .bg-\[\#e8f7ef\] { background-color: #173c28; }
+:root.escuro .bg-\[\#e9eef5\] { background-color: #1a2739; }
+:root.escuro .bg-\[\#eaf2ff\] { background-color: #142136; }
+:root.escuro .bg-\[\#edf1f6\] { background-color: #1a2635; }
+:root.escuro .bg-\[\#eef2f7\] { background-color: #192535; }
+:root.escuro .bg-\[\#eef3f9\] { background-color: #152437; }
+:root.escuro .bg-\[\#f1f4f8\] { background-color: #192331; }
+:root.escuro .bg-\[\#f1f5fa\] { background-color: #142234; }
+:root.escuro .bg-\[\#f3f6fa\] { background-color: #152132; }
+:root.escuro .bg-\[\#f4f8ff\] { background-color: #121d2f; }
+:root.escuro .bg-\[\#f5f7fa\] { background-color: #17202e; }
+:root.escuro .bg-\[\#f5f9f7\] { background-color: #1a2c23; }
+:root.escuro .bg-\[\#f6f9fd\] { background-color: #121f2f; }
+:root.escuro .bg-\[\#f7f9fc\] { background-color: #121e2f; }
+:root.escuro .bg-\[\#f8fafc\] { background-color: #13202d; }
+:root.escuro .bg-\[\#fafbfd\] { background-color: #121b2c; }
+:root.escuro .bg-\[\#fafcff\] { background-color: #111b2c; }
+:root.escuro .bg-\[\#fdd9df\] { background-color: #411920; }
+:root.escuro .bg-\[\#fdf5f6\] { background-color: #301216; }
+:root.escuro .bg-\[\#ffe3c8\] { background-color: #4b331c; }
+:root.escuro .bg-\[\#fff0f2\] { background-color: #321317; }
+:root.escuro .bg-\[\#fff1e6\] { background-color: #382515; }
+:root.escuro .bg-\[\#fff2e6\] { background-color: #382615; }
+:root.escuro .border-\[\#bfe6d1\] { border-color: #286745; }
+:root.escuro .border-\[\#bfe8d3\] { border-color: #276747; }
+:root.escuro .border-\[\#cfd9e6\] { border-color: #2f425b; }
+:root.escuro .border-\[\#cfdae8\] { border-color: #2c425d; }
+:root.escuro .border-\[\#cfdffc\] { border-color: #24395e; }
+:root.escuro .border-\[\#d3dce8\] { border-color: #2f4159; }
+:root.escuro .border-\[\#d6e4fb\] { border-color: #23395d; }
+:root.escuro .border-\[\#d6e4fc\] { border-color: #23385d; }
+:root.escuro .border-\[\#d8e1ec\] { border-color: #2b4059; }
+:root.escuro .border-\[\#e3e9f1\] { border-color: #2a3c55; }
+:root.escuro .border-\[\#e3ebf6\] { border-color: #223a5b; }
+:root.escuro .border-\[\#f3c58f\] { border-color: #71512b; }
+:root.escuro .border-\[\#f9cdd5\] { border-color: #60242f; }
+:root.escuro .border-\[\#f9d0d7\] { border-color: #5f242e; }
+:root.escuro .border-\[\#fde2c8\] { border-color: #604224; }
+:root.escuro .from-\[\#d9f3e5\] { --tw-gradient-from: #1b4730; }
+:root.escuro .from-\[\#dbe7fc\] { --tw-gradient-from: #192741; }
+:root.escuro .from-\[\#e4f7ee\] { --tw-gradient-from: #183e2c; }
+:root.escuro .from-\[\#e6effe\] { --tw-gradient-from: #162339; }
+:root.escuro .from-\[\#e8f0fe\] { --tw-gradient-from: #152237; }
+:root.escuro .from-\[\#eaf0f8\] { --tw-gradient-from: #16253a; }
+:root.escuro .from-\[\#ecf9f2\] { --tw-gradient-from: #153825; }
+:root.escuro .from-\[\#eef3f9\] { --tw-gradient-from: #152437; }
+:root.escuro .from-\[\#eef4ff\] { --tw-gradient-from: #131f33; }
+:root.escuro .from-\[\#f1f5fa\] { --tw-gradient-from: #142234; }
+:root.escuro .from-\[\#f1f6fe\] { --tw-gradient-from: #131f32; }
+:root.escuro .from-\[\#f3f6fa\] { --tw-gradient-from: #152132; }
+:root.escuro .from-\[\#f3f7ff\] { --tw-gradient-from: #121c30; }
+:root.escuro .from-\[\#f3f8ff\] { --tw-gradient-from: #121f30; }
+:root.escuro .from-\[\#f7faff\] { --tw-gradient-from: #111c2e; }
+:root.escuro .from-\[\#fbfcfe\] { --tw-gradient-from: #111a2c; }
+:root.escuro .from-\[\#fcdfe4\] { --tw-gradient-from: #3e181e; }
+:root.escuro .from-\[\#ffecef\] { --tw-gradient-from: #341419; }
+:root.escuro .from-\[\#fff0e1\] { --tw-gradient-from: #3b2916; }
+:root.escuro .from-\[\#fff1e3\] { --tw-gradient-from: #3a2816; }
+:root.escuro .from-\[\#fff1f3\] { --tw-gradient-from: #311317; }
+:root.escuro .from-\[\#fff4ea\] { --tw-gradient-from: #362414; }
+:root.escuro .from-\[\#fff4f6\] { --tw-gradient-from: #2f1217; }
+:root.escuro .from-\[\#fff6ec\] { --tw-gradient-from: #342514; }
+:root.escuro .from-\[\#fff7ef\] { --tw-gradient-from: #332313; }
+:root.escuro .ring-\[\#c6ebd7\] { --tw-ring-color: #266543; }
+:root.escuro .ring-\[\#cfdffc\] { --tw-ring-color: #24395e; }
+:root.escuro .ring-\[\#dfe6ef\] { --tw-ring-color: #2b3e56; }
+:root.escuro .ring-\[\#f3c58f\] { --tw-ring-color: #71512b; }
+:root.escuro .ring-\[\#f5f7fa\] { --tw-ring-color: #27374e; }
+:root.escuro .ring-\[\#f6f9fc\] { --tw-ring-color: #203a54; }
+:root.escuro .ring-\[\#f9cdd5\] { --tw-ring-color: #60242f; }
+:root.escuro .ring-\[\#fdd9b5\] { --tw-ring-color: #654526; }
+:root.escuro .text-\[\#0f7a4b\] { color: #b2ecd2; }
+:root.escuro .text-\[\#147a47\] { color: #aeebcc; }
+:root.escuro .text-\[\#1d4fb8\] { color: #85a2e0; }
+:root.escuro .text-\[\#1f5fd6\] { color: #85a5e0; }
+:root.escuro .text-\[\#1fa463\] { color: #85e0b4; }
+:root.escuro .text-\[\#2f4a72\] { color: #aabedc; }
+:root.escuro .text-\[\#3d5170\] { color: #a9b9d0; }
+:root.escuro .text-\[\#4a6385\] { color: #9dafc8; }
+:root.escuro .text-\[\#5b6f8c\] { color: #a2b0c3; }
+:root.escuro .text-\[\#5c2c06\] { color: #f4e0d1; }
+:root.escuro .text-\[\#5e1220\] { color: #f1c6ce; }
+:root.escuro .text-\[\#7a3c07\] { color: #edd1b8; }
+:root.escuro .text-\[\#8a4b06\] { color: #eacdac; }
+:root.escuro .text-\[\#9a4a0b\] { color: #e6bc9c; }
+:root.escuro .text-\[\#9b1c2e\] { color: #e38d99; }
+:root.escuro .text-\[\#b4232f\] { color: #e0858c; }
+:root.escuro .text-\[\#b44d06\] { color: #e2ae8b; }
+:root.escuro .text-\[\#b4560a\] { color: #e1b088; }
+:root.escuro .text-\[\#c2410c\] { color: #e09f85; }
+:root.escuro .text-\[\#e8640c\] { color: #e0a985; }
+:root.escuro .to-\[\#c9eedb\] { --tw-gradient-to: #20543a; }
+:root.escuro .to-\[\#cfe0fd\] { --tw-gradient-to: #1b2c47; }
+:root.escuro .to-\[\#d9e3f0\] { --tw-gradient-to: #1d3049; }
+:root.escuro .to-\[\#d9e7fd\] { --tw-gradient-to: #192941; }
+:root.escuro .to-\[\#d9f2e5\] { --tw-gradient-to: #1b4831; }
+:root.escuro .to-\[\#dde9fd\] { --tw-gradient-to: #18263f; }
+:root.escuro .to-\[\#dfe7f1\] { --tw-gradient-to: #1d2e42; }
+:root.escuro .to-\[\#e5ecf4\] { --tw-gradient-to: #1a2b3e; }
+:root.escuro .to-\[\#e6effe\] { --tw-gradient-to: #162339; }
+:root.escuro .to-\[\#e8eef5\] { --tw-gradient-to: #19293b; }
+:root.escuro .to-\[\#e8f0fe\] { --tw-gradient-to: #152237; }
+:root.escuro .to-\[\#e8f8ef\] { --tw-gradient-to: #163b27; }
+:root.escuro .to-\[\#e9f1fe\] { --tw-gradient-to: #152237; }
+:root.escuro .to-\[\#f1f6fd\] { --tw-gradient-to: #132033; }
+:root.escuro .to-\[\#f2f6fb\] { --tw-gradient-to: #132233; }
+:root.escuro .to-\[\#f3f7ff\] { --tw-gradient-to: #121c30; }
+:root.escuro .to-\[\#f7f9fc\] { --tw-gradient-to: #121e2f; }
+:root.escuro .to-\[\#f7faff\] { --tw-gradient-to: #111c2e; }
+:root.escuro .to-\[\#f8fafd\] { --tw-gradient-to: #121d2e; }
+:root.escuro .to-\[\#fdd9df\] { --tw-gradient-to: #411920; }
+:root.escuro .to-\[\#fde0e5\] { --tw-gradient-to: #3d171e; }
+:root.escuro .to-\[\#fdeef1\] { --tw-gradient-to: #34141a; }
+:root.escuro .to-\[\#ffdcbb\] { --tw-gradient-to: #53381f; }
+:root.escuro .to-\[\#ffe2c7\] { --tw-gradient-to: #4b331d; }
+:root.escuro .to-\[\#ffe3cc\] { --tw-gradient-to: #48301b; }
+:root.escuro .to-\[\#ffe8d1\] { --tw-gradient-to: #45301a; }
+:root.escuro .to-\[\#fff6f7\] { --tw-gradient-to: #2e1215; }
+:root.escuro .to-\[\#fff7ef\] { --tw-gradient-to: #332313; }
+:root.escuro .\!bg-\[\#fafcff\] { background-color: #111b2c !important; }
+:root.escuro .\!border-\[\#c6ebd7\] { border-color: #266543 !important; }
+:root.escuro .\!border-\[\#cfe0fc\] { border-color: #243a5e !important; }
+:root.escuro .\!border-\[\#d3e2fc\] { border-color: #23395d !important; }
+:root.escuro .\!border-\[\#f6d3d9\] { border-color: #5f242e !important; }
+:root.escuro .\!from-\[\#dfeafd\] { --tw-gradient-from: #17253e !important; }
+:root.escuro .\!from-\[\#e3edfd\] { --tw-gradient-from: #16253b !important; }
+:root.escuro .\!from-\[\#eaf2ff\] { --tw-gradient-from: #142136 !important; }
+:root.escuro .\!from-\[\#ecf9f2\] { --tw-gradient-from: #153825 !important; }
+:root.escuro .\!to-\[\#eef4ff\] { --tw-gradient-to: #131f33 !important; }
+:root.escuro .\!to-\[\#f1f6ff\] { --tw-gradient-to: #131e31 !important; }
+:root.escuro .\!to-\[\#f4fbf7\] { --tw-gradient-to: #133220 !important; }
+:root.escuro .\!to-\[\#f6f9ff\] { --tw-gradient-to: #121b2e !important; }
+:root.escuro .hover\:bg-\[\#cadcfb\]:hover { background-color: #1d2e4c; }
+:root.escuro .hover\:bg-\[\#d9f2e5\]:hover { background-color: #1b4831; }
+:root.escuro .hover\:bg-\[\#dde9fd\]:hover { background-color: #18263f; }
+:root.escuro .hover\:bg-\[\#e8edf3\]:hover { background-color: #1d2a38; }
+:root.escuro .hover\:bg-\[\#f7faff\]:hover { background-color: #111c2e; }
+:root.escuro .hover\:bg-\[\#fbc9d1\]:hover { background-color: #4c1d25; }
+:root.escuro .hover\:bg-\[\#fbfcfe\]:hover { background-color: #111a2c; }
+:root.escuro .hover\:bg-\[\#fde0e5\]:hover { background-color: #3d171e; }
+:root.escuro .hover\:bg-\[\#ffd8b3\]:hover { background-color: #583c21; }
+:root.escuro .hover\:bg-\[\#ffe6d1\]:hover { background-color: #452e1a; }
+:root.escuro .hover\:border-\[\#9fdcb9\]:hover { border-color: #2b734a; }
+:root.escuro .hover\:border-\[\#c9d7ec\]:hover { border-color: #263f64; }
+:root.escuro .hover\:border-\[\#d3dce8\]:hover { border-color: #2f4159; }

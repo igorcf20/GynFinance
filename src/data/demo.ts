@@ -5,6 +5,7 @@ import { CATEGORIAS_PADRAO } from './categorias'
 import { saldoCaixa } from '../domain/calc'
 import { parametroDoAno } from '../domain/parametros'
 import { gerarPrevistos } from '../domain/recorrencia'
+import { salvarParceiro, type NovoParceiro } from '../domain/parceiros'
 import type { Atendimento, Dados, Lancamento, PagamentoDas, Recorrencia } from '../domain/types'
 
 export const DEMO_HOJE = '2026-10-15'
@@ -160,8 +161,8 @@ function outubro(): Lancamento[] {
     venda('10', 860, 'Balcão', 'Vendas da semana', { formaPagamento: 'dinheiro', contaFinanceiraId: CAIXA, notaEmitida: 'nao' }),
     venda('13', 1060, 'Encomenda de aniversário', 'Bolo para festa', { formaPagamento: 'credito' }),
     venda('15', 350, 'João Silva', 'Venda de bolos'),
-    saida('02', 1300, 'mercadoria', 'Ingredientes', { contraparte: 'Atacadão' }),
-    saida('09', 800, 'mercadoria', 'Chocolate e confeitos', { contraparte: 'Atacadão' }),
+    saida('02', 1300, 'mercadoria', 'Ingredientes', { contraparte: 'Atacadão', numeroFatura: 'FT 2026/1180', numeroOrcamento: 'ORC-552' }),
+    saida('09', 800, 'mercadoria', 'Chocolate e confeitos', { contraparte: 'Atacadão', numeroFatura: 'FT 2026/1243' }),
     saida('05', 230, 'embalagem', 'Caixas para bolo', { contraparte: 'Embala Fácil' }),
     saida('10', 380, 'embalagem', 'Embalagens', { contraparte: 'Embala Fácil' }),
     saida('14', 180, 'maquininha', 'Taxas da maquininha', { formaPagamento: 'debito' }),
@@ -169,7 +170,7 @@ function outubro(): Lancamento[] {
     saida('11', 300, 'marketing', 'Anúncio no Instagram', { formaPagamento: 'credito' }),
     saida('12', 400, 'manutencao', 'Conserto da batedeira', { formaPagamento: 'dinheiro', contaFinanceiraId: CAIXA }),
     realizado({ natureza: 'retirada', valor: 1500, categoriaId: 'prolabore', dataCompetencia: `${m}-05`, descricao: 'Pró-labore' }),
-    previsto({ natureza: 'saida', valor: 380, categoriaId: 'embalagem', dataCompetencia: `${m}-24`, dataVencimento: `${m}-24`, descricao: 'Fornecedor de embalagens', contraparte: 'Embala Fácil' }),
+    previsto({ natureza: 'saida', valor: 380, categoriaId: 'embalagem', dataCompetencia: `${m}-24`, dataVencimento: `${m}-24`, descricao: 'Fornecedor de embalagens', contraparte: 'Embala Fácil', numeroFatura: 'NF 8841', numeroProforma: 'PF-310' }),
     previsto({ natureza: 'entrada', valor: 350, categoriaId: 'vendas', dataCompetencia: `${m}-02`, dataVencimento: `${m}-02`, descricao: 'Encomenda de doces', contraparte: 'João Silva' }),
     previsto({ natureza: 'entrada', valor: 900, categoriaId: 'vendas', dataCompetencia: `${m}-14`, dataVencimento: `${m}-28`, descricao: 'Doces para casamento', contraparte: 'Buffet Estrela' }),
   ]
@@ -199,7 +200,7 @@ export function dadosDemo(): Dados {
 
   const gerado = gerarPrevistos([REC_ALUGUEL, REC_INTERNET, REC_LUZ], lancamentos, DEMO_HOJE, () => id('l'))
 
-  return {
+  const base: Dados = {
     empresa: {
       id: EMPRESA,
       nomeDono: 'Ana',
@@ -219,9 +220,30 @@ export function dadosDemo(): Dados {
     recorrencias: gerado.recorrencias,
     pagamentosDas,
     atendimentos: atendimentosDemo(lancamentos),
+    parceiros: [],
     preferencias: { lembreteDias: 1, lembreteEmail: true, resumoMensal: true },
   }
+  // Fichas da Ana: ao cadastrar, o histórico com o mesmo nome entra na ficha. "Balcão" e alguns
+  // clientes da agenda ficam de fora para aparecerem como sugestão de cadastro.
+  return PARCEIROS.reduce((d, [criadoEm, p], i) => salvarParceiro(d, p, `parceiro-${i + 1}`, criadoEm), base)
 }
+
+const PARCEIROS: [string, NovoParceiro][] = [
+  ['2024-03-10', { tipo: 'cliente', nome: 'Buffet Estrela', documento: '23.456.789/0001-10', telefone: '(62) 3241-5566', email: 'eventos@buffetestrela.com.br', endereco: 'Av. T-63, 1200, Setor Bueno, Goiânia', observacao: 'Paga em até 15 dias depois do evento. Falar com a Sônia.', ativo: true,
+    contatos: [{ id: 'ct-1', nome: 'Sônia Prado', cargo: 'Financeiro', telefone: '(62) 99812-3344', email: 'sonia@buffetestrela.com.br' }, { id: 'ct-2', nome: 'Rafael', cargo: 'Cozinha', telefone: '(62) 99700-1122' }],
+    anotacoes: [{ id: 'an-1', data: '2026-10-03', texto: 'Gostaram dos doces do evento. Querem orçamento para 3 casamentos em dezembro.' }, { id: 'an-2', data: '2026-08-20', texto: 'Pediram nota fiscal em todas as vendas.' }],
+    tarefas: [{ id: 'ta-1', texto: 'Mandar orçamento dos casamentos de dezembro', prazo: '2026-10-18', feita: false }, { id: 'ta-2', texto: 'Confirmar cardápio do casamento do dia 28', prazo: '2026-10-14', feita: false }, { id: 'ta-3', texto: 'Enviar fotos dos doces do evento', feita: true }] }],
+  ['2024-05-02', { tipo: 'cliente', nome: 'Padaria Central', documento: '34.567.890/0001-21', telefone: '(62) 3215-7788', endereco: 'Rua 9, 410, Centro, Goiânia', observacao: 'Revende bolos no balcão. Entrega toda sexta.', ativo: true }],
+  ['2025-02-14', { tipo: 'cliente', nome: 'Maria Souza', telefone: '(62) 99876-1234', observacao: 'Cliente fiel. Gosta de brigadeiro de pistache.', ativo: true }],
+  ['2026-09-30', { tipo: 'cliente', nome: 'João Silva', telefone: '(62) 99654-7788', ativo: true }],
+  ['2024-03-01', { tipo: 'fornecedor', nome: 'Atacadão', documento: '75.315.333/0001-09', telefone: '(62) 3088-4000', observacao: 'Ingredientes. Compras às segundas.', ativo: true,
+    contatos: [{ id: 'ct-3', nome: 'Rita', cargo: 'Vendedora', telefone: '(62) 99955-6677' }],
+    tarefas: [{ id: 'ta-4', texto: 'Pedir tabela de preços do chocolate', prazo: '2026-10-20', feita: false }] }],
+  ['2024-03-01', { tipo: 'fornecedor', nome: 'Embala Fácil', telefone: '(62) 99777-4455', email: 'vendas@embalafacil.com.br', observacao: 'Caixas e fitas. Boleto em 15 dias.', ativo: true }],
+  ['2024-03-01', { tipo: 'fornecedor', nome: 'Imobiliária Lar', telefone: '(62) 3091-2020', observacao: 'Aluguel da cozinha. Vence dia 16.', ativo: true }],
+  ['2024-03-01', { tipo: 'fornecedor', nome: 'NetGoiás', ativo: true }],
+  ['2026-10-01', { tipo: 'fornecedor', nome: 'Equatorial Goiás', ativo: true }],
+]
 
 /**
  * Agenda da Ana: retiradas, entregas e degustações. As que têm valor usam as contas a receber

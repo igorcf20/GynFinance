@@ -195,7 +195,8 @@ export function criarFonteDemo(hoje: DataISO = hojeReal()): FonteAdmin {
   const dia = (n: number) => addDias(hoje, n)
   const quando = (n: number) => `${dia(n)}T${String(9 + (Math.abs(n) % 9)).padStart(2, '0')}:15:00.000Z`
   let planos: Plano[] = [
-    { id: 'essencial', nome: 'Essencial', descricao: 'Tudo para organizar o dinheiro do negócio e o MEI.', precoCentavos: 2500, modulos: PRONTOS, temIa: false, destaque: true, ativo: true, ordem: 1 },
+    { id: 'essencial', nome: 'Essencial', descricao: 'Tudo para organizar o dinheiro do negócio e o MEI.', precoCentavos: 2500, modulos: PRONTOS.filter((m) => m !== 'clientes'), temIa: false, destaque: true, ativo: true, ordem: 1 },
+    { id: 'plus', nome: 'Plus', descricao: 'O Essencial com clientes e fornecedores: ficha de cada um e quanto você ganha e gasta com eles.', precoCentavos: 3900, modulos: PRONTOS, temIa: false, destaque: false, ativo: false, ordem: 2 },
     {
       id: 'completo',
       nome: 'Completo',
@@ -205,7 +206,7 @@ export function criarFonteDemo(hoje: DataISO = hojeReal()): FonteAdmin {
       temIa: true,
       destaque: false,
       ativo: false,
-      ordem: 2,
+      ordem: 3,
     },
   ]
   const neg = (nome: string, municipio: string, ehMei = true, atividade = 'servico') => ({ nome, ehMei, uf: 'GO', municipio, atividade })

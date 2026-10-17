@@ -55,6 +55,9 @@ export function csvDoMes(linhas: Lancamento[], categorias: Categoria[]): string 
     'Grupo da categoria': NOMES_GRUPO_CSV[cat(l.categoriaId)?.grupo ?? ''] ?? '',
     Descrição: l.descricao ?? '',
     'Cliente ou fornecedor': l.contraparte ?? '',
+    'Nº da fatura': l.numeroFatura ?? '',
+    'Nº da pro forma': l.numeroProforma ?? '',
+    'Nº do orçamento': l.numeroOrcamento ?? '',
     'Forma de pagamento': FORMAS.find((f) => f.valor === l.formaPagamento)?.rotulo ?? '',
     Valor: ((sinal(l) * l.valor) / 100).toFixed(2).replace('.', ','),
     Situação: situacaoBadge(l).texto,
@@ -104,7 +107,7 @@ export function Transactions() {
       if (situacao === 'feito' && l.situacao !== 'realizado') return false
       if (situacao === 'aberto' && l.situacao !== 'previsto') return false
       if (situacao === 'semnota' && !(l.natureza === 'entrada' && l.notaEmitida === 'nao')) return false
-      if (termo && !`${l.descricao ?? ''} ${l.contraparte ?? ''}`.toLowerCase().includes(termo)) return false
+      if (termo && !`${l.descricao ?? ''} ${l.contraparte ?? ''} ${l.numeroFatura ?? ''} ${l.numeroProforma ?? ''} ${l.numeroOrcamento ?? ''}`.toLowerCase().includes(termo)) return false
       return true
     })
     return r.sort((a, b) => {

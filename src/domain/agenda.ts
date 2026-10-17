@@ -164,6 +164,7 @@ export function salvarAtendimento(d: Dados, a: NovoAtendimento, id: string, gera
         dataCompetencia: a.data,
         dataVencimento: a.data,
         contraparte: a.cliente,
+        parceiroId: a.parceiroId,
         descricao: a.servico || 'Atendimento',
       }
       lancamentos = lancamentos.map((l) => (l.id === ligada.id ? atualizada : l))
@@ -186,6 +187,7 @@ export function salvarAtendimento(d: Dados, a: NovoAtendimento, id: string, gera
       formaPagamento: 'pix',
       descricao: a.servico || 'Atendimento',
       contraparte: a.cliente,
+      parceiroId: a.parceiroId,
       notaEmitida: 'nao',
     }
     lancamentos = [...lancamentos, conta]
