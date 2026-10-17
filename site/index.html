@@ -1,0 +1,649 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script>
+    // Links antigos do sistema (gynfinance.kodemi.pt/#/lancamentos) agora abrem em /app/.
+    if (location.hash.indexOf('#/') === 0) location.replace('/app/' + location.hash)
+  </script>
+  <title>Gynfinance | Controle financeiro simples para MEI e pequenas empresas</title>
+  <meta name="description" content="Saiba quanto sobrou no mês, separe o dinheiro da casa do da empresa, não esqueça contas e acompanhe o limite do MEI e o DAS. Funciona no celular e no computador. A partir de R$ 25/mês.">
+  <link rel="canonical" href="https://gynfinance.kodemi.pt/">
+  <meta name="theme-color" content="#F5F7FA">
+
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="pt_BR">
+  <meta property="og:site_name" content="Gynfinance">
+  <meta property="og:url" content="https://gynfinance.kodemi.pt/">
+  <meta property="og:title" content="Gynfinance | Saiba quanto sobrou no mês">
+  <meta property="og:description" content="Controle financeiro simples para MEI e pequenas empresas: entradas e saídas, contas a pagar e a receber, limite do MEI e DAS. A partir de R$ 25/mês.">
+  <meta property="og:image" content="https://gynfinance.kodemi.pt/img/og-gynfinance.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Painel do Gynfinance mostrando quanto sobrou no mês, o que entrou, o que saiu e as próximas contas.">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Gynfinance | Saiba quanto sobrou no mês">
+  <meta name="twitter:description" content="Controle financeiro simples para MEI e pequenas empresas. A partir de R$ 25/mês.">
+  <meta name="twitter:image" content="https://gynfinance.kodemi.pt/img/og-gynfinance.jpg">
+
+  <link rel="icon" type="image/png" href="img/favicon.png">
+  <link rel="apple-touch-icon" href="img/logo-simbolo.png">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="estilo.css">
+  <link rel="preload" as="image" href="img/tela-painel.webp" fetchpriority="high">
+  <script>document.documentElement.classList.add('js')</script>
+  <script src="site.js" defer></script>
+</head>
+<body>
+  <!-- Ícones (traço simples, desenhados para este site) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <symbol id="i-seta" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10-6.5-10-6.5z"/></symbol>
+    <symbol id="i-raio" viewBox="0 0 24 24"><path d="M13 2.5L4.5 13.5h7l-1 8 8.5-11h-7l1-8z"/></symbol>
+    <symbol id="i-separar" viewBox="0 0 24 24"><path d="M12 21v-7.5L6 7.5M12 13.5l6-6M5 12.5V7h5.5M19 12.5V7h-5.5"/></symbol>
+    <symbol id="i-barras" viewBox="0 0 24 24"><path d="M4 20h16M7 16v-4M12 16V8M17 16V5"/></symbol>
+    <symbol id="i-sino" viewBox="0 0 24 24"><path d="M6 16v-5a6 6 0 1 1 12 0v5l1.5 2h-15L6 16z"/><path d="M10 21h4"/></symbol>
+    <symbol id="i-conversa" viewBox="0 0 24 24"><path d="M20 12a8 8 0 0 1-11.6 7.1L4 20l1-4.2A8 8 0 1 1 20 12z"/><path d="M9 12h.01M12.5 12h.01M16 12h.01"/></symbol>
+    <symbol id="i-repetir" viewBox="0 0 24 24"><path d="M17 3l3 3-3 3"/><path d="M4 12v-2a4 4 0 0 1 4-4h12"/><path d="M7 21l-3-3 3-3"/><path d="M20 12v2a4 4 0 0 1-4 4H4"/></symbol>
+    <symbol id="i-escudo" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 4.5-3.4 8.2-8 9-4.6-.8-8-4.5-8-9V6l8-3z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></symbol>
+    <symbol id="i-calendario" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4M9 15l2 2 4-4"/></symbol>
+    <symbol id="i-calendario-x" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4M10 13.5l4 4M14 13.5l-4 4"/></symbol>
+    <symbol id="i-tendencia" viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></symbol>
+    <symbol id="i-arquivo" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></symbol>
+    <symbol id="i-aparelhos" viewBox="0 0 24 24"><rect x="2.5" y="4" width="14" height="10" rx="2"/><path d="M6 18h7M9.5 14v4"/><rect x="17.5" y="8" width="4.5" height="12" rx="1.2"/></symbol>
+    <symbol id="i-cadeado" viewBox="0 0 24 24"><rect x="4.5" y="10.5" width="15" height="10" rx="2.5"/><path d="M8 10.5v-3a4 4 0 0 1 8 0v3M12 14.5v2"/></symbol>
+    <symbol id="i-relogio" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
+    <symbol id="i-recibo" viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3z"/><path d="M9 8h6M9 12h6"/></symbol>
+    <symbol id="i-caixa" viewBox="0 0 24 24"><path d="M3.5 7.5L12 3l8.5 4.5v9L12 21l-8.5-4.5v-9z"/><path d="M3.5 7.5L12 12l8.5-4.5M12 12v9"/></symbol>
+    <symbol id="i-qr" viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><path d="M14 14h2v2M20 14v6h-6M17 17v3"/></symbol>
+    <symbol id="i-alerta" viewBox="0 0 24 24"><path d="M12 4l9 16H3l9-16z"/><path d="M12 10v4M12 17h.01"/></symbol>
+    <symbol id="i-carteira" viewBox="0 0 24 24"><path d="M5 7V6a2 2 0 0 1 2-2h10v3"/><rect x="3.5" y="7" width="17" height="13" rx="2.5"/><path d="M16 13.5h.01"/></symbol>
+    <symbol id="i-interrogacao" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5v.4M12 16.5h.01"/></symbol>
+    <symbol id="i-usuarios" viewBox="0 0 24 24"><circle cx="9" cy="8.5" r="3.5"/><path d="M3 20a6 6 0 0 1 12 0M16 5.5a3.5 3.5 0 0 1 0 6.5M18 14.5a6 6 0 0 1 3 5.5"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+    <symbol id="i-fechar" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="i-email" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3.5 7l8.5 6 8.5-6"/></symbol>
+    <symbol id="i-seta-baixo" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+    <symbol id="i-usuario" viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></symbol>
+    <symbol id="i-seta-cima" viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></symbol>
+    <symbol id="i-local" viewBox="0 0 24 24"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/></symbol>
+    <symbol id="i-instagram" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="5"/><circle cx="12" cy="12" r="4"/><path d="M17 7h.01"/></symbol>
+  </svg>
+
+  <a class="skip" href="#conteudo">Pular para o conteúdo</a>
+
+  <header class="site-header">
+    <div class="container header-row">
+      <a class="brand" href="./" aria-label="Gynfinance, página inicial">
+        <img src="img/logo.png" alt="Gynfinance" width="147" height="30">
+      </a>
+      <nav class="nav" aria-label="Seções do site">
+        <div class="nav-grupo">
+          <a href="#recursos" data-secao="recursos" class="nav-abre" aria-expanded="false" aria-controls="mega-recursos">Recursos<svg class="icon nav-seta" aria-hidden="true"><use href="#i-seta-baixo"/></svg></a>
+          <div class="mega" id="mega-recursos">
+            <div class="mega-grade">
+            <a class="mega-item" href="#tela-lancamentos" data-secao-sub="tela-lancamentos">
+              <span class="mega-icone"><svg class="icon" aria-hidden="true"><use href="#i-raio"/></svg></span>
+              <span><strong>Lançamentos</strong><small>Anote o que entrou e saiu em segundos</small></span>
+            </a>
+            <a class="mega-item" href="#tela-pessoal" data-secao-sub="tela-pessoal">
+              <span class="mega-icone"><svg class="icon" aria-hidden="true"><use href="#i-separar"/></svg></span>
+              <span><strong>Pessoal x empresa</strong><small>Quanto sobrou e quanto você tirou</small></span>
+            </a>
+            <a class="mega-item" href="#tela-contas" data-secao-sub="tela-contas">
+              <span class="mega-icone"><svg class="icon" aria-hidden="true"><use href="#i-sino"/></svg></span>
+              <span><strong>Contas a pagar e a receber</strong><small>Nada esquecido, cobrança pelo WhatsApp</small></span>
+            </a>
+            <a class="mega-item" href="#mei" data-secao-sub="mei">
+              <span class="mega-icone"><svg class="icon" aria-hidden="true"><use href="#i-escudo"/></svg></span>
+              <span><strong>Meu MEI</strong><small>Limite do ano e DAS sempre à vista</small></span>
+            </a>
+            <a class="mega-item" href="#tela-fluxo" data-secao-sub="tela-fluxo">
+              <span class="mega-icone"><svg class="icon" aria-hidden="true"><use href="#i-tendencia"/></svg></span>
+              <span><strong>Fluxo de caixa e relatórios</strong><small>Para onde vai o seu dinheiro</small></span>
+            </a>
+            </div>
+            <a class="mega-demo" href="/app/">
+              <span><strong>Veja tudo funcionando</strong><small>A demonstração abre na hora, sem cadastro.</small></span>
+              <span class="mega-demo-btn">Testar a demonstração<svg class="icon icon-arrow" aria-hidden="true"><use href="#i-seta"/></svg></span>
+            </a>
+          </div>
+        </div>
+        <a href="#mei" data-secao="mei">Para o MEI</a>
+        <a href="#como-comecar" data-secao="como-comecar">Como começar</a>
+        <a href="#preco" data-secao="preco">Preço</a>
+        <a href="#duvidas" data-secao="duvidas">Dúvidas</a>
+        <span class="nav-marca" aria-hidden="true"></span>
+      </nav>
+      <div class="header-actions">
+        <a class="link-entrar" href="/app/#/entrar"><svg class="icon" aria-hidden="true"><use href="#i-usuario"/></svg>Entrar</a>
+        <a class="btn btn-primary btn-sm header-cta" href="/app/#/entrar?depois=comecar" data-cadastro>Criar minha conta</a>
+        <button class="menu-btn" type="button" aria-expanded="false" aria-controls="menu-mobile" aria-label="Abrir menu">
+          <svg class="icon i-abrir" aria-hidden="true"><use href="#i-menu"/></svg>
+          <svg class="icon i-fechar" aria-hidden="true"><use href="#i-fechar"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="progresso" aria-hidden="true"><span></span></div>
+    <div class="menu-mobile" id="menu-mobile">
+      <nav class="menu-mobile-itens" aria-label="Seções do site">
+        <div class="item-grupo">
+          <a class="item" href="#recursos" data-secao="recursos"><svg class="icon" aria-hidden="true"><use href="#i-barras"/></svg>Recursos</a>
+          <button class="item-abre" type="button" aria-expanded="false" aria-controls="sub-recursos" aria-label="Ver as telas"><svg class="icon" aria-hidden="true"><use href="#i-seta-baixo"/></svg></button>
+        </div>
+        <div class="subitens" id="sub-recursos"><div class="subitens-lista">
+          <a class="subitem" href="#tela-lancamentos">Lançamentos</a>
+          <a class="subitem" href="#tela-pessoal">Pessoal x empresa</a>
+          <a class="subitem" href="#tela-contas">Contas a pagar e a receber</a>
+          <a class="subitem" href="#mei">Meu MEI</a>
+          <a class="subitem" href="#tela-fluxo">Fluxo de caixa e relatórios</a>
+        </div>
+        </div>
+        <a class="item" href="#mei" data-secao="mei"><svg class="icon" aria-hidden="true"><use href="#i-recibo"/></svg>Para o MEI</a>
+        <a class="item" href="#como-comecar" data-secao="como-comecar"><svg class="icon" aria-hidden="true"><use href="#i-raio"/></svg>Como começar</a>
+        <a class="item" href="#preco" data-secao="preco"><svg class="icon" aria-hidden="true"><use href="#i-carteira"/></svg>Preço</a>
+        <a class="item" href="#duvidas" data-secao="duvidas"><svg class="icon" aria-hidden="true"><use href="#i-interrogacao"/></svg>Dúvidas</a>
+      </nav>
+      <div class="menu-mobile-acoes">
+        <a class="btn btn-primary btn-block" href="/app/#/entrar?depois=comecar" data-cadastro>Criar minha conta</a>
+        <a class="btn btn-secondary btn-block" href="/app/">Testar a demonstração</a>
+        <p class="menu-mobile-rodape">
+          <a href="/app/#/entrar">Já tenho conta: entrar</a>
+          <a href="https://wa.me/351914125381?text=Ol%C3%A1!%20Quero%20saber%20mais%20sobre%20o%20Gynfinance." data-whats target="_blank" rel="noopener"><svg class="icon" aria-hidden="true"><use href="#i-conversa"/></svg>WhatsApp</a>
+        </p>
+      </div>
+    </div>
+  </header>
+
+  <main id="conteudo">
+
+    <!-- Abertura -->
+    <section class="hero">
+      <div class="container">
+        <div class="hero-copy anima-entrada">
+          <span class="eyebrow"><span class="dot"></span><span data-cms="hero.selo">Para MEI e pequenas empresas</span></span>
+          <h1><span data-cms="hero.titulo_antes">Saiba quanto</span> <span class="grad-text" data-cms="hero.titulo_destaque">sobrou</span> <span data-cms="hero.titulo_depois">no fim do mês.</span></h1>
+          <p class="lead" data-cms="hero.subtitulo">O Gynfinance organiza o dinheiro do seu negócio: o que entrou, o que saiu, as contas para pagar e receber e o limite do MEI. Você anota, ele faz as contas.</p>
+          <div class="hero-ctas">
+            <a class="btn btn-primary" href="/app/">
+              <svg class="icon" aria-hidden="true"><use href="#i-play"/></svg>
+              <span data-cms="hero.botao_principal">Testar a demonstração</span>
+            </a>
+            <a class="btn btn-secondary" href="/app/#/entrar?depois=comecar" data-cadastro>
+              <span data-cms="hero.botao_secundario">Criar minha conta</span>
+              <svg class="icon icon-arrow" aria-hidden="true"><use href="#i-seta"/></svg>
+            </a>
+          </div>
+          <p class="hero-note"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span data-cms="hero.nota">A demonstração abre na hora, sem cadastro.</span></p>
+          <p class="hero-oferta" data-lista-oferta hidden><svg class="icon" aria-hidden="true"><use href="#i-sino"/></svg><span></span></p>
+        </div>
+
+        <div class="hero-visual">
+          <div class="float-card fc-1" aria-hidden="true">
+            <span class="ic ic-warn"><svg class="icon"><use href="#i-sino"/></svg></span>
+            <div><strong>O DAS de outubro vence dia 20.</strong><span>Aviso do Meu MEI</span></div>
+          </div>
+          <div class="browser">
+            <div class="browser-bar" aria-hidden="true">
+              <div class="browser-dots"><i></i><i></i><i></i></div>
+              <div class="browser-url"><svg class="icon"><use href="#i-cadeado"/></svg>gynfinance.kodemi.pt</div>
+              <div class="spacer"></div>
+            </div>
+            <img src="img/tela-painel.webp" data-cms-img="hero.imagem" width="1440" height="900" fetchpriority="high"
+                 alt="Painel do Gynfinance: sobrou R$ 2.480 no mês, entrou R$ 6.320, saiu R$ 3.840, retirada de R$ 1.500 e as contas dos próximos 7 dias.">
+          </div>
+          <div class="hero-phone">
+            <div class="phone">
+              <img src="img/celular-painel.webp" width="560" height="1212" loading="lazy"
+                   alt="O mesmo painel aberto no celular.">
+            </div>
+          </div>
+        </div>
+
+        <ul class="trust" aria-label="Destaques">
+          <li><svg class="icon" aria-hidden="true"><use href="#i-aparelhos"/></svg>No celular e no computador</li>
+          <li><svg class="icon" aria-hidden="true"><use href="#i-relogio"/></svg>Pronto para usar em 2 minutos</li>
+          <li><svg class="icon" aria-hidden="true"><use href="#i-cadeado"/></svg>Dados separados por empresa</li>
+          <li><svg class="icon" aria-hidden="true"><use href="#i-arquivo"/></svg>Planilha para o contador</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- Problemas -->
+    <section class="section problems" aria-labelledby="titulo-problemas">
+      <div class="container">
+        <div class="section-head revela">
+          <h2 class="h2" id="titulo-problemas" data-cms="problemas.titulo">O mês acaba e o dinheiro some?</h2>
+          <p class="lead" data-cms="problemas.subtitulo">Quem toca um pequeno negócio conhece bem esses problemas. O Gynfinance foi feito para resolver cada um deles, sem você precisar entender de contabilidade.</p>
+        </div>
+        <div class="problem-grid">
+          <article class="problem revela">
+            <span class="ic"><svg class="icon" aria-hidden="true"><use href="#i-carteira"/></svg></span>
+            <h3 data-cms="problemas.card1.titulo">Dinheiro da casa misturado com o da empresa</h3>
+            <p data-cms="problemas.card1.texto">O mercado de casa sai do caixa da loja e ninguém sabe mais o que é de quem.</p>
+            <p class="resposta"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Separe o que é seu do que é do negócio, com o pró-labore anotado à parte.</p>
+          </article>
+          <article class="problem revela revela-d1">
+            <span class="ic"><svg class="icon" aria-hidden="true"><use href="#i-interrogacao"/></svg></span>
+            <h3 data-cms="problemas.card2.titulo">Não sabe quanto sobrou no mês</h3>
+            <p data-cms="problemas.card2.texto">Vendeu bem, mas no fim do mês a conta não fecha e fica a dúvida: o negócio dá lucro?</p>
+            <p class="resposta"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Veja na primeira tela quanto entrou, quanto saiu e quanto sobrou.</p>
+          </article>
+          <article class="problem revela revela-d2">
+            <span class="ic"><svg class="icon" aria-hidden="true"><use href="#i-calendario-x"/></svg></span>
+            <h3 data-cms="problemas.card3.titulo">Conta esquecida, juros pagos</h3>
+            <p data-cms="problemas.card3.texto">O boleto venceu, o cliente não pagou e você só lembrou depois.</p>
+            <p class="resposta"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Contas a pagar e a receber com aviso de vencimento e cobrança pelo WhatsApp.</p>
+          </article>
+          <article class="problem revela revela-d3">
+            <span class="ic"><svg class="icon" aria-hidden="true"><use href="#i-alerta"/></svg></span>
+            <h3 data-cms="problemas.card4.titulo">Limite do MEI e DAS no escuro</h3>
+            <p data-cms="problemas.card4.texto">Sem acompanhar o faturamento, dá para estourar o limite anual ou atrasar o DAS.</p>
+            <p class="resposta"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Acompanhe o limite do ano e cada DAS, com aviso antes de vencer.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- Recursos em destaque -->
+    <section class="section section-recursos" id="recursos" aria-labelledby="titulo-recursos">
+      <div class="container">
+        <div class="section-head revela">
+          <span class="eyebrow"><span class="dot"></span>Como funciona</span>
+          <h2 class="h2" id="titulo-recursos" data-cms="recursos.titulo">Tudo o que o seu negócio precisa, em telas simples</h2>
+          <p class="lead" data-cms="recursos.subtitulo">Nada de planilha complicada nem termo de contador. Cada tela responde a uma pergunta sobre o seu dinheiro.</p>
+        </div>
+
+        <div class="feature">
+          <div class="feature-copy revela" id="tela-lancamentos">
+            <span class="tag"><svg class="icon" aria-hidden="true"><use href="#i-raio"/></svg><span data-cms="lancamentos.selo">Lançamentos</span></span>
+            <h3 data-cms="lancamentos.titulo">Entrou ou saiu dinheiro? Anote em segundos.</h3>
+            <p data-cms="lancamentos.texto">Escolha se entrou ou saiu, digite o valor e a categoria. Pronto. O resto o Gynfinance calcula sozinho.</p>
+            <ul class="checks">
+              <li><span class="ck"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span>Só o valor e a categoria são obrigatórios</li>
+              <li><span class="ck"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span>Pix, dinheiro, débito, crédito ou boleto</li>
+              <li><span class="ck"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span>Foto do comprovante e marcação de nota emitida</li>
+              <li><span class="ck"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span>Retirada para você e gasto pago com dinheiro pessoal ficam separados</li>
+            </ul>
+          </div>
+          <div class="feature-media media-phone revela revela-d1">
+            <div class="phone">
+              <img src="img/celular-lancar.webp" data-cms-img="lancamentos.imagem" width="560" height="1212" loading="lazy"
+                   alt="Tela de novo lançamento no celular: entrou dinheiro, R$ 350,00, categoria Vendas, pago no Pix.">
+            </div>
+          </div>
+        </div>
+
+        <div class="feature invertido">
+          <div class="feature-copy revela" id="tela-pessoal">
+            <span class="tag"><svg class="icon" aria-hidden="true"><use href="#i-separar"/></svg><span data-cms="pessoal.selo">Pessoal x empresa</span></span>
+            <h3 data-cms="pessoal.titulo">Quanto sobrou, quanto você tirou e quanto ficou na empresa.</h3>
+            <p data-cms="pessoal.texto">No fechamento do mês você vê o resultado do negócio sem confundir com o seu salário. E recebe uma sugestão de quanto guardar de reserva.</p>
+            <ul class="checks">
+              <li><span class="ck"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span>"Quanto sobrou no mês" logo na primeira tela</li>
+              <li><span class="ck"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span>Pró-labore anotado à parte, sem bagunçar o resultado</li>
+              <li><span class="ck"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span>Onde você mais gastou, por categoria</li>
+              <li><span class="ck"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span>Resumo do mês para compartilhar no WhatsApp</li>
+            </ul>
+          </div>
+          <div class="feature-media revela revela-d1">
+            <div class="shot">
+              <picture><source media="(max-width: 759px)" srcset="img/recorte-fechamento.webp" width="780" height="1540"><img src="img/tela-fechamento.webp" data-cms-img="pessoal.imagem" width="1384" height="1372" loading="lazy"
+                   alt="Fechamento de setembro: sobrou R$ 2.100, entrou R$ 5.800, saiu R$ 3.700, retirei R$ 1.500, ficou na empresa R$ 600, e onde mais gastou."></picture>
+            </div>
+          </div>
+        </div>
+
+        <div class="feature">
+          <div class="feature-copy revela" id="tela-contas">
+            <span class="tag"><svg class="icon" aria-hidden="true"><use href="#i-sino"/></svg><span data-cms="contas.selo">Contas a pagar e a receber</span></span>
+            <h3 data-cms="contas.titulo">Nenhuma conta esquecida. Nenhum cliente sem cobrança.</h3>
+            <p data-cms="contas.texto">As contas aparecem separadas por atrasadas, desta semana e mais para frente. Para o cliente que está devendo, a cobrança sai pronta pelo WhatsApp.</p>
+            <ul class="checks">
+              <li><span class="ck"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span>Aviso de vencimento das suas contas</li>
+              <li><span class="ck"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span>Botão "Cobrar" com a mensagem pronta no WhatsApp</li>
+              <li><span class="ck"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span>Contas fixas (aluguel, internet, luz) se repetem todo mês sozinhas</li>
+              <li><span class="ck"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span><span>Registrar o pagamento com comprovante, pagamento parcial ou parcelado, e desfazer <span class="badge-novo">Novo</span></span></li>
+            </ul>
+          </div>
+          <div class="feature-media revela revela-d1">
+            <div class="shot">
+              <picture><source media="(max-width: 759px)" srcset="img/recorte-contas.webp" width="780" height="840"><img src="img/tela-contas.webp" data-cms-img="contas.imagem" width="1400" height="754" loading="lazy"
+                   alt="Contas a receber: João Silva com R$ 350 atrasado e Buffet Estrela com R$ 900, cada um com os botões Cobrar e Recebi."></picture>
+            </div>
+          </div>
+        </div>
+
+        <div class="feature invertido" id="mei">
+          <div class="feature-copy revela">
+            <span class="tag"><svg class="icon" aria-hidden="true"><use href="#i-escudo"/></svg><span data-cms="mei.selo">Meu MEI</span></span>
+            <h3 data-cms="mei.titulo">O limite do MEI e o DAS sempre à vista.</h3>
+            <p data-cms="mei.texto">O Gynfinance soma o que você faturou no ano e mostra quanto ainda pode faturar. Se o ritmo das vendas passar do limite, você fica sabendo antes.</p>
+            <ul class="checks">
+              <li><span class="ck"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span>Faturamento do ano em comparação com o limite do MEI</li>
+              <li><span class="ck"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span>Previsão de como o ano vai fechar no ritmo atual</li>
+              <li><span class="ck"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span>DAS mês a mês: pago, pendente ou a vencer</li>
+              <li><span class="ck"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span>Prazo da declaração anual (DASN-SIMEI)</li>
+            </ul>
+          </div>
+          <div class="feature-media revela revela-d1">
+            <div class="shot">
+              <picture><source media="(max-width: 759px)" srcset="img/recorte-mei.webp" width="780" height="1580"><img src="img/tela-mei.webp" data-cms-img="mei.imagem" width="1384" height="1180" loading="lazy"
+                   alt="Tela Meu MEI: faturamento do ano de R$ 52.400 de R$ 81.000, DAS de outubro a vencer e pagamentos do DAS em 2026."></picture>
+            </div>
+          </div>
+        </div>
+
+        <div class="feature">
+          <div class="feature-copy revela" id="tela-fluxo">
+            <span class="tag"><svg class="icon" aria-hidden="true"><use href="#i-tendencia"/></svg><span data-cms="fluxo.selo">Fluxo de caixa e relatórios</span></span>
+            <h3 data-cms="fluxo.titulo">Veja se o negócio está crescendo, mês a mês.</h3>
+            <p data-cms="fluxo.texto">Compare as entradas e as saídas dos últimos meses e descubra para onde está indo o dinheiro. Quando o contador pedir, é só exportar.</p>
+            <ul class="checks">
+              <li><span class="ck"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span>Fluxo de caixa de 3, 6 ou 12 meses</li>
+              <li><span class="ck"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span>Despesas e receitas por categoria</li>
+              <li><span class="ck"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span>Pró-labore, retiradas e contas em atraso</li>
+              <li><span class="ck"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span>Exporta os lançamentos em CSV, que abre no Excel, para o contador</li>
+            </ul>
+          </div>
+          <div class="feature-media revela revela-d1">
+            <div class="shot">
+              <picture><source media="(max-width: 759px)" srcset="img/recorte-fluxo.webp" width="780" height="1120"><img src="img/tela-fluxo.webp" data-cms-img="fluxo.imagem" width="1400" height="810" loading="lazy"
+                   alt="Gráfico de fluxo de caixa com entradas e saídas de maio a outubro."></picture>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Grade de recursos -->
+    <section class="section all-features" aria-labelledby="titulo-tudo">
+      <div class="container">
+        <div class="section-head revela">
+          <h2 class="h2" id="titulo-tudo">Tudo incluído no Gynfinance</h2>
+          <p class="lead">Feito para o dia a dia de quem vende, presta serviço ou fabrica o que vende.</p>
+        </div>
+        <div class="feat-grid">
+          <article class="feat revela">
+            <span class="ic"><svg class="icon" aria-hidden="true"><use href="#i-raio"/></svg></span>
+            <h3>Lançamentos em segundos</h3>
+            <p>Entradas e saídas anotadas com poucos toques, no celular ou no computador.</p>
+          </article>
+          <article class="feat revela revela-d1">
+            <span class="ic"><svg class="icon" aria-hidden="true"><use href="#i-separar"/></svg></span>
+            <h3>Pessoal x empresa</h3>
+            <p>O pró-labore fica separado do resultado do negócio.</p>
+          </article>
+          <article class="feat revela revela-d2">
+            <span class="ic"><svg class="icon" aria-hidden="true"><use href="#i-barras"/></svg></span>
+            <h3>Quanto sobrou no mês</h3>
+            <p>O número mais importante, logo na primeira tela.</p>
+          </article>
+          <article class="feat revela">
+            <span class="ic"><svg class="icon" aria-hidden="true"><use href="#i-conversa"/></svg></span>
+            <h3>Contas a pagar e a receber</h3>
+            <p>Aviso de vencimento e cobrança do cliente pelo WhatsApp.</p>
+          </article>
+          <article class="feat revela revela-d1">
+            <span class="ic"><svg class="icon" aria-hidden="true"><use href="#i-repetir"/></svg></span>
+            <h3>Contas fixas</h3>
+            <p>Aluguel, internet e outras contas que se repetem todo mês.</p>
+          </article>
+          <article class="feat revela revela-d2">
+            <span class="ic"><svg class="icon" aria-hidden="true"><use href="#i-escudo"/></svg></span>
+            <h3>Limite do MEI e DAS</h3>
+            <p>Alerta antes de chegar no limite anual e antes do DAS vencer.</p>
+          </article>
+          <article class="feat revela">
+            <span class="ic"><svg class="icon" aria-hidden="true"><use href="#i-calendario"/></svg></span>
+            <h3>Fechamento do mês</h3>
+            <p>Resumo do mês que terminou, com sugestão de reserva.</p>
+          </article>
+          <article class="feat revela revela-d1">
+            <span class="ic"><svg class="icon" aria-hidden="true"><use href="#i-tendencia"/></svg></span>
+            <h3>Fluxo de caixa e relatórios</h3>
+            <p>Entradas, saídas e categorias, mês a mês.</p>
+          </article>
+          <article class="feat revela revela-d2">
+            <span class="ic"><svg class="icon" aria-hidden="true"><use href="#i-arquivo"/></svg></span>
+            <h3>Planilha para o contador</h3>
+            <p>Exporte os lançamentos do mês em CSV.</p>
+          </article>
+          <article class="feat revela">
+            <span class="ic"><svg class="icon" aria-hidden="true"><use href="#i-aparelhos"/></svg></span>
+            <h3>Celular e computador</h3>
+            <p>Abre no navegador. Não precisa instalar nada.</p>
+          </article>
+          <article class="feat revela revela-d1">
+            <span class="ic"><svg class="icon" aria-hidden="true"><use href="#i-cadeado"/></svg></span>
+            <h3>Dados guardados com segurança</h3>
+            <p>Conexão protegida e cada empresa só vê os próprios dados.</p>
+          </article>
+          <article class="feat revela revela-d2">
+            <span class="ic"><svg class="icon" aria-hidden="true"><use href="#i-relogio"/></svg></span>
+            <h3>Pronto em 2 minutos</h3>
+            <p>Responda poucas perguntas e o painel já fica montado.</p>
+          </article>
+        </div>
+        <div class="breve revela">
+          <span>Em breve:</span>
+          <span class="chip"><svg class="icon" aria-hidden="true"><use href="#i-recibo"/></svg>Emissão de nota fiscal <em>em breve</em></span>
+          <span class="chip"><svg class="icon" aria-hidden="true"><use href="#i-caixa"/></svg>Controle de estoque <em>em breve</em></span>
+          <span class="chip"><svg class="icon" aria-hidden="true"><use href="#i-qr"/></svg>Pix integrado <em>em breve</em></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Como começar -->
+    <section class="section" id="como-comecar" aria-labelledby="titulo-comecar">
+      <div class="container">
+        <div class="section-head revela">
+          <span class="eyebrow"><span class="dot"></span>Como começar</span>
+          <h2 class="h2" id="titulo-comecar">Comece hoje, em 3 passos</h2>
+          <p class="lead">Sem instalar nada e sem precisar chamar ninguém para configurar.</p>
+        </div>
+        <ol class="steps" style="list-style:none;margin:0;padding:0">
+          <li class="step revela">
+            <span class="n">1</span>
+            <h3>Teste a demonstração</h3>
+            <p>Veja o sistema funcionando com os dados de exemplo da Doces da Ana. Pode mexer à vontade: nada fica salvo.</p>
+            <a href="/app/">Abrir a demonstração <svg class="icon" aria-hidden="true"><use href="#i-seta"/></svg></a>
+          </li>
+          <li class="step revela revela-d1">
+            <span class="n">2</span>
+            <h3 data-lista-texto="Entre na lista de espera">Crie sua conta</h3>
+            <p data-lista-texto="Os cadastros abrem {data}. Chame a gente no WhatsApp e avisamos você no dia da abertura.">Só o seu nome, e-mail e uma senha. Os dados do seu negócio ficam guardados e separados dos de outras empresas.</p>
+            <a href="/app/#/entrar?depois=comecar" data-cadastro>Criar minha conta <svg class="icon" aria-hidden="true"><use href="#i-seta"/></svg></a>
+          </li>
+          <li class="step revela revela-d2">
+            <span class="n">3</span>
+            <h3>Configure em 2 minutos</h3>
+            <p>Conte o que o seu negócio faz, se é MEI e quanto tem em caixa hoje. O Gynfinance monta o painel para você.</p>
+          </li>
+        </ol>
+
+        <div class="devices revela">
+          <div class="devices-copy">
+            <h3>No balcão pelo celular. No escritório pelo computador.</h3>
+            <p>É o mesmo Gynfinance em qualquer tela. Anote a venda na hora, pelo celular, e veja os relatórios com calma no computador.</p>
+            <ul class="checks">
+              <li><span class="ck"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span>Abre no navegador, sem instalar aplicativo</li>
+              <li><span class="ck"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span>Botão de novo lançamento sempre à mão</li>
+              <li><span class="ck"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span>Menu na parte de baixo da tela, fácil de usar com uma mão</li>
+            </ul>
+          </div>
+          <div class="devices-phones" aria-hidden="true">
+            <div class="phone"><img src="img/celular-painel.webp" width="560" height="1212" loading="lazy" alt=""></div>
+            <div class="phone"><img src="img/celular-mei.webp" width="560" height="1212" loading="lazy" alt=""></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Preço -->
+    <section class="section" id="preco" aria-labelledby="titulo-preco" style="padding-top:24px">
+      <div class="container">
+        <div class="section-head revela">
+          <span class="eyebrow"><span class="dot"></span>Preço</span>
+          <h2 class="h2" id="titulo-preco" data-cms="preco.titulo" data-cms-varios="preco.titulo_varios" data-texto-varios="Escolha o plano para o seu negócio">Um plano só, com tudo incluído</h2>
+          <p class="lead" data-cms="preco.subtitulo" data-cms-varios="preco.subtitulo_varios" data-texto-varios="Assinatura mensal. Compare o que vem em cada plano e comece pelo que precisa hoje.">Assinatura mensal, sem planos complicados para comparar.</p>
+        </div>
+        <div class="pricing" data-preco-estatico>
+          <div class="price-card revela">
+            <p class="plano">Plano Gynfinance</p>
+            <p class="valor num"><small>a partir de</small><strong data-preco-min>R$ 25</strong><span>/mês</span></p>
+            <p class="desc">Para MEI e pequenas empresas que querem saber, todo mês, quanto entrou, quanto saiu e quanto sobrou.</p>
+            <a class="btn btn-primary btn-block" href="/app/#/entrar?depois=comecar" data-cadastro>
+              Começar agora
+              <svg class="icon icon-arrow" aria-hidden="true"><use href="#i-seta"/></svg>
+            </a>
+            <p class="alt"><span data-cms="preco.nota_demo">Prefere ver antes?</span> <a href="/app/">Testar a demonstração</a></p>
+            <div class="price-contato">
+              <p data-cms="preco.contato_texto">Ficou com alguma dúvida? A gente responde.</p>
+              <a class="btn btn-whats btn-block" href="https://wa.me/351914125381?text=Ol%C3%A1!%20Quero%20saber%20mais%20sobre%20o%20Gynfinance." data-whats target="_blank" rel="noopener">
+                <svg class="icon" aria-hidden="true"><use href="#i-conversa"/></svg>
+                Fale com a gente pelo WhatsApp
+              </a>
+            </div>
+          </div>
+          <div class="price-list revela revela-d1">
+            <h3>O que vem no plano</h3>
+            <ul class="checks">
+              <li><span class="ck"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span>Lançamentos de entradas e saídas</li>
+              <li><span class="ck"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span>Dinheiro pessoal separado do da empresa</li>
+              <li><span class="ck"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span>Contas a pagar e a receber, com cobrança pelo WhatsApp</li>
+              <li><span class="ck"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span>Contas fixas que se repetem todo mês</li>
+              <li><span class="ck"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span>Limite anual do MEI e controle do DAS</li>
+              <li><span class="ck"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span>Fechamento do mês, fluxo de caixa e relatórios</li>
+              <li><span class="ck"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span>Exportação em CSV para o contador</li>
+              <li><span class="ck"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span>Uso no celular e no computador</li>
+              <li><span class="ck"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span>Dados guardados com segurança, separados por empresa</li>
+              <li><span class="ck"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span>Configuração inicial em 2 minutos</li>
+            </ul>
+          </div>
+        </div>
+        <!-- Planos vindos do painel (site.js preenche; sem JS fica o cartão acima) -->
+        <div class="planos" data-planos hidden></div>
+      </div>
+    </section>
+
+    <!-- Dúvidas -->
+    <section class="section" id="duvidas" aria-labelledby="titulo-duvidas" style="padding-top:24px">
+      <div class="container">
+        <div class="section-head revela">
+          <h2 class="h2" id="titulo-duvidas">Dúvidas frequentes</h2>
+        </div>
+        <div class="faq revela">
+          <details>
+            <summary data-cms="faq.1.pergunta">Preciso instalar alguma coisa?</summary>
+            <div class="resp"><p data-cms="faq.1.resposta">Não. O Gynfinance abre no navegador, no celular ou no computador. É só entrar com o seu e-mail e senha.</p></div>
+          </details>
+          <details>
+            <summary data-cms="faq.2.pergunta">Meus dados ficam seguros?</summary>
+            <div class="resp"><p data-cms="faq.2.resposta">Sim. A sua senha é guardada cifrada, a conexão com o site é protegida (HTTPS) e cada empresa só vê os próprios dados.</p></div>
+          </details>
+          <details>
+            <summary data-cms="faq.3.pergunta">Serve para quem não é MEI?</summary>
+            <div class="resp"><p data-cms="faq.3.resposta">Serve. Pequenas empresas também usam o Gynfinance para controlar entradas, saídas, contas e o fechamento do mês. As telas do limite e do DAS são as únicas pensadas só para o MEI.</p></div>
+          </details>
+          <details>
+            <summary data-cms="faq.4.pergunta">O Gynfinance emite nota fiscal?</summary>
+            <div class="resp"><p data-cms="faq.4.resposta">Ainda não, a emissão de nota chega em breve. Hoje cada venda tem o campo "nota emitida" e um atalho para o portal oficial da nota (NFS-e), e o fechamento do mês avisa quantas vendas ficaram sem nota.</p></div>
+          </details>
+          <details>
+            <summary data-cms="faq.5.pergunta">Como faço para testar antes de assinar?</summary>
+            <div class="resp"><p data-cms="faq.5.resposta">Clique em "Testar a demonstração". O sistema abre na hora com os dados de exemplo da Doces da Ana, sem cadastro. O que você mexer na demonstração não fica salvo.</p></div>
+          </details>
+          <details>
+            <summary data-cms="faq.6.pergunta">Consigo mandar os números para o meu contador?</summary>
+            <div class="resp"><p data-cms="faq.6.resposta">Sim. Na tela de lançamentos você exporta os lançamentos do mês em CSV, um arquivo que abre no Excel ou em qualquer planilha.</p></div>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <!-- Chamada final -->
+    <section class="cta-final" aria-labelledby="titulo-final">
+      <div class="container">
+        <div class="cta-box revela">
+          <h2 id="titulo-final" data-cms="chamada.titulo">Comece o próximo mês sabendo para onde vai o seu dinheiro.</h2>
+          <p data-cms="chamada.texto" data-lista-texto="Teste agora com dados de exemplo e entre na lista de espera: os cadastros abrem {data} e você é avisado no dia.">Teste agora com dados de exemplo ou crie sua conta e configure o seu negócio em 2 minutos.</p>
+          <div class="cta-buttons">
+            <a class="btn btn-white" href="/app/#/entrar?depois=comecar" data-cadastro>
+              Começar agora
+              <svg class="icon icon-arrow" aria-hidden="true"><use href="#i-seta"/></svg>
+            </a>
+            <a class="btn btn-ghost-light" href="/app/">
+              <svg class="icon" aria-hidden="true"><use href="#i-play"/></svg>
+              Testar a demonstração
+            </a>
+          </div>
+          <p class="cta-whats">
+            <a href="https://wa.me/351914125381?text=Ol%C3%A1!%20Quero%20saber%20mais%20sobre%20o%20Gynfinance." data-whats target="_blank" rel="noopener">
+              <svg class="icon" aria-hidden="true"><use href="#i-conversa"/></svg>
+              Fale com a gente pelo WhatsApp
+            </a>
+          </p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <img src="img/logo.png" alt="Gynfinance" width="147" height="30" loading="lazy">
+          <p data-cms="rodape.texto">Controle financeiro simples para MEI e pequenas empresas.</p>
+          <p class="footer-contato">
+            <a data-contato="email" hidden><svg class="icon" aria-hidden="true"><use href="#i-email"/></svg><span></span></a>
+            <a data-contato="instagram" target="_blank" rel="noopener" hidden><svg class="icon" aria-hidden="true"><use href="#i-instagram"/></svg><span>Instagram</span></a>
+          </p>
+        </div>
+        <nav class="footer-col" aria-labelledby="rodape-produto">
+          <h2 id="rodape-produto">Produto</h2>
+          <a href="#recursos">Recursos</a>
+          <a href="#mei">Para o MEI</a>
+          <a href="#como-comecar">Como começar</a>
+          <a href="#preco">Preço</a>
+          <a href="#duvidas">Dúvidas</a>
+        </nav>
+        <nav class="footer-col" aria-labelledby="rodape-acesso">
+          <h2 id="rodape-acesso">Acesso</h2>
+          <a href="/app/#/entrar">Entrar</a>
+          <a href="/app/#/entrar?depois=comecar" data-cadastro>Criar conta</a>
+          <a href="/app/">Testar a demonstração</a>
+        </nav>
+        <div class="footer-col footer-atendimento">
+          <h2>Atendimento</h2>
+          <p class="footer-info"><svg class="icon" aria-hidden="true"><use href="#i-relogio"/></svg><span data-cms="atendimento.horario">Segunda a sexta, em horário comercial</span></p>
+          <p class="footer-info" data-empresa="endereco" hidden><svg class="icon" aria-hidden="true"><use href="#i-local"/></svg><span></span></p>
+          <a class="btn btn-whats btn-sm footer-whats" href="https://wa.me/351914125381?text=Ol%C3%A1!%20Quero%20saber%20mais%20sobre%20o%20Gynfinance." data-whats target="_blank" rel="noopener">
+            <svg class="icon" aria-hidden="true"><use href="#i-conversa"/></svg>Falar no WhatsApp
+          </a>
+        </div>
+      </div>
+      <div class="footer-base">
+        <div class="footer-legal">
+          <span>© <span data-ano>2026</span> <span data-cms="empresa.nome">KodeMI</span>. Todos os direitos reservados.</span>
+          <span data-empresa="cnpj" hidden>CNPJ <span></span></span>
+          <span data-empresa="responsavel" hidden>Responsável: <span></span></span>
+        </div>
+        <a class="credito" href="https://kodemi.pt" target="_blank" rel="noopener" aria-label="Desenvolvido por KodeMI, Soluções Personalizadas em Tecnologia">
+          <span>Desenvolvido por</span>
+          <img src="img/kodemi.png" alt="" width="140" height="37" loading="lazy">
+        </a>
+      </div>
+    </div>
+  </footer>
+
+  <button class="topo" type="button" aria-label="Voltar ao topo" title="Voltar ao topo">
+    <svg class="icon" aria-hidden="true"><use href="#i-seta-cima"/></svg>
+  </button>
+</body>
+</html>
