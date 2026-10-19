@@ -266,3 +266,63 @@ html {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Esconder valores (src/lib/valores.ts): eixos e balões dos gráficos ficam borrados. */
+.valores-ocultos .recharts-cartesian-axis-tick-value,
+.valores-ocultos .recharts-tooltip-wrapper,
+.valores-ocultos .recharts-label,
+.valores-ocultos [data-valor] {
+  filter: blur(6px);
+}
+
+/* Folha para salvar em PDF (src/pages/Imprimir.tsx): sempre papel branco, também no modo escuro. */
+.folha {
+  max-width: 800px;
+  margin: 24px auto 48px;
+  padding: 44px 48px 28px;
+  background: #fff;
+  color: #1b2a41;
+  border-radius: 16px;
+  box-shadow: 0 24px 60px -30px rgba(16, 32, 64, 0.35);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.folha .num { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.folha-cabecalho { display: flex; justify-content: space-between; gap: 24px; padding-bottom: 18px; border-bottom: 2px solid #3478f6; margin-bottom: 22px; }
+.folha-negocio { font-size: 19px; font-weight: 800; letter-spacing: -0.02em; }
+.folha-titulo { font-size: 15px; font-weight: 700; color: #3478f6; }
+.folha-direita { text-align: right; }
+.folha-miudo { font-size: 11.5px; color: #5b6b82; }
+.folha-resumo { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 22px; }
+.folha-resumo > div { background: #f3f7fe; border-radius: 10px; padding: 10px 12px; }
+.folha-valor { font-size: 17px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.folha-duas { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.folha-secao { margin-bottom: 20px; break-inside: avoid; }
+.folha-secao h2 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #3478f6; margin-bottom: 6px; }
+.folha table { width: 100%; border-collapse: collapse; }
+.folha th { text-align: left; font-size: 11px; font-weight: 700; color: #5b6b82; border-bottom: 1px solid #dbe3ee; padding: 5px 4px; }
+.folha td { border-bottom: 1px solid #edf1f6; padding: 5px 4px; vertical-align: top; }
+.folha tfoot td { font-weight: 800; border-bottom: 0; border-top: 1.5px solid #c9d5e6; }
+.folha-entrada { color: #12805c; }
+.folha-quebra { break-inside: auto; }
+.folha-quebra tr { break-inside: avoid; }
+.folha-rodape { display: flex; align-items: center; gap: 6px; justify-content: center; margin-top: 26px; font-size: 11px; color: #8292a8; }
+.folha-recibo { max-width: 680px; }
+.folha-valor-recibo { font-size: 30px; font-weight: 800; letter-spacing: -0.02em; text-align: right; margin-bottom: 18px; font-variant-numeric: tabular-nums; }
+.folha-texto { font-size: 15px; line-height: 1.75; margin-bottom: 14px; }
+.folha-assinatura { margin: 56px auto 0; max-width: 320px; text-align: center; }
+.folha-assinatura > span { display: block; border-top: 1px solid #1b2a41; margin-bottom: 6px; }
+.folha-aviso { text-align: center; margin-top: 22px; }
+@media (max-width: 640px) {
+  .folha { margin: 12px; padding: 24px 18px 18px; border-radius: 12px; }
+  .folha-resumo { grid-template-columns: 1fr 1fr; }
+  .folha-duas { grid-template-columns: 1fr; gap: 0; }
+  .folha-cabecalho { flex-direction: column; gap: 8px; }
+  .folha-direita { text-align: left; }
+}
+@media print {
+  @page { size: A4; margin: 14mm; }
+  html, body { background: #fff !important; background-image: none !important; }
+  .nao-imprimir { display: none !important; }
+  .folha { margin: 0; padding: 0; max-width: none; box-shadow: none; border-radius: 0; }
+}

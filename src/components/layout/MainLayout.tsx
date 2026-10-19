@@ -5,6 +5,7 @@ import { AvisosDoPlano } from './AvisosDoPlano'
 import { MobileNavigation } from './MobileNavigation'
 import { ProtecaoDeErro } from './ProtecaoDeErro'
 import { Sidebar } from './Sidebar'
+import { useValoresOcultos } from '../../lib/valores'
 
 /** Cartões entram um a um ao abrir a tela: mostra a ordem de leitura sem atrasar o uso. */
 function useCascata(chave: string) {
@@ -26,6 +27,8 @@ function useCascata(chave: string) {
 export function MainLayout() {
   const { pathname } = useLocation()
   const ref = useCascata(pathname)
+  // Ao esconder ou mostrar os valores, a tela é desenhada de novo com o formato novo.
+  const ocultos = useValoresOcultos()
   const navigate = useNavigate()
   // Chaves de propósito: no Chrome novo scrollTo devolve uma Promise, e o React a trataria como
   // limpeza do efeito ("is not a function") ao trocar de tela, derrubando o app.
@@ -36,7 +39,7 @@ export function MainLayout() {
     <div className="flex min-h-dvh">
       <Sidebar />
       <main className="min-w-0 flex-1 px-4 pt-[calc(1.25rem+env(safe-area-inset-top))] pb-[calc(7rem+env(safe-area-inset-bottom))] md:px-7 md:pt-8 md:pb-10 xl:px-10">
-        <div key={pathname} ref={ref} className="mx-auto max-w-[1240px]">
+        <div key={`${pathname}:${ocultos}`} ref={ref} className="mx-auto max-w-[1240px]">
           <ProtecaoDeErro
             acao={<Button onClick={() => navigate('/')}>Voltar ao início</Button>}
             onSuporte={(pagina) => navigate(`/suporte?novo=1&erro=1&de=${encodeURIComponent(pagina)}`)}

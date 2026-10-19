@@ -1,33 +1,45 @@
-import { Bell, Building2, CreditCard, Landmark, LogOut, Monitor, Moon, RotateCcw, Sparkles, Sun, Tags, Users, type LucideIcon } from 'lucide-react'
+import { Bell, Building2, CreditCard, Gift, Landmark, LogOut, Monitor, Moon, RotateCcw, Sparkles, Store, Sun, Tags, Target, Trash2, Users, type LucideIcon } from 'lucide-react'
+import { AvisosNoAparelho, CategoriasEditaveis, Cobranca, Contador, Indicacao, Lixeira, MetasETetos, Negocios } from './ConfigExtras'
 import { useTema } from '../components/layout/BotaoTema'
 import type { Tema } from '../lib/tema'
 import { useState } from 'react'
 import { NavLink, useNavigate, useParams } from 'react-router-dom'
-import { NOMES_GRUPO } from '../data/categorias'
 import { Header } from '../components/layout/Header'
-import { Badge } from '../components/ui/Badge'
 import { Button, ButtonLink } from '../components/ui/Button'
 import { Card, CardTitulo } from '../components/ui/Card'
 import { Input, Select, Toggle } from '../components/ui/Field'
 import { Modal, useToast } from '../components/ui/Modal'
 import { saldoPorConta } from '../domain/calc'
-import type { Atividade, Categoria } from '../domain/types'
+import type { Atividade } from '../domain/types'
 import { useStore } from '../data/store'
 import { brl } from '../lib/format'
 
 const SECOES: { id: string; rotulo: string; icone: LucideIcon }[] = [
   { id: 'empresa', rotulo: 'Empresa', icone: Building2 },
   { id: 'categorias', rotulo: 'Categorias', icone: Tags },
+  { id: 'metas', rotulo: 'Metas e tetos', icone: Target },
   { id: 'contas', rotulo: 'Contas bancárias', icone: Landmark },
   { id: 'notificacoes', rotulo: 'Notificações', icone: Bell },
   { id: 'aparencia', rotulo: 'Aparência', icone: Moon },
-  { id: 'usuarios', rotulo: 'Usuários', icone: Users },
+  { id: 'negocios', rotulo: 'Seus negócios', icone: Store },
+  { id: 'usuarios', rotulo: 'Contador', icone: Users },
+  { id: 'indique', rotulo: 'Indique e ganhe', icone: Gift },
+  { id: 'lixeira', rotulo: 'Lixeira', icone: Trash2 },
   { id: 'assinatura', rotulo: 'Assinatura', icone: CreditCard },
 ]
 
 const UFS = 'AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO'.split(' ')
 
 function Empresa() {
+  return (
+    <div className="flex flex-col gap-4 md:gap-5">
+      <DadosEmpresa />
+      <Cobranca />
+    </div>
+  )
+}
+
+function DadosEmpresa() {
   const { dados, atualizarEmpresa } = useStore()
   const toast = useToast()
   const [f, setF] = useState(dados.empresa)
@@ -73,34 +85,6 @@ function Empresa() {
           <Button type="submit">Salvar alterações</Button>
         </div>
       </form>
-    </Card>
-  )
-}
-
-function Categorias() {
-  const { dados } = useStore()
-  const grupos = Object.keys(NOMES_GRUPO) as Categoria['grupo'][]
-  return (
-    <Card>
-      <CardTitulo>Categorias</CardTitulo>
-      <p className="-mt-2 mb-4 text-[13px] text-ink-2">As categorias padrão já cobrem o dia a dia de um pequeno negócio. Criar categorias próprias chega numa próxima versão.</p>
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-        {grupos.map((g) => (
-          <div key={g}>
-            <p className="mb-2 text-[12px] font-semibold tracking-wide text-ink-2 uppercase">{NOMES_GRUPO[g]}</p>
-            <ul className="flex flex-wrap gap-2">
-              {dados.categorias
-                .filter((c) => c.grupo === g)
-                .map((c) => (
-                  <li key={c.id}>
-                    <Badge tom={c.contaNoFaturamento ? 'azul' : 'neutro'}>{c.nome}</Badge>
-                  </li>
-                ))}
-            </ul>
-          </div>
-        ))}
-      </div>
-      <p className="mt-5 text-[12px] text-ink-2">As categorias em azul contam no faturamento do MEI.</p>
     </Card>
   )
 }
@@ -155,8 +139,16 @@ function Notificacoes() {
         <Toggle checked={p.lembreteEmail} onChange={(v) => atualizarPreferencias({ lembreteEmail: v })} label="Receber avisos por e-mail" descricao="Contas, DAS e limite do MEI." />
         <Toggle checked={p.resumoMensal} onChange={(v) => atualizarPreferencias({ resumoMensal: v })} label="Resumo do mês no dia 1" descricao="Abre o fechamento do mês que terminou." />
       </div>
-      <p className="mt-3 text-[12px] text-ink-2">Avisos pelo WhatsApp chegam numa próxima versão.</p>
     </Card>
+  )
+}
+
+function NotificacoesETelefone() {
+  return (
+    <div className="flex flex-col gap-4 md:gap-5">
+      <AvisosNoAparelho />
+      <Notificacoes />
+    </div>
   )
 }
 
@@ -193,24 +185,6 @@ function Aparencia() {
   )
 }
 
-function Usuarios() {
-  const { dados } = useStore()
-  return (
-    <Card>
-      <CardTitulo>Usuários</CardTitulo>
-      <div className="flex items-center gap-3 rounded-[12px] border border-line p-3.5">
-        <span className="inline-flex size-10 items-center justify-center rounded-full bg-primary-soft font-bold text-primary">{dados.empresa.nomeDono.charAt(0)}</span>
-        <div className="flex-1">
-          <p className="font-semibold text-ink">{dados.empresa.nomeDono}</p>
-          <p className="text-[12px] text-ink-2">Dona do negócio</p>
-        </div>
-        <Badge tom="azul">Acesso total</Badge>
-      </div>
-      <p className="mt-4 text-[13px] text-ink-2">Convidar o contador (só leitura) e outras pessoas chega numa próxima versão.</p>
-    </Card>
-  )
-}
-
 function Assinatura() {
   const { restaurarDemo, modo, conta, sair } = useStore()
   const navigate = useNavigate()
@@ -221,10 +195,12 @@ function Assinatura() {
       <Card>
         <CardTitulo>Assinatura</CardTitulo>
         <div className="rounded-[14px] border border-[#d6e4fb] bg-[#f4f8ff] p-5">
-          <p className="text-[13px] font-semibold text-primary">Plano Essencial</p>
-          <p className="num mt-1 text-[28px] font-bold text-ink">
-            R$ 25<span className="text-[14px] font-medium text-ink-2"> por mês</span>
-          </p>
+          <p className="text-[13px] font-semibold text-primary">Plano {conta?.assinatura?.planoNome ?? 'Essencial'}</p>
+          {!conta?.assinatura && (
+            <p className="num mt-1 text-[28px] font-bold text-ink">
+              R$ 25<span className="text-[14px] font-medium text-ink-2"> por mês</span>
+            </p>
+          )}
           <p className="mt-2 text-[13px] text-ink-2">Entradas e saídas, contas a pagar e receber, Meu MEI e relatórios. Sem fidelidade.</p>
         </div>
       </Card>
@@ -306,7 +282,19 @@ function Assinatura() {
   )
 }
 
-const CONTEUDO: Record<string, () => React.JSX.Element> = { empresa: Empresa, categorias: Categorias, contas: Contas, notificacoes: Notificacoes, aparencia: Aparencia, usuarios: Usuarios, assinatura: Assinatura }
+const CONTEUDO: Record<string, () => React.JSX.Element> = {
+  empresa: Empresa,
+  categorias: CategoriasEditaveis,
+  metas: MetasETetos,
+  contas: Contas,
+  notificacoes: NotificacoesETelefone,
+  aparencia: Aparencia,
+  negocios: Negocios,
+  usuarios: Contador,
+  indique: Indicacao,
+  lixeira: Lixeira,
+  assinatura: Assinatura,
+}
 
 export function Settings() {
   const { secao = 'empresa' } = useParams()

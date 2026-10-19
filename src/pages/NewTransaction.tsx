@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUpRight, Bell, CircleCheck, Calendar, Check, ChevronDown, CreditCard, ExternalLink, FileText, ImagePlus, Repeat, UserRound, Wallet, X } from 'lucide-react'
+import { ArrowDown, ArrowUpRight, Bell, CircleCheck, Calendar, Check, ChevronDown, CreditCard, ExternalLink, FileText, ImagePlus, ReceiptText, Repeat, UserRound, Wallet, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Header } from '../components/layout/Header'
@@ -10,6 +10,7 @@ import { Chips, Segmentado } from '../components/ui/Tabs'
 import { LINKS } from '../domain/parametros'
 import { EscolherParceiro } from '../components/parceiros/EscolherParceiro'
 import { parceiroPeloNome } from '../domain/parceiros'
+import { podeTerRecibo } from '../domain/recibo'
 import { temModulo } from '../domain/planos'
 import type { FormaPagamento, Lancamento, NotaEmitida, SeFimDeSemana } from '../domain/types'
 import { FORMAS } from '../data/formas'
@@ -472,6 +473,11 @@ export function NewTransaction() {
           <Button tamanho="lg" onClick={salvar} carregando={salvando} className="w-full">
             {salvando ? 'Salvando…' : editando ? 'Salvar alterações' : 'Salvar lançamento'}
           </Button>
+          {editando && podeTerRecibo(editando) && (
+            <Button variante="contorno" onClick={() => navigate(`/imprimir/recibo/${editando.id}`)} className="-mt-1 w-full">
+              <ReceiptText size={17} aria-hidden /> Fazer recibo para o cliente
+            </Button>
+          )}
           {editando && (
             <Button variante="discreto" onClick={() => setConfirmarExclusao(true)} className="-mt-3 self-center !text-danger hover:!bg-danger-soft">
               Excluir lançamento
@@ -585,8 +591,8 @@ export function NewTransaction() {
               variante="perigo"
               onClick={() => {
                 if (!editando) return
-                excluirLancamento(editando.id)
-                toast('Lançamento excluído.')
+                const desfazer = excluirLancamento(editando.id)
+                toast('Lançamento foi para a lixeira.', { desfazer })
                 navigate(-1)
               }}
             >
@@ -595,7 +601,7 @@ export function NewTransaction() {
           </>
         }
       >
-        <p>Ele sai dos totais do mês. Não dá para desfazer.</p>
+        <p>Ele sai dos totais do mês e fica 30 dias na lixeira (Configurações, Lixeira), caso precise de volta.</p>
       </Modal>
     </>
   )

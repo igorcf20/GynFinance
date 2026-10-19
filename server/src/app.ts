@@ -10,7 +10,8 @@ import type pg from 'pg'
 import { z } from 'zod'
 import { config } from './config.ts'
 import { bloqueioDeGravacao, ehAdmin, guardaAdmin, lerAcesso, rotasAdmin } from './admin.ts'
-import { aplicarMudancas, criarNegocio, empresaDaSessao, ErroDeDados, gravarComprovante, lerComprovante, lerDados } from './dados.ts'
+import { aplicarMudancas, criarNegocio, ehSoLeitura, empresaDaSessao, ErroDeDados, gravarComprovante, lerComprovante, lerDados } from './dados.ts'
+import { codigoDeConvite, dadosDaConta, limiteDeNegocios, rotasNegocios, SO_LEITURA } from './negocios.ts'
 import { comUsuario } from './db.ts'
 import { criarCarteiro, emailSenhaNova, type Carteiro } from './email.ts'
 import * as esquema from './esquemas.ts'
@@ -24,6 +25,8 @@ const HASH_FALSO = bcrypt.hashSync('senha-que-ninguem-usa', 12)
 declare module 'fastify' {
   interface FastifyRequest {
     usuarioId?: string
+    /** Negócio aberto nesta sessão (vazio = o primeiro da pessoa). */
+    empresaAberta?: string | null
   }
 }
 
@@ -57,8 +60,11 @@ export async function criarApp(pool: pg.Pool, opcoes: { site?: boolean; logger?:
   async function lerSessao(req: FastifyRequest): Promise<string | undefined> {
     const token = req.cookies[COOKIE]
     if (!token) return undefined
-    const r = await pool.query<{ usuario_id: string }>('select usuario_id from sessao where token_hash = $1 and expira_em > now()', [hash(token)])
-    if (r.rows[0]) req.usuarioId = r.rows[0].usuario_id
+    const r = await pool.query<{ usuario_id: string; empresa_id: string | null }>('select usuario_id, empresa_id from sessao where token_hash = $1 and expira_em > now()', [hash(token)])
+    if (r.rows[0]) {
+      req.usuarioId = r.rows[0].usuario_id
+      req.empresaAberta = r.rows[0].empresa_id
+    }
     return r.rows[0]?.usuario_id
   }
 
@@ -67,6 +73,13 @@ export async function criarApp(pool: pg.Pool, opcoes: { site?: boolean; logger?:
     return rep.code(401).send({ erro: 'Entre na sua conta para continuar.' })
   }
   const admin = guardaAdmin(pool, exigirLogin)
+  /** Transação da pessoa logada, no negócio aberto na sessão. */
+  const doUsuario = <T>(req: FastifyRequest, fn: (c: pg.PoolClient) => Promise<T>) => comUsuario(pool, req.usuarioId!, fn, req.empresaAberta)
+  /** Troca o negócio aberto na sessão deste navegador. */
+  const abrirNegocio = (req: FastifyRequest, empresaId: string) => {
+    req.empresaAberta = empresaId
+    return pool.query('update sessao set empresa_id = $2 where token_hash = $1', [hash(req.cookies[COOKIE] ?? ''), empresaId])
+  }
 
   // Erros de validação viram 400 com uma frase simples; o resto é 500 sem detalhes.
   app.setErrorHandler((erro, req, rep) => {
@@ -92,12 +105,15 @@ export async function criarApp(pool: pg.Pool, opcoes: { site?: boolean; logger?:
   app.post('/api/conta/criar', limite, async (req, rep) => {
     const d = esquema.criarConta.parse(req.body)
     const aberto = (await pool.query<{ cadastro_aberto: boolean }>('select cadastro_aberto from config_sistema')).rows[0]?.cadastro_aberto ?? true
-    if (!aberto) return rep.code(403).send({ erro: 'Novos cadastros estão fechados no momento. Fale com a gente pelo site.' })
+    // Contador convidado por um cliente entra mesmo com os cadastros fechados.
+    const convidado = !!d.convite && !!(await pool.query<{ n: string | null }>('select convite_negocio($1) as n', [codigoDeConvite(d.convite)])).rows[0]?.n
+    if (!aberto && !convidado) return rep.code(403).send({ erro: 'Novos cadastros estão fechados no momento. Fale com a gente pelo site.' })
     const email = d.email.trim().toLowerCase()
     const senhaHash = await bcrypt.hash(d.senha, 12)
+    const indicador = d.indicacao ? ((await pool.query<{ id: string }>('select id from usuario where codigo_indicacao = $1', [d.indicacao.trim().toLowerCase()])).rows[0]?.id ?? null) : null
     const r = await pool.query<{ id: string }>(
-      'insert into usuario (nome, email, senha_hash, aceite_termos_em) values ($1, $2, $3, now()) on conflict do nothing returning id',
-      [d.nome, email, senhaHash],
+      'insert into usuario (nome, email, senha_hash, aceite_termos_em, indicado_por) values ($1, $2, $3, now(), $4) on conflict do nothing returning id',
+      [d.nome, email, senhaHash, indicador],
     )
     if (!r.rows[0]) return rep.code(409).send({ erro: 'Já existe uma conta com esse e-mail. Tente entrar.' })
     await abrirSessao(rep, r.rows[0].id)
@@ -155,31 +171,43 @@ export async function criarApp(pool: pg.Pool, opcoes: { site?: boolean; logger?:
 
   app.get('/api/conta', { preHandler: exigirLogin }, async (req) => {
     const u = (await pool.query<{ nome: string; email: string }>('select nome, email from usuario where id = $1', [req.usuarioId])).rows[0]
-    const { temNegocio, acesso, naoLidos } = await comUsuario(pool, req.usuarioId!, async (c) => ({
+    const { temNegocio, acesso, naoLidos, extra } = await doUsuario(req, async (c) => ({
       temNegocio: !!(await empresaDaSessao(c)),
       acesso: await lerAcesso(c),
       naoLidos: await contarNaoLidos(c),
+      extra: await dadosDaConta(c, pool, req.usuarioId!),
     }))
-    return { usuario: u, temNegocio, admin: await ehAdmin(pool, req.usuarioId!), ...acesso, suporte: { naoLidos } }
+    // Contador num negócio de cliente: os módulos são os do plano do dono.
+    if (extra.planoDoNegocio) acesso.assinatura = { ...acesso.assinatura, planoNome: extra.planoDoNegocio.nome, modulos: extra.planoDoNegocio.modulos }
+    const { planoDoNegocio: _, ...resto } = extra
+    return { usuario: u, temNegocio, admin: await ehAdmin(pool, req.usuarioId!), ...acesso, suporte: { naoLidos }, ...resto }
   })
 
-  app.get('/api/dados', { preHandler: exigirLogin }, async (req) => ({ dados: await comUsuario(pool, req.usuarioId!, lerDados) }))
+  app.get('/api/dados', { preHandler: exigirLogin }, async (req) => ({ dados: await doUsuario(req, lerDados) }))
 
+  // Configuração inicial. Com ?adicional=1, é mais um negócio na mesma conta (dentro do limite do plano).
   app.post('/api/negocio', { preHandler: exigirLogin }, async (req, rep) => {
     const n = esquema.novoNegocio.parse(req.body)
-    const r = await comUsuario(pool, req.usuarioId!, async (c) => {
+    const adicional = (req.query as { adicional?: string }).adicional === '1'
+    const r = await doUsuario(req, async (c) => {
       const bloqueio = bloqueioDeGravacao(await lerAcesso(c))
       if (bloqueio) return { bloqueio }
-      await criarNegocio(c, req.usuarioId!, n)
+      if (adicional) {
+        const { meus, limite } = await limiteDeNegocios(c)
+        if (meus >= limite) return { bloqueio: `Seu plano permite ${limite} ${limite === 1 ? 'negócio' : 'negócios'}. Fale com a gente para mudar de plano.` }
+      }
+      await criarNegocio(c, req.usuarioId!, n, adicional)
+      await c.query("select set_config('app.empresa_id', $1, true)", [n.empresa.id])
       return { dados: await lerDados(c) }
     })
+    if (!r.bloqueio) await abrirNegocio(req, n.empresa.id)
     if (r.bloqueio) return rep.code(403).send({ erro: r.bloqueio, bloqueado: true })
     return rep.code(201).send({ dados: r.dados })
   })
 
   app.post('/api/sincronizar', { preHandler: exigirLogin }, async (req, rep) => {
     const m = esquema.mudancas.parse(req.body)
-    const r = await comUsuario(pool, req.usuarioId!, async (c) => {
+    const r = await doUsuario(req, async (c) => {
       const acesso = await lerAcesso(c)
       const bloqueio = bloqueioDeGravacao(acesso)
       if (bloqueio) return { codigo: 403, erro: bloqueio }
@@ -189,6 +217,7 @@ export async function criarApp(pool: pg.Pool, opcoes: { site?: boolean; logger?:
         return { codigo: 403, erro: 'Clientes e fornecedores não fazem parte do seu plano.' }
       const empresaId = await empresaDaSessao(c)
       if (!empresaId) return { codigo: 409, erro: 'Faça a configuração inicial do negócio primeiro.' }
+      if (await ehSoLeitura(c, empresaId)) return { codigo: 403, erro: SO_LEITURA }
       await aplicarMudancas(c, empresaId, m)
       return null
     })
@@ -205,12 +234,13 @@ export async function criarApp(pool: pg.Pool, opcoes: { site?: boolean; logger?:
     const assinatura = dados.subarray(0, 4).toString('hex')
     const confere = { 'application/pdf': '25504446', 'image/jpeg': 'ffd8', 'image/png': '89504e47', 'image/webp': '52494646' }[d.tipo]
     if (!assinatura.startsWith(confere)) return rep.code(400).send({ erro: 'O arquivo não parece ser uma foto ou um PDF.' })
-    const r = await comUsuario(pool, req.usuarioId!, async (c) => {
+    const r = await doUsuario(req, async (c) => {
       const acesso = await lerAcesso(c)
       const bloqueio = bloqueioDeGravacao(acesso) ?? (acesso.assinatura.modulos.includes('comprovantes') ? undefined : 'Comprovantes não fazem parte do seu plano.')
       if (bloqueio) return { codigo: 403, erro: bloqueio }
       const empresaId = await empresaDaSessao(c)
       if (!empresaId) return { codigo: 409, erro: 'Faça a configuração inicial do negócio primeiro.' }
+      if (await ehSoLeitura(c, empresaId)) return { codigo: 403, erro: SO_LEITURA }
       await gravarComprovante(c, empresaId, { id: d.id, nome: d.nome, tipo: d.tipo, dados })
       return null
     })
@@ -220,7 +250,7 @@ export async function criarApp(pool: pg.Pool, opcoes: { site?: boolean; logger?:
 
   app.get('/api/comprovantes/:id', { preHandler: exigirLogin }, async (req, rep) => {
     const { id } = z.object({ id: z.uuid() }).parse(req.params)
-    const comp = await comUsuario(pool, req.usuarioId!, (c) => lerComprovante(c, id))
+    const comp = await doUsuario(req, (c) => lerComprovante(c, id))
     if (!comp) return rep.code(404).send({ erro: 'Comprovante não encontrado.' })
     return rep
       .header('content-type', comp.tipo)
@@ -231,6 +261,7 @@ export async function criarApp(pool: pg.Pool, opcoes: { site?: boolean; logger?:
   })
 
   await rotasAdmin(app, pool, exigirLogin, admin)
+  await rotasNegocios(app, pool, { exigirLogin, doUsuario, abrirNegocio })
   await rotasSuporte(app, pool, { exigirLogin, lerSessao, admin })
 
   app.all('/api/*', async (_req, rep) => rep.code(404).send({ erro: 'Endereço não encontrado.' }))

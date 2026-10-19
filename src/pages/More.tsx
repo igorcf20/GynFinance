@@ -5,6 +5,7 @@ import { SeloNav, useGruposNav, useSelosNav } from '../components/layout/Sidebar
 import { Card } from '../components/ui/Card'
 import { CartaoComecar } from '../components/layout/CartaoComecar'
 import { useStore } from '../data/store'
+import { TrocaNegocio } from '../components/layout/TrocaNegocio'
 
 /** No celular, o menu completo: os mesmos grupos do menu lateral do computador. */
 export function More() {
@@ -24,6 +25,7 @@ export function More() {
           )}
         </div>
       )}
+      <TrocaNegocio className="mb-4" />
       <div className="flex flex-col gap-4">
         {grupos.map((g, n) => (
           <section key={g.titulo ?? n} aria-label={g.titulo ?? 'Início'}>

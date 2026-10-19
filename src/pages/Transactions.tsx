@@ -14,6 +14,7 @@ import type { Categoria, Lancamento, Natureza } from '../domain/types'
 import { useStore } from '../data/store'
 import { brl, dataBR, diaMes, mesDe } from '../lib/format'
 import { temModulo } from '../domain/planos'
+import { podeTerRecibo } from '../domain/recibo'
 import { FORMAS } from '../data/formas'
 
 type Filtro = 'todos' | 'entradas' | 'saidas'
@@ -267,6 +268,11 @@ export function Transactions() {
                             <button onClick={() => navigate(`/lancar?id=${l.id}`)} aria-label={`Editar ${l.descricao ?? 'lançamento'}`} className="rounded-lg p-2 text-slate hover:bg-hover hover:text-ink">
                               <Pencil size={15} />
                             </button>
+                            {podeTerRecibo(l) && (
+                              <button onClick={() => navigate(`/imprimir/recibo/${l.id}`)} aria-label={`Recibo de ${l.descricao ?? 'lançamento'}`} title="Fazer recibo" className="rounded-lg p-2 text-slate hover:bg-hover hover:text-ink">
+                                <ReceiptText size={15} />
+                              </button>
+                            )}
                             <button onClick={() => setExcluir(l)} aria-label={`Excluir ${l.descricao ?? 'lançamento'}`} className="rounded-lg p-2 text-slate hover:bg-danger-soft hover:text-danger">
                               <Trash2 size={15} />
                             </button>
@@ -336,8 +342,8 @@ export function Transactions() {
               variante="perigo"
               onClick={() => {
                 if (!excluir) return
-                excluirLancamento(excluir.id)
-                toast('Lançamento excluído.')
+                const desfazer = excluirLancamento(excluir.id)
+                toast('Lançamento foi para a lixeira.', { desfazer })
                 setExcluir(null)
               }}
             >
@@ -348,7 +354,7 @@ export function Transactions() {
       >
         {excluir && (
           <p>
-            "{excluir.descricao || NATUREZA[excluir.natureza]}" de {brl(excluir.valor, { centavos: true })} vai sair dos totais do mês. Não dá para desfazer.
+            "{excluir.descricao || NATUREZA[excluir.natureza]}" de {brl(excluir.valor, { centavos: true })} vai sair dos totais do mês e fica 30 dias na lixeira, caso precise de volta.
           </p>
         )}
       </Modal>

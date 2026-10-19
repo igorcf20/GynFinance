@@ -2,7 +2,7 @@
 // demonstração pelos dados do próprio negócio.
 import { ArrowLeft, ArrowRight, Briefcase, Building2, Check, Factory, Landmark, Package, PiggyBank, Store, UserRound, Wallet, X, type LucideIcon } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { Logo } from '../components/layout/Logo'
 import { Button } from '../components/ui/Button'
 import { Input, Label, Select } from '../components/ui/Field'
@@ -142,11 +142,13 @@ function Previa({ r }: { r: Respostas }) {
 }
 
 export function Onboarding() {
-  const { modo, comecar, servidor, conta } = useStore()
+  const { modo, comecar, servidor, conta, dados } = useStore()
   const navigate = useNavigate()
+  // "Novo negócio" (Configurações > Seus negócios): cria mais um, sem apagar o que está aberto.
+  const adicional = useSearchParams()[0].get('novo') === '1' && servidor === 'com' && !!conta?.temNegocio
   const hoje = hojeReal()
   const [r, setR] = useState<Respostas>({
-    nomeDono: '',
+    nomeDono: adicional ? dados.empresa.nomeDono : '',
     nomeFantasia: '',
     cnpj: '',
     uf: '',
@@ -216,7 +218,7 @@ export function Onboarding() {
     setSalvando(true)
     setErroEnvio('')
     try {
-      await comecar(c)
+      await comecar(c, adicional)
       setPronto(c)
       window.scrollTo({ top: 0, behavior: 'smooth' })
     } catch (e) {
@@ -304,7 +306,7 @@ export function Onboarding() {
           </p>
 
           <div key={passo} className="anim-entrar">
-            <h1 className="mt-1 text-[24px] font-bold tracking-[-0.02em] text-balance text-ink md:text-[30px]">{t.titulo}</h1>
+            <h1 className="mt-1 text-[24px] font-bold tracking-[-0.02em] text-balance text-ink md:text-[30px]">{adicional && passo === 'negocio' ? 'Vamos conhecer o novo negócio' : t.titulo}</h1>
             <p className="mt-1.5 max-w-[56ch] text-[14px] text-ink-2 md:text-[15px]">{t.texto}</p>
 
             <form

@@ -1,4 +1,4 @@
-import { ChevronRight, LifeBuoy, Lock, Megaphone, Wrench } from 'lucide-react'
+import { ChevronRight, Eye, LifeBuoy, Lock, Megaphone, Wrench } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useStore } from '../../data/store'
@@ -13,7 +13,7 @@ import { Card, EstadoVazio } from '../ui/Card'
  * da assinatura (teste acabando, mensalidade atrasada, conta suspensa).
  */
 export function AvisosDoPlano() {
-  const { conta, servidor, bloqueio, hoje } = useStore()
+  const { conta, servidor, bloqueio, hoje, somenteLeitura, dados } = useStore()
   const { pathname } = useLocation()
   if (servidor === 'com') naoLidosDaConta(conta)
   else if (servidor === 'sem') suporteDemo()
@@ -39,6 +39,12 @@ export function AvisosDoPlano() {
   const a = conta.assinatura
   const s = conta.sistema
   const itens: ReactNode[] = []
+  if (somenteLeitura)
+    itens.push(
+      <Aviso key="contador" nivel="info" icone={Eye}>
+        Você está vendo {dados.empresa.nomeFantasia} como contador: dá para consultar, ver relatórios e exportar, mas não para mudar nada.
+      </Aviso>,
+    )
   if (s?.aviso) itens.push(<Aviso key="aviso" nivel="info" icone={Megaphone}>{s.aviso}</Aviso>)
   if (s?.manutencao)
     itens.push(
@@ -52,7 +58,7 @@ export function AvisosDoPlano() {
         Sua assinatura está {a.situacao}. Você ainda vê e exporta seus dados, mas para gravar fale com a gente e regularize a mensalidade.
       </Aviso>,
     )
-  else if (bloqueio && !s?.manutencao) itens.push(<Aviso key="bloqueio" nivel="perigo" icone={Lock}>{bloqueio}</Aviso>)
+  else if (bloqueio && !s?.manutencao && !somenteLeitura) itens.push(<Aviso key="bloqueio" nivel="perigo" icone={Lock}>{bloqueio}</Aviso>)
   else if (a?.situacao === 'atrasada')
     itens.push(
       <Aviso key="assinatura" nivel="atencao">

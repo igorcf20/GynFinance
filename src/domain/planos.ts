@@ -39,6 +39,8 @@ export interface Plano {
   /** Aparece no site e pode ser escolhido para novos clientes. */
   ativo: boolean
   ordem: number
+  /** Quantos negócios a mesma conta pode ter (1 = só um). */
+  negocios?: number
 }
 
 export type SituacaoAssinatura = 'teste' | 'ativa' | 'atrasada' | 'suspensa' | 'cancelada'

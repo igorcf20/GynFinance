@@ -24,6 +24,14 @@ export interface Empresa {
   /** Vendas do ano feitas antes de usar o Gynfinance, informadas na configuração inicial (limite do MEI). */
   faturadoAntes?: { ano: number; valor: Centavos }
   modulosAtivos: string[]
+  /** Chave Pix que vai na mensagem de cobrança e no recibo. */
+  chavePix?: string
+  /** Meta de faturamento por mês (Início). */
+  metaFaturamento?: Centavos
+  /** Teto de gasto por mês em cada categoria de saída (id da categoria → valor). */
+  limitesCategoria?: Record<string, Centavos>
+  /** Texto próprio da mensagem de cobrança; {nome}, {valor}, {vencimento}, {descricao}, {pix} e {negocio} são trocados. */
+  mensagemCobranca?: string
 }
 
 export type TipoConta = 'caixa' | 'banco' | 'reserva'
@@ -230,6 +238,13 @@ export interface Parceiro {
   criadoEm: DataISO
 }
 
+/** Lançamento apagado: fica 30 dias na lixeira (com o aporte espelho, quando houver) antes de sumir. */
+export interface ItemLixeira {
+  id: string
+  excluidoEm: DataISO
+  lancamentos: Lancamento[]
+}
+
 export interface Dados {
   empresa: Empresa
   contas: ContaFinanceira[]
@@ -243,4 +258,6 @@ export interface Dados {
   preferencias: Preferencias
   /** Avisos que o usuário dispensou (o id do aviso já traz o mês ou a conta). */
   avisosDispensados?: string[]
+  /** Lançamentos apagados nos últimos 30 dias. */
+  lixeira?: ItemLixeira[]
 }

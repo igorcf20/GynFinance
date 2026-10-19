@@ -18,6 +18,10 @@ export const criarConta = z.object({
   email: z.email().max(200),
   senha: z.string().min(8, 'A senha precisa de pelo menos 8 caracteres.').max(200),
   aceiteTermos: z.literal(true),
+  /** Código do link de convite de contador (deixa cadastrar mesmo com cadastros fechados). */
+  convite: z.string().trim().max(200).optional(),
+  /** Código do link "Indique e ganhe" de quem indicou. */
+  indicacao: z.string().trim().max(40).optional(),
 })
 export const esqueci = z.object({ email: z.string().trim().max(200) })
 export const redefinir = z.object({
@@ -38,6 +42,10 @@ export const empresa = z.object({
   prolaboreDesejado: centavos.optional(),
   faturadoAntes: z.object({ ano: z.number().int(), valor: centavos }).optional(),
   modulosAtivos: z.array(texto(40)).max(20),
+  chavePix: texto(140).optional(),
+  metaFaturamento: centavos.optional(),
+  limitesCategoria: z.record(texto(60), centavos).optional().refine((x) => !x || Object.keys(x).length <= 100, 'Tetos demais.'),
+  mensagemCobranca: texto(1000).optional(),
 })
 
 export const preferencias = z.object({
@@ -148,6 +156,18 @@ export const pagamentoDas = z.object({
   pagoForaDoSistema: z.boolean().optional(),
 })
 
+export const categoria = z.object({
+  id: texto(60).min(1),
+  /** Ausente nas categorias padrão (aí só vale ligar e desligar). Qualquer valor marca uma categoria própria. */
+  empresaId: z.string().optional(),
+  nome: texto(60).min(1, 'Dê um nome à categoria.'),
+  grupo: z.enum(['receita', 'custo', 'despesa_fixa', 'despesa_variavel', 'imposto', 'retirada']),
+  contaNoFaturamento: z.boolean(),
+  ativa: z.boolean(),
+})
+
+const itemLixeira = z.object({ id, excluidoEm: data, lancamentos: z.array(lancamento).min(1).max(5) })
+
 export const mudancas = z.object({
   empresa: empresa.optional(),
   preferencias: preferencias.optional(),
@@ -157,6 +177,8 @@ export const mudancas = z.object({
   atendimentos: z.object({ salvar: z.array(atendimento).max(2000), excluir: z.array(id).max(2000) }).optional(),
   parceiros: z.object({ salvar: z.array(parceiro).max(2000), excluir: z.array(id).max(2000) }).optional(),
   avisosDispensados: z.array(texto(300)).max(200).optional(),
+  categorias: z.object({ salvar: z.array(categoria).max(200) }).optional(),
+  lixeira: z.object({ salvar: z.array(itemLixeira).max(500), excluir: z.array(id).max(500) }).optional(),
 })
 
 const conta = z.object({ id, nome: texto(60).min(1), tipo: z.enum(['caixa', 'banco', 'reserva']), saldoInicial: z.number().int().min(-1e13).max(1e13), ativa: z.boolean() })

@@ -10,8 +10,8 @@ import { aplicarPagamento, reverterDados, type DetalhesPagamento } from '../doma
 import { gerarPrevistos } from '../domain/recorrencia'
 import { cadastrarSugeridos as gravarSugeridos, excluirParceiro as tirarParceiro, salvarParceiro as gravarParceiro, vincularLancamentos as vincular, type NomeSugerido, type NovoParceiro } from '../domain/parceiros'
 import type { IdModulo } from '../domain/planos'
-import type { Atividade, Centavos, Comprovante, Dados, DataISO, Empresa, Lancamento, MesISO, Preferencias, Recorrencia, SeFimDeSemana } from '../domain/types'
-import { hojeReal, mesDe, uid } from '../lib/format'
+import type { Atividade, Categoria, Centavos, Comprovante, Dados, DataISO, Empresa, Lancamento, MesISO, Preferencias, Recorrencia, SeFimDeSemana } from '../domain/types'
+import { addDias, hojeReal, mesDe, uid } from '../lib/format'
 import { api, ErroApi, verificarServidor, type Conta } from './api'
 import { categoriasDoNegocio } from './categorias'
 import { lerComprovante } from './comprovante'
@@ -20,6 +20,24 @@ import { diferencas, juntar, paraNovoNegocio, type Mudancas } from './sincroniza
 
 // v2: valores em centavos e contas fixas como Recorrencia.
 const CHAVE = 'gynfinance:v2'
+/** Convite de contador aberto antes de entrar, e o código de quem indicou (o site também grava). */
+export const CHAVE_CONVITE = 'gynfinance:convite'
+export const CHAVE_INDICACAO = 'gynfinance:indicacao'
+export function lerGuardado(chave: string): string | undefined {
+  try {
+    return localStorage.getItem(chave) || undefined
+  } catch {
+    return undefined
+  }
+}
+export function guardar(chave: string, valor: string | undefined) {
+  try {
+    if (valor) localStorage.setItem(chave, valor)
+    else localStorage.removeItem(chave)
+  } catch {
+    /* sem armazenamento: segue sem guardar */
+  }
+}
 
 interface Salvo {
   modo: 'demo' | 'real'
@@ -37,6 +55,13 @@ function comPrevistos(d: Dados, hoje: DataISO): Dados {
   return { ...d, lancamentos: [...d.lancamentos, ...novos], recorrencias }
 }
 
+/** A lixeira guarda 30 dias: o que passou disso some ao abrir o app. */
+function semLixoVelho(d: Dados, hoje: DataISO): Dados {
+  const limite = addDias(hoje, -30)
+  if (!d.lixeira?.some((i) => i.excluidoEm <= limite)) return d
+  return { ...d, lixeira: d.lixeira.filter((i) => i.excluidoEm > limite) }
+}
+
 function carregar(): Salvo {
   try {
     const bruto = localStorage.getItem(CHAVE)
@@ -44,7 +69,7 @@ function carregar(): Salvo {
       const s = JSON.parse(bruto) as Salvo
       // A demonstração nunca fica gravada: cada visita começa com os dados de exemplo.
       // Dados gravados antes da agenda não têm a lista de atendimentos.
-      if (s.modo !== 'demo') return { modo: s.modo, dados: comPrevistos({ ...s.dados, atendimentos: s.dados.atendimentos ?? [] }, hojeDo(s.modo)) }
+      if (s.modo !== 'demo') return { modo: s.modo, dados: comPrevistos(semLixoVelho({ ...s.dados, atendimentos: s.dados.atendimentos ?? [] }, hojeDo(s.modo)), hojeDo(s.modo)) }
     }
   } catch {
     /* sem armazenamento: segue com a demonstração */
@@ -136,7 +161,12 @@ interface Store {
   mes: MesISO
   setMes: (m: MesISO) => void
   salvarLancamento: (l: NovoLancamento, id?: string, repetir?: OpcoesRepetir) => string
-  excluirLancamento: (id: string) => void
+  /** Apaga o lançamento (vai para a lixeira por 30 dias). Devolve a função que desfaz. */
+  excluirLancamento: (id: string) => Desfazer
+  /** Devolve à lista um lançamento da lixeira. */
+  restaurarLancamento: (itemId: string) => void
+  /** Cria ou altera uma categoria própria; nas padrão, só liga e desliga. */
+  salvarCategoria: (c: Categoria) => void
   /** Baixa uma conta prevista com os dados de hoje. Devolve a função que desfaz. */
   marcarComoPago: (id: string, valorReal?: Centavos) => Desfazer
   /** Baixa com detalhes: valor, data, conta, forma, comprovante, parcial ou parcelado. */
@@ -163,7 +193,13 @@ interface Store {
   atualizarPreferencias: (p: Partial<Preferencias>) => void
   dispensarAviso: (id: string) => void
   /** Sai da demonstração e começa com os dados do próprio negócio (no servidor, quando há um). */
-  comecar: (c: ConfigInicial) => Promise<void>
+  comecar: (c: ConfigInicial, adicional?: boolean) => Promise<void>
+  /** Abre outro negócio da conta (ou um em que a pessoa é contadora). */
+  trocarNegocio: (empresaId: string) => Promise<void>
+  /** Busca de novo a conta (negócios, plano, indicações). */
+  recarregarConta: () => Promise<void>
+  /** O negócio aberto é de outra pessoa: o contador só vê, não grava. */
+  somenteLeitura: boolean
   restaurarDemo: () => void
   /** Há servidor (versão instalada) ou só o navegador (demonstração publicada)? */
   servidor: 'verificando' | 'sem' | 'com'
@@ -175,7 +211,10 @@ interface Store {
   /** Por que o servidor recusou gravar (assinatura suspensa, manutenção), quando recusou. */
   bloqueio: string | null
   entrar: (email: string, senha: string) => Promise<Conta>
+  /** Cria a conta; leva junto o convite de contador e o código de indicação guardados neste navegador. */
   criarConta: (nome: string, email: string, senha: string) => Promise<Conta>
+  /** Aceita o convite de contador guardado (ou o código dado) e abre o negócio do cliente. */
+  aceitarConvite: (codigo?: string) => Promise<boolean>
   /** Senha nova pelo link do e-mail; já entra na conta. */
   redefinirSenha: (codigo: string, senha: string) => Promise<Conta>
   sair: () => Promise<void>
@@ -195,6 +234,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [bloqueio, setBloqueio] = useState<string | null>(null)
   const salvoRef = useRef(salvo)
   salvoRef.current = salvo
+  const somenteLeitura = servidor === 'com' && conta?.negocio?.papel === 'contador'
+  const leituraRef = useRef(somenteLeitura)
+  leituraRef.current = somenteLeitura
 
   useEffect(() => {
     if (salvo.noServidor) return
@@ -260,6 +302,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const mudar = useCallback(
     (f: (d: Dados) => Dados) => {
       const s = salvoRef.current
+      // Contador: a tela não muda nada (o servidor também recusaria).
+      if (leituraRef.current) {
+        setBloqueio('Você está vendo este negócio como contador: dá para consultar e exportar, mas não para mudar nada.')
+        return
+      }
       const dados = comPrevistos(f(s.dados), hojeDo(s.modo))
       const novo = { ...s, dados }
       salvoRef.current = novo
@@ -326,7 +373,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [carregarDoServidor],
   )
   const criarConta = useCallback(async (nome: string, email: string, senha: string) => {
-    const criada = await api<Conta>('POST', 'conta/criar', { nome, email, senha, aceiteTermos: true })
+    const extras = { convite: lerGuardado(CHAVE_CONVITE), indicacao: lerGuardado(CHAVE_INDICACAO) }
+    const criada = await api<Conta>('POST', 'conta/criar', { nome, email, senha, aceiteTermos: true, ...extras })
     const c = await api<Conta>('GET', 'conta').catch(() => criada)
     setConta(c)
     return c
@@ -418,17 +466,46 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const excluirLancamento = useCallback(
     (id: string) =>
-      mudar((d) => {
+      desfazivel((d) => {
         const alvo = d.lancamentos.find((l) => l.id === id)
         // Excluir um previsto de conta fixa vira "cancelado", para o gerador não recriar o mês.
         if (alvo?.recorrenciaId && alvo.situacao === 'previsto') {
           return { ...d, lancamentos: d.lancamentos.map((l) => (l.id === id ? { ...l, situacao: 'cancelado' as const } : l)) }
         }
+        // Vai para a lixeira junto com o aporte espelho, para voltar inteiro.
+        const indo = d.lancamentos.filter((l) => l.id === id || l.espelhoDe === id)
         return {
           ...d,
           lancamentos: d.lancamentos.filter((l) => l.id !== id && l.espelhoDe !== id),
           pagamentosDas: d.pagamentosDas.map((p) => (p.lancamentoId === id ? { ...p, lancamentoId: undefined } : p)),
+          lixeira: indo.length ? [{ id: uid(), excluidoEm: hojeDo(salvoRef.current.modo), lancamentos: indo }, ...(d.lixeira ?? [])] : d.lixeira,
         }
+      }),
+    [desfazivel],
+  )
+
+  const restaurarLancamento = useCallback(
+    (itemId: string) =>
+      mudar((d) => {
+        const item = d.lixeira?.find((i) => i.id === itemId)
+        if (!item) return d
+        const ids = new Set(d.lancamentos.map((l) => l.id))
+        const parceiros = new Set((d.parceiros ?? []).map((p) => p.id))
+        const contas = new Set(d.contas.map((c) => c.id))
+        // A ficha do cliente pode ter sido apagada depois; a conta financeira, nunca some.
+        const voltam = item.lancamentos
+          .filter((l) => !ids.has(l.id) && contas.has(l.contaFinanceiraId))
+          .map((l) => (l.parceiroId && !parceiros.has(l.parceiroId) ? { ...l, parceiroId: undefined } : l))
+        return { ...d, lancamentos: [...d.lancamentos, ...voltam], lixeira: d.lixeira!.filter((i) => i.id !== itemId) }
+      }),
+    [mudar],
+  )
+
+  const salvarCategoria = useCallback(
+    (c: Categoria) =>
+      mudar((d) => {
+        const existe = d.categorias.some((x) => x.id === c.id)
+        return { ...d, categorias: existe ? d.categorias.map((x) => (x.id === c.id ? c : x)) : [...d.categorias, c] }
       }),
     [mudar],
   )
@@ -542,21 +619,52 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     (id: string) => mudar((d) => ({ ...d, avisosDispensados: [...(d.avisosDispensados ?? []), id] })),
     [mudar],
   )
+  const aceitarConvite = useCallback(
+    async (codigo?: string) => {
+      const c = codigo ?? lerGuardado(CHAVE_CONVITE)
+      if (!c) return false
+      await api('POST', 'convite/aceitar', { codigo: c })
+      guardar(CHAVE_CONVITE, undefined)
+      const atual = await api<Conta>('GET', 'conta')
+      setConta(atual)
+      await carregarDoServidor()
+      return true
+    },
+    [carregarDoServidor],
+  )
+  const recarregarConta = useCallback(async () => {
+    const c = await api<Conta>('GET', 'conta')
+    setConta(c)
+  }, [])
   const comecar = useCallback(
-    async (c: ConfigInicial) => {
+    async (c: ConfigInicial, adicional = false) => {
       const h = hojeReal()
       const dados = dadosIniciais(c, h)
       if (servidor === 'com') {
-        const r = await api<{ dados: Dados }>('POST', 'negocio', paraNovoNegocio(dados))
+        // Mudanças do negócio anterior vão antes de trocar.
+        if (fila.current) await enviar()
+        const r = await api<{ dados: Dados }>('POST', adicional ? 'negocio?adicional=1' : 'negocio', paraNovoNegocio(dados))
         fila.current = null
+        setBloqueio(null)
         setSalvo({ modo: 'real', dados: r.dados, noServidor: true })
         setConta((x) => x && { ...x, temNegocio: true })
+        await recarregarConta().catch(() => {})
       } else {
         setSalvo({ modo: 'real', dados })
       }
       setMes(mesDe(h))
     },
-    [servidor],
+    [servidor, enviar, recarregarConta],
+  )
+  const trocarNegocio = useCallback(
+    async (empresaId: string) => {
+      if (fila.current) await enviar()
+      await api('POST', 'negocios/abrir', { empresaId })
+      setBloqueio(null)
+      await recarregarConta()
+      await carregarDoServidor()
+    },
+    [enviar, recarregarConta, carregarDoServidor],
   )
   const restaurarDemo = useCallback(() => {
     setSalvo({ modo: 'demo', dados: dadosDemo() })
@@ -578,6 +686,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setMes,
       salvarLancamento,
       excluirLancamento,
+      restaurarLancamento,
+      salvarCategoria,
       marcarComoPago,
       registrarPagamento,
       anexarComprovante,
@@ -595,6 +705,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       atualizarPreferencias,
       dispensarAviso,
       comecar,
+      trocarNegocio,
+      recarregarConta,
+      somenteLeitura,
       restaurarDemo,
       servidor,
       conta,
@@ -603,10 +716,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       bloqueio,
       entrar,
       criarConta,
+      aceitarConvite,
       redefinirSenha,
       sair,
     }),
-    [salvo, hoje, mes, salvarLancamento, excluirLancamento, marcarComoPago, registrarPagamento, anexarComprovante, marcarDasPago, separarReserva, recorrenciaDe, salvarAtendimento, excluirAtendimento, salvarParceiro, excluirParceiro, vincularLancamentos, cadastrarSugeridos, importarExtrato, atualizarEmpresa, atualizarPreferencias, dispensarAviso, comecar, restaurarDemo, servidor, conta, salvamento, bloqueio, entrar, criarConta, redefinirSenha, sair],
+    [salvo, hoje, mes, salvarLancamento, excluirLancamento, restaurarLancamento, salvarCategoria, trocarNegocio, recarregarConta, somenteLeitura, marcarComoPago, registrarPagamento, anexarComprovante, marcarDasPago, separarReserva, recorrenciaDe, salvarAtendimento, excluirAtendimento, salvarParceiro, excluirParceiro, vincularLancamentos, cadastrarSugeridos, importarExtrato, atualizarEmpresa, atualizarPreferencias, dispensarAviso, comecar, restaurarDemo, servidor, conta, salvamento, bloqueio, entrar, criarConta, aceitarConvite, redefinirSenha, sair],
   )
   return <Ctx.Provider value={valor}>{children}</Ctx.Provider>
 }

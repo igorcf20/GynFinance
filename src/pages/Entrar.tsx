@@ -7,7 +7,7 @@ import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Field'
 import { Segmentado } from '../components/ui/Tabs'
 import { api } from '../data/api'
-import { useStore } from '../data/store'
+import { CHAVE_CONVITE, CHAVE_INDICACAO, guardar, lerGuardado, useStore } from '../data/store'
 
 type Aba = 'entrar' | 'criar'
 
@@ -77,9 +77,13 @@ function EsqueciSenha({ emailInicial, onVoltar }: { emailInicial: string; onVolt
 }
 
 export function Entrar() {
-  const { servidor, conta, entrar, criarConta } = useStore()
+  const { servidor, conta, entrar, criarConta, aceitarConvite } = useStore()
   const navigate = useNavigate()
   const [params] = useSearchParams()
+  // Link de quem indicou também pode chegar direto no sistema (/app/#/entrar?indicacao=...).
+  const indicacao = params.get('indicacao')
+  if (indicacao && /^[0-9a-z]{4,40}$/i.test(indicacao) && lerGuardado(CHAVE_INDICACAO) !== indicacao) guardar(CHAVE_INDICACAO, indicacao)
+  const convidado = !!lerGuardado(CHAVE_CONVITE)
   const [aba, setAba] = useState<Aba>(params.get('depois') === 'comecar' ? 'criar' : 'entrar')
   const [nome, setNome] = useState('')
   const [email, setEmail] = useState('')
@@ -91,7 +95,8 @@ export function Entrar() {
 
   // Sem servidor (demonstração publicada) não há conta: segue direto para a configuração no navegador.
   if (servidor === 'sem') return <Navigate to="/comecar" replace />
-  if (conta) return <Navigate to={conta.temNegocio ? '/' : '/comecar'} replace />
+  // Durante o envio quem decide a próxima tela é enviar() (o convite do contador vem antes).
+  if (conta && !enviando) return <Navigate to={conta.temNegocio ? '/' : '/comecar'} replace />
 
   async function enviar() {
     setErro('')
@@ -103,6 +108,12 @@ export function Entrar() {
     setEnviando(true)
     try {
       const c = aba === 'entrar' ? await entrar(email, senha) : await criarConta(nome, email, senha)
+      // Veio pelo convite de um cliente: já abre o negócio dele.
+      if (convidado) {
+        const aceito = await aceitarConvite().catch(() => false)
+        if (aceito) return navigate('/', { replace: true })
+        guardar(CHAVE_CONVITE, undefined)
+      }
       navigate(c.temNegocio ? '/' : '/comecar', { replace: true })
     } catch (e) {
       setErro((e as Error).message)
@@ -131,6 +142,11 @@ export function Entrar() {
               ? 'Entre para ver as finanças do seu negócio.'
               : 'Seus dados ficam guardados e você acessa do celular ou do computador.'}
         </p>
+        {convidado && !esqueci && (
+          <p className="mt-4 rounded-[14px] border border-primary-line bg-primary-soft/60 px-4 py-3 text-center text-[13px] text-ink">
+            Você foi convidado para ver o financeiro de um cliente como contador. Entre ou crie a sua conta para abrir.
+          </p>
+        )}
 
         {esqueci ? (
           <EsqueciSenha emailInicial={email} onVoltar={() => setEsqueci(false)} />

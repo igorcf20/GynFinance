@@ -10,7 +10,7 @@ import { MODULOS, type IdModulo } from '../../domain/planos'
 import { brl, centavosParaTexto, lerValor } from '../../lib/format'
 import { Texto } from './comum'
 
-const VAZIO: DadosPlano = { nome: '', descricao: '', precoCentavos: 0, modulos: ['financeiro'], temIa: false, destaque: false, ativo: true, ordem: 1 }
+const VAZIO: DadosPlano = { nome: '', descricao: '', precoCentavos: 0, modulos: ['financeiro'], temIa: false, destaque: false, ativo: true, ordem: 1, negocios: 1 }
 
 export function AbaPlanos({ fonte, planos, onMudou }: { fonte: FonteAdmin; planos: PlanoAdmin[] | null; onMudou: () => Promise<void> }) {
   const [editando, setEditando] = useState<PlanoAdmin | 'novo' | null>(null)
@@ -150,10 +150,11 @@ function FormPlano({ fonte, plano, ordem, onFechar, onMudou }: { fonte: FonteAdm
       }
     >
       <div className="flex flex-col gap-4">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1.4fr_1fr_0.6fr]">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1.4fr_1fr_0.6fr_0.8fr]">
           <Input label="Nome" value={d.nome} onChange={(e) => (muda('nome', e.target.value), setErro(''))} placeholder="Ex.: Essencial" />
           <Input label="Preço por mês" inputMode="decimal" value={precoTxt} onChange={(e) => setPrecoTxt(e.target.value)} placeholder="R$ 0,00 (grátis)" />
           <Input label="Ordem" type="number" min={0} value={d.ordem} onChange={(e) => muda('ordem', Number(e.target.value) || 0)} />
+          <Input label="Negócios por conta" type="number" min={1} max={50} value={d.negocios ?? 1} onChange={(e) => muda('negocios', Math.min(50, Math.max(1, Number(e.target.value) || 1)))} />
         </div>
         <Texto label="Descrição (aparece no site)" rows={2} value={d.descricao} onChange={(e) => muda('descricao', e.target.value)} placeholder="Ex.: Tudo para organizar o dinheiro do negócio e o MEI." />
         <div>
