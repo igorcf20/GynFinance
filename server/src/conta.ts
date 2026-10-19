@@ -125,7 +125,7 @@ export async function aceitesPendentes(c: Cliente): Promise<{ tipo: TipoDocument
 }
 
 // ---------- Limpeza diária ----------
-/** Apaga o que já passou do prazo de guarda (ver a Política de Privacidade, item 6). */
+/** Apaga o que já passou do prazo de guarda (ver a Política de Privacidade, item 7). */
 export async function limparVencidos(pool: pg.Pool) {
   await comAdmin(pool, async (c) => {
     await c.query("delete from registro_acesso where em < now() - interval '6 months'")
