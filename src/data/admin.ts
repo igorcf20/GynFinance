@@ -49,6 +49,25 @@ export interface ConfigSistema {
   manutencao: boolean
 }
 
+/** Assistente (inteligência artificial): chave, modelo, limite e quanto está custando. */
+export interface ConfigIa {
+  /** De onde vem a chave: salva no painel, do servidor (.env) ou nenhuma. */
+  origemChave: 'painel' | 'servidor' | 'nenhuma'
+  /** Últimos 4 caracteres da chave, para conferir qual está salva. */
+  finalChave: string
+  modelo: string
+  limiteDia: number
+  modelos: { id: string; nome: string }[]
+  uso: Record<'hoje' | 'mes', { pedidos: number; fotos: number; clientes: number; custoMicro: number }>
+}
+
+export interface MudancaIa {
+  /** Vazio mantém a chave salva; null apaga. */
+  chave?: string | null
+  modelo: string
+  limiteDia: number
+}
+
 export interface ImagemSite {
   id: string
   nome: string
@@ -98,6 +117,10 @@ export interface FonteAdmin {
   config(): Promise<ConfigSistema>
   salvarConfig(c: ConfigSistema): Promise<void>
   registro(): Promise<RegistroAdmin[]>
+  ia(): Promise<ConfigIa>
+  salvarIa(m: MudancaIa): Promise<void>
+  /** Faz um pedido pequeno com a chave salva. */
+  testarIa(): Promise<string>
   /** Mensalidades recebidas no mês de hoje. */
   recebidoNoMes(hoje: DataISO): Promise<Centavos>
 }
@@ -185,6 +208,9 @@ export const fonteServidor: FonteAdmin = {
   config: async () => (await api<{ config: ConfigSistema }>('GET', 'admin/config')).config,
   salvarConfig: async (c) => void (await api('PUT', 'admin/config', c)),
   registro: async () => (await api<{ registro: RegistroAdmin[] }>('GET', 'admin/registro')).registro,
+  ia: async () => (await api<{ ia: ConfigIa }>('GET', 'admin/ia')).ia,
+  salvarIa: async (m) => void (await api('PUT', 'admin/ia', m)),
+  testarIa: async () => (await api<{ resposta: string }>('POST', 'admin/ia/testar')).resposta,
   recebidoNoMes: async () => (await api<{ recebidoNoMesCentavos: Centavos }>('GET', 'admin/resumo')).recebidoNoMesCentavos,
 }
 
@@ -231,6 +257,19 @@ export function criarFonteDemo(hoje: DataISO = hojeReal()): FonteAdmin {
     pagamentos.set(a.id, lista)
   }
   let config: ConfigSistema = { cadastroAberto: true, diasTeste: 7, planoPadrao: 'essencial', iaLigada: false, aviso: '', manutencao: false }
+  const MODELOS = [
+    { id: 'claude-opus-5-5', nome: 'Opus 5.5 (mais preciso)' },
+    { id: 'claude-sonnet-5-5', nome: 'Sonnet 5.5 (equilibrado)' },
+    { id: 'claude-haiku-5-5', nome: 'Haiku 5.5 (mais barato)' },
+  ]
+  let ia: ConfigIa = {
+    origemChave: 'nenhuma',
+    finalChave: '',
+    modelo: MODELOS[0].id,
+    limiteDia: 40,
+    modelos: MODELOS,
+    uso: { hoje: { pedidos: 0, fotos: 0, clientes: 0, custoMicro: 0 }, mes: { pedidos: 0, fotos: 0, clientes: 0, custoMicro: 0 } },
+  }
   let conteudo: Record<string, string> = {}
   const imagens: ImagemSite[] = []
   const registro: RegistroAdmin[] = [{ quando: quando(-1), admin: 'voce@exemplo.com', acao: 'mensalidade recebida', detalhe: 'Mendes Refrigeração: R$ 25,00' }]
@@ -339,6 +378,17 @@ export function criarFonteDemo(hoje: DataISO = hojeReal()): FonteAdmin {
       await espera(null)
     },
     registro: () => espera(registro),
+    ia: () => espera(ia),
+    salvarIa: async (m) => {
+      const chave = m.chave === null ? 'nenhuma' : m.chave ? 'painel' : ia.origemChave
+      ia = { ...ia, modelo: m.modelo, limiteDia: m.limiteDia, origemChave: chave, finalChave: m.chave === null ? '' : m.chave ? m.chave.slice(-4) : ia.finalChave }
+      anotar('assistente alterado')
+      await espera(null)
+    },
+    testarIa: async () => {
+      await espera(null)
+      throw new Error('Na demonstração não há chave de verdade para testar.')
+    },
     recebidoNoMes: (h) =>
       espera(
         [...pagamentos.values()]

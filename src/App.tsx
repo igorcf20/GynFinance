@@ -13,6 +13,7 @@ import { Entrar } from './pages/Entrar'
 import { RedefinirSenha } from './pages/RedefinirSenha'
 import { Accounts } from './pages/Accounts'
 import { Agenda } from './pages/Agenda'
+import { Assistente } from './pages/Assistente'
 import { Admin } from './pages/admin/Admin'
 import { ImportarExtrato } from './pages/ImportarExtrato'
 import { CashFlow } from './pages/CashFlow'
@@ -80,6 +81,7 @@ export default function App() {
               <Route path="comecar" element={<Onboarding />} />
               <Route element={<MainLayout />}>
                 <Route index element={<Dashboard />} />
+                <Route path="assistente" element={<Assistente />} />
                 <Route path="lancamentos" element={<Transactions />} />
                 <Route path="lancar" element={<NewTransaction />} />
                 <Route path="contas" element={<Accounts />} />

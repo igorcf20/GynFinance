@@ -204,7 +204,7 @@ const PISTAS: { categoria: string; regra: RegExp }[] = [
   { categoria: 'das', regra: /\bdas\b|simples nacional|receita federal|darf/i },
   { categoria: 'luz', regra: /energia|equatorial|enel|cemig|light |copel|celesc|saneago|sabesp|agua/i },
   { categoria: 'internet', regra: /internet|telefon|vivo|claro|\btim\b|\boi\b|net /i },
-  { categoria: 'transporte', regra: /posto|combust|uber|99 ?app|99pop|estacionamento/i },
+  { categoria: 'transporte', regra: /posto|combust|gasolina|etanol|diesel|uber|99 ?app|99pop|estacionamento/i },
   { categoria: 'marketing', regra: /facebook|meta ads|instagram|google ads|anuncio/i },
   { categoria: 'aluguel', regra: /aluguel|imobiliaria/i },
   { categoria: 'contador', regra: /contabil|contador/i },

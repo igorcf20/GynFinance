@@ -1,6 +1,6 @@
 import type { IdModulo } from '../../domain/planos'
 import { temModulo } from '../../domain/planos'
-import { CalendarCheck, LifeBuoy, CalendarDays, ChartSpline, FileUp, FileChartColumn, FileText, House, ReceiptText, Settings, ShieldCheck, Store, Users, type LucideIcon } from 'lucide-react'
+import { CalendarCheck, LifeBuoy, CalendarDays, ChartSpline, FileUp, FileChartColumn, FileText, House, ReceiptText, Settings, ShieldCheck, Sparkles, Store, Users, type LucideIcon } from 'lucide-react'
 
 export interface ItemNav {
   para: string
@@ -10,6 +10,8 @@ export interface ItemNav {
   tambem?: string[]
   /** Só aparece quando o plano do cliente inclui este módulo. */
   modulo?: IdModulo
+  /** Só aparece quando o plano do cliente inclui o assistente (inteligência artificial). */
+  ia?: boolean
   /** Número ao lado do item: contas atrasadas ou respostas do suporte não lidas. */
   selo?: 'atrasadas' | 'suporte'
 }
@@ -21,6 +23,7 @@ export interface GrupoNav {
 
 export const NAV_PRINCIPAL: ItemNav[] = [
   { para: '/', rotulo: 'Início', icone: House },
+  { para: '/assistente', rotulo: 'Assistente', icone: Sparkles, ia: true },
   { para: '/lancamentos', rotulo: 'Lançamentos', icone: ReceiptText, tambem: ['/lancar'] },
   { para: '/contas', rotulo: 'Contas', icone: FileText, selo: 'atrasadas' },
   { para: '/agenda', rotulo: 'Agenda', icone: CalendarDays, modulo: 'agenda' },
@@ -43,14 +46,15 @@ const nav = (para: string) => [...NAV_PRINCIPAL, ...NAV_MAIS].find((i) => i.para
 
 /** Menu lateral: tudo à vista, separado pelo que a pessoa quer fazer. */
 export const GRUPOS_NAV: GrupoNav[] = [
-  { itens: [nav('/')] },
+  { itens: [nav('/'), nav('/assistente')] },
   { titulo: 'Dinheiro', itens: ['/lancamentos', '/contas', '/fluxo', '/importar'].map(nav) },
   { titulo: 'Negócio', itens: ['/agenda', '/clientes', '/mei', '/relatorios', '/fechamento'].map(nav) },
   { titulo: 'Ajustes', itens: ['/configuracoes', '/suporte'].map(nav) },
 ]
 
 /** Tira os itens de módulos que o plano do cliente não tem. */
-export const doPlano = (itens: ItemNav[], modulos: IdModulo[] | undefined) => itens.filter((i) => !i.modulo || temModulo(modulos, i.modulo))
+export const doPlano = (itens: ItemNav[], modulos: IdModulo[] | undefined, temIa = true) =>
+  itens.filter((i) => (!i.modulo || temModulo(modulos, i.modulo)) && (!i.ia || temIa))
 
 export function estaAtivo(item: ItemNav, caminho: string): boolean {
   if (item.para === '/') return caminho === '/'

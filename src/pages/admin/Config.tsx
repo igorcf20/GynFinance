@@ -1,10 +1,10 @@
-import { FileClock } from 'lucide-react'
+import { FileClock, Sparkles } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { Button } from '../../components/ui/Button'
 import { Card, CardTitulo, EstadoVazio, Skeleton } from '../../components/ui/Card'
 import { Input, Select, Toggle } from '../../components/ui/Field'
 import { useToast } from '../../components/ui/Modal'
-import type { ConfigSistema, FonteAdmin, PlanoAdmin } from '../../data/admin'
+import type { ConfigIa, ConfigSistema, FonteAdmin, PlanoAdmin } from '../../data/admin'
 import { Texto, useCarregar } from './comum'
 
 export function AbaConfig({ fonte, planos }: { fonte: FonteAdmin; planos: PlanoAdmin[] }) {
@@ -45,8 +45,8 @@ export function AbaConfig({ fonte, planos }: { fonte: FonteAdmin; planos: PlanoA
           <Toggle
             checked={c.iaLigada}
             onChange={(v) => muda('iaLigada', v)}
-            label="Inteligência artificial ligada"
-            descricao="Chave geral: só com ela ligada os planos com IA usam os recursos de IA. Ainda não há recursos de IA no sistema."
+            label="Assistente ligado"
+            descricao="Chave geral do assistente (inteligência artificial): ligado, os clientes dos planos com IA veem o Assistente no menu. Configure a chave do serviço logo abaixo."
           />
           <Toggle
             checked={c.manutencao}
@@ -65,7 +65,120 @@ export function AbaConfig({ fonte, planos }: { fonte: FonteAdmin; planos: PlanoA
           Salvar configurações
         </Button>
       </div>
+      <div className="xl:col-span-2">
+        <CartaoAssistente fonte={fonte} />
+      </div>
     </div>
+  )
+}
+
+const dolar = (micro: number) => `US$ ${(micro / 1e6).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+
+/** Chave do serviço de IA, modelo, limite por cliente e quanto o assistente custou. */
+function CartaoAssistente({ fonte }: { fonte: FonteAdmin }) {
+  const toast = useToast()
+  const buscar = useCallback(() => fonte.ia(), [fonte])
+  const { dados, recarregar } = useCarregar(buscar)
+  const [ia, setIa] = useState<ConfigIa | null>(null)
+  const [chave, setChave] = useState('')
+  const [salvando, setSalvando] = useState(false)
+  const [testando, setTestando] = useState(false)
+  useEffect(() => setIa(dados), [dados])
+  if (!ia) return <Skeleton className="h-64" />
+  const salvar = async (apagar = false) => {
+    setSalvando(true)
+    try {
+      await fonte.salvarIa({ chave: apagar ? null : chave.trim(), modelo: ia.modelo, limiteDia: ia.limiteDia })
+      setChave('')
+      await recarregar()
+      toast(apagar ? 'Chave apagada.' : 'Assistente salvo.')
+    } catch (e) {
+      toast((e as Error).message)
+    } finally {
+      setSalvando(false)
+    }
+  }
+  const testar = async () => {
+    setTestando(true)
+    try {
+      const r = await fonte.testarIa()
+      toast(`A chave funciona. Resposta de teste: "${r}"`, { segundos: 6 })
+    } catch (e) {
+      toast((e as Error).message, { segundos: 6 })
+    } finally {
+      setTestando(false)
+    }
+  }
+  const media = ia.uso.mes.pedidos ? ia.uso.mes.custoMicro / ia.uso.mes.pedidos : 0
+  const origem = {
+    painel: `Chave salva aqui (termina em ${ia.finalChave}).`,
+    servidor: `Usando a chave do servidor (termina em ${ia.finalChave}).`,
+    nenhuma: 'Nenhuma chave salva: o assistente não funciona até salvar uma.',
+  }[ia.origemChave]
+  return (
+    <Card>
+      <CardTitulo>
+        <span className="inline-flex items-center gap-2">
+          <Sparkles size={18} className="text-primary" aria-hidden /> Assistente
+        </span>
+      </CardTitulo>
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+        <div className="flex flex-col gap-4">
+          <div>
+            <Input
+              label="Chave do serviço de IA (Anthropic)"
+              type="password"
+              autoComplete="off"
+              value={chave}
+              onChange={(e) => setChave(e.target.value)}
+              placeholder={ia.origemChave === 'nenhuma' ? 'Cole aqui a chave que começa com sk-ant-' : 'Cole uma chave nova só se quiser trocar'}
+            />
+            <p className={`mt-1 text-[12px] ${ia.origemChave === 'nenhuma' ? 'text-warning' : 'text-ink-2'}`}>{origem}</p>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Select label="Qualidade da leitura" value={ia.modelo} onChange={(e) => setIa({ ...ia, modelo: e.target.value })} opcoes={ia.modelos.map((m) => ({ valor: m.id, rotulo: m.nome }))} />
+            <Input
+              label="Pedidos por cliente por dia"
+              type="number"
+              min={0}
+              max={1000}
+              value={ia.limiteDia}
+              onChange={(e) => setIa({ ...ia, limiteDia: Math.max(0, Math.min(1000, Number(e.target.value) || 0)) })}
+            />
+          </div>
+          <p className="-mt-2 text-[12px] text-ink-2">O limite por dia protege a conta do serviço contra uso exagerado. 0 = sem limite.</p>
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={() => void salvar()} carregando={salvando}>
+              Salvar assistente
+            </Button>
+            <Button variante="secundario" onClick={() => void testar()} carregando={testando} disabled={ia.origemChave === 'nenhuma'}>
+              Testar a chave
+            </Button>
+            {ia.origemChave === 'painel' && (
+              <Button variante="discreto" onClick={() => void salvar(true)} disabled={salvando}>
+                Apagar chave
+              </Button>
+            )}
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3 self-start">
+          {[
+            { rotulo: 'Pedidos hoje', valor: String(ia.uso.hoje.pedidos) },
+            { rotulo: 'Pedidos no mês', valor: String(ia.uso.mes.pedidos) },
+            { rotulo: 'Custo no mês', valor: dolar(ia.uso.mes.custoMicro) },
+            { rotulo: 'Custo médio por pedido', valor: dolar(media) },
+            { rotulo: 'Clientes que usaram no mês', valor: String(ia.uso.mes.clientes) },
+            { rotulo: 'Fotos lidas no mês', valor: String(ia.uso.mes.fotos) },
+          ].map((x) => (
+            <div key={x.rotulo} className="rounded-[14px] border border-line p-3">
+              <p className="text-[12px] text-ink-2">{x.rotulo}</p>
+              <p className="num mt-0.5 text-[18px] font-bold text-ink">{x.valor}</p>
+            </div>
+          ))}
+          <p className="col-span-2 text-[12px] text-ink-2">Custo estimado pelo preço oficial do serviço. A cobrança de verdade aparece no painel da Anthropic.</p>
+        </div>
+      </div>
+    </Card>
   )
 }
 

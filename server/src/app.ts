@@ -14,6 +14,7 @@ import { aplicarMudancas, criarNegocio, empresaDaSessao, ErroDeDados, gravarComp
 import { comUsuario } from './db.ts'
 import { criarCarteiro, emailSenhaNova, type Carteiro } from './email.ts'
 import * as esquema from './esquemas.ts'
+import { rotasAssistente, type LeitorIa } from './assistente.ts'
 import { contarNaoLidos, registrarErroServidor, rotasSuporte } from './suporte.ts'
 
 const COOKIE = 'gyn_sessao'
@@ -27,7 +28,7 @@ declare module 'fastify' {
   }
 }
 
-export async function criarApp(pool: pg.Pool, opcoes: { site?: boolean; logger?: boolean; carteiro?: Carteiro } = {}) {
+export async function criarApp(pool: pg.Pool, opcoes: { site?: boolean; logger?: boolean; carteiro?: Carteiro; leitorIa?: LeitorIa } = {}) {
   const carteiro = opcoes.carteiro ?? criarCarteiro()
   // O sistema abre em /app/ e chama api/... relativo: /app/api/x vira /api/x.
   const app = Fastify({
@@ -232,6 +233,7 @@ export async function criarApp(pool: pg.Pool, opcoes: { site?: boolean; logger?:
 
   await rotasAdmin(app, pool, exigirLogin, admin)
   await rotasSuporte(app, pool, { exigirLogin, lerSessao, admin })
+  await rotasAssistente(app, pool, { exigirLogin, admin, leitor: opcoes.leitorIa })
 
   app.all('/api/*', async (_req, rep) => rep.code(404).send({ erro: 'Endereço não encontrado.' }))
 

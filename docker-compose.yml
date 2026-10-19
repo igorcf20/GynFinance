@@ -39,6 +39,7 @@ services:
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}
       EMAIL_REMETENTE: ${EMAIL_REMETENTE:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     # Só dentro da VPS: para um nginx ou painel que já exista encaminhar para cá.
     ports:
       - '127.0.0.1:${PORTA_APP:-3000}:3000'
