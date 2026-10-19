@@ -20,6 +20,24 @@ import { diferencas, juntar, paraNovoNegocio, type Mudancas } from './sincroniza
 
 // v2: valores em centavos e contas fixas como Recorrencia.
 const CHAVE = 'gynfinance:v2'
+/** Convite de contador aberto antes de entrar, e o código de quem indicou (o site também grava). */
+export const CHAVE_CONVITE = 'gynfinance:convite'
+export const CHAVE_INDICACAO = 'gynfinance:indicacao'
+export function lerGuardado(chave: string): string | undefined {
+  try {
+    return localStorage.getItem(chave) || undefined
+  } catch {
+    return undefined
+  }
+}
+export function guardar(chave: string, valor: string | undefined) {
+  try {
+    if (valor) localStorage.setItem(chave, valor)
+    else localStorage.removeItem(chave)
+  } catch {
+    /* sem armazenamento: segue sem guardar */
+  }
+}
 
 interface Salvo {
   modo: 'demo' | 'real'
@@ -193,7 +211,10 @@ interface Store {
   /** Por que o servidor recusou gravar (assinatura suspensa, manutenção), quando recusou. */
   bloqueio: string | null
   entrar: (email: string, senha: string) => Promise<Conta>
+  /** Cria a conta; leva junto o convite de contador e o código de indicação guardados neste navegador. */
   criarConta: (nome: string, email: string, senha: string) => Promise<Conta>
+  /** Aceita o convite de contador guardado (ou o código dado) e abre o negócio do cliente. */
+  aceitarConvite: (codigo?: string) => Promise<boolean>
   /** Senha nova pelo link do e-mail; já entra na conta. */
   redefinirSenha: (codigo: string, senha: string) => Promise<Conta>
   sair: () => Promise<void>
@@ -352,7 +373,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [carregarDoServidor],
   )
   const criarConta = useCallback(async (nome: string, email: string, senha: string) => {
-    const criada = await api<Conta>('POST', 'conta/criar', { nome, email, senha, aceiteTermos: true })
+    const extras = { convite: lerGuardado(CHAVE_CONVITE), indicacao: lerGuardado(CHAVE_INDICACAO) }
+    const criada = await api<Conta>('POST', 'conta/criar', { nome, email, senha, aceiteTermos: true, ...extras })
     const c = await api<Conta>('GET', 'conta').catch(() => criada)
     setConta(c)
     return c
@@ -597,6 +619,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     (id: string) => mudar((d) => ({ ...d, avisosDispensados: [...(d.avisosDispensados ?? []), id] })),
     [mudar],
   )
+  const aceitarConvite = useCallback(
+    async (codigo?: string) => {
+      const c = codigo ?? lerGuardado(CHAVE_CONVITE)
+      if (!c) return false
+      await api('POST', 'convite/aceitar', { codigo: c })
+      guardar(CHAVE_CONVITE, undefined)
+      const atual = await api<Conta>('GET', 'conta')
+      setConta(atual)
+      await carregarDoServidor()
+      return true
+    },
+    [carregarDoServidor],
+  )
   const recarregarConta = useCallback(async () => {
     const c = await api<Conta>('GET', 'conta')
     setConta(c)
@@ -681,10 +716,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       bloqueio,
       entrar,
       criarConta,
+      aceitarConvite,
       redefinirSenha,
       sair,
     }),
-    [salvo, hoje, mes, salvarLancamento, excluirLancamento, restaurarLancamento, salvarCategoria, trocarNegocio, recarregarConta, somenteLeitura, marcarComoPago, registrarPagamento, anexarComprovante, marcarDasPago, separarReserva, recorrenciaDe, salvarAtendimento, excluirAtendimento, salvarParceiro, excluirParceiro, vincularLancamentos, cadastrarSugeridos, importarExtrato, atualizarEmpresa, atualizarPreferencias, dispensarAviso, comecar, restaurarDemo, servidor, conta, salvamento, bloqueio, entrar, criarConta, redefinirSenha, sair],
+    [salvo, hoje, mes, salvarLancamento, excluirLancamento, restaurarLancamento, salvarCategoria, trocarNegocio, recarregarConta, somenteLeitura, marcarComoPago, registrarPagamento, anexarComprovante, marcarDasPago, separarReserva, recorrenciaDe, salvarAtendimento, excluirAtendimento, salvarParceiro, excluirParceiro, vincularLancamentos, cadastrarSugeridos, importarExtrato, atualizarEmpresa, atualizarPreferencias, dispensarAviso, comecar, restaurarDemo, servidor, conta, salvamento, bloqueio, entrar, criarConta, aceitarConvite, redefinirSenha, sair],
   )
   return <Ctx.Provider value={valor}>{children}</Ctx.Provider>
 }

@@ -1,12 +1,15 @@
 import { useState } from 'react'
-import { FluxoChart } from '../components/financial/charts'
+import { AlertTriangle, CheckCircle2 } from 'lucide-react'
+import { FluxoChart, PrevisaoChart } from '../components/financial/charts'
+import { Explica } from '../components/ui/Explica'
+import { previsaoCaixa } from '../domain/planejamento'
 import { Header } from '../components/layout/Header'
 import { Card, CardTitulo } from '../components/ui/Card'
 import { Input } from '../components/ui/Field'
 import { Segmentado } from '../components/ui/Tabs'
 import { resumoMes, serieMensal } from '../domain/calc'
 import { useStore } from '../data/store'
-import { addMeses, brl, capitalizar, mesAno, nomeMesCurto } from '../lib/format'
+import { addMeses, brl, capitalizar, diaMes, mesAno, nomeMesCurto } from '../lib/format'
 
 type Periodo = '3' | '6' | '12' | 'custom'
 
@@ -25,10 +28,58 @@ export function CashFlow() {
   serie = serie.filter((r) => r.mes >= dados.empresa.dataAbertura.slice(0, 7))
   const totalE = serie.reduce((t, r) => t + r.entrou, 0)
   const totalS = serie.reduce((t, r) => t + r.saiu, 0)
+  const [dias, setDias] = useState<'30' | '60'>('60')
+  const prev = previsaoCaixa(dados, hoje, Number(dias))
+  const fim = prev.pontos.at(-1)!
 
   return (
     <>
-      <Header titulo="Fluxo de caixa" subtitulo="Quanto entrou e saiu a cada mês." />
+      <Header titulo="Fluxo de caixa" subtitulo="O que vem pela frente e quanto entrou e saiu a cada mês." />
+      <Card className="mb-5 md:!p-7">
+        <CardTitulo
+          explica={
+            <Explica titulo="Vai faltar dinheiro?" conta={<>Hoje {brl(prev.hoje)} + a receber − a pagar, dia a dia</>}>
+              Parte do saldo do caixa de hoje (sem a reserva) e soma o que vence: o que você tem a receber entra no dia do vencimento, o que tem a pagar sai no dia do
+              vencimento. Contas a pagar já atrasadas saem hoje. O que clientes já deviam e não pagaram fica de fora, porque ninguém sabe quando chega.
+            </Explica>
+          }
+          acao={
+            <Segmentado
+              rotulo="Dias da previsão"
+              valor={dias}
+              onChange={setDias}
+              opcoes={[
+                { valor: '30', rotulo: '30 dias' },
+                { valor: '60', rotulo: '60 dias' },
+              ]}
+            />
+          }
+        >
+          Vai faltar dinheiro?
+        </CardTitulo>
+        {prev.primeiroNegativo ? (
+          <p className="mb-4 flex items-start gap-2.5 rounded-[14px] border border-[#f6d3d9] bg-[#fdf5f6] px-4 py-3 text-[14px] text-ink">
+            <AlertTriangle size={18} className="mt-0.5 shrink-0 text-danger" aria-hidden />
+            <span>
+              Se nada mudar, no dia <b>{diaMes(prev.primeiroNegativo.dia)}</b> o caixa fica <b className="text-danger">{brl(-prev.primeiroNegativo.saldo)} no vermelho</b>. O pior
+              dia é {diaMes(prev.menor.dia)}, com {brl(prev.menor.saldo)}. Cobre quem deve, adie uma conta ou separe dinheiro antes.
+            </span>
+          </p>
+        ) : (
+          <p className="mb-4 flex items-start gap-2.5 rounded-[14px] border border-[#cdebd9] bg-[#f3fbf6] px-4 py-3 text-[14px] text-ink">
+            <CheckCircle2 size={18} className="mt-0.5 shrink-0 text-success" aria-hidden />
+            <span>
+              O caixa não fica negativo nos próximos {dias} dias. O menor saldo é {brl(prev.menor.saldo)}, no dia {diaMes(prev.menor.dia)}, e termina o período com{' '}
+              <b>{brl(fim.saldo)}</b>.
+            </span>
+          </p>
+        )}
+        <PrevisaoChart pontos={prev.pontos} />
+        {prev.atrasadoReceber > 0 && (
+          <p className="mt-3 text-[12px] text-ink-2">Ficaram de fora {brl(prev.atrasadoReceber)} que clientes já deviam. Se receber, a linha sobe.</p>
+        )}
+      </Card>
+
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end">
         <Segmentado
           rotulo="Período"

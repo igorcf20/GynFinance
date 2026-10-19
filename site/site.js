@@ -248,6 +248,13 @@
     try { return decodeURIComponent(m[1].replace(/\+/g, ' ')).replace(/[^\w\s.-]/g, '').trim().slice(0, 40); } catch (e) { return ''; }
   }
 
+  // Link de indicação (?indicacao=CODIGO): guarda no aparelho para o cadastro no sistema saber quem indicou.
+  (function () {
+    var m = /[?&]indicacao=([0-9a-z]{4,40})(?:&|#|$)/i.exec(location.search);
+    if (!m) return;
+    try { localStorage.setItem('gynfinance:indicacao', m[1]); } catch (e) { /* sem armazenamento */ }
+  })();
+
   // Troca o texto do botão sem mexer nos ícones: o span editável, ou o primeiro texto solto.
   function trocarRotulo(a, valor) {
     var alvo = a.querySelector('span[data-cms]');

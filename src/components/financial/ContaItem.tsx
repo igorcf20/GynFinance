@@ -1,5 +1,6 @@
 import { FileText, Home, Lightbulb, MessageCircle, Package, Receipt, Repeat, SlidersHorizontal, UserRound, Wifi, Zap, type LucideIcon } from 'lucide-react'
 import { descricaoConta, grupoPrazo } from '../../domain/calc'
+import { linkCobranca } from '../../domain/cobranca'
 import type { DataISO, Lancamento } from '../../domain/types'
 import { brl, dataBR } from '../../lib/format'
 import { useState } from 'react'
@@ -24,13 +25,6 @@ const ICONES: Record<string, LucideIcon> = {
 export function iconeConta(l: Lancamento): LucideIcon {
   if (l.natureza === 'entrada') return UserRound
   return (l.categoriaId && ICONES[l.categoriaId]) || FileText
-}
-
-export function linkCobranca(l: Lancamento, negocio: string): string {
-  const texto = `Olá${l.contraparte ? `, ${l.contraparte.split(' ')[0]}` : ''}! Aqui é da ${negocio}. Passando para lembrar do pagamento de ${brl(l.valor, { centavos: true })}${
-    l.descricao ? ` (${l.descricao.toLowerCase()})` : ''
-  }, com vencimento em ${dataBR(l.dataVencimento!)}. Pode ser por Pix. Obrigado!`
-  return `https://wa.me/?text=${encodeURIComponent(texto)}`
 }
 
 export function estadoConta(l: Lancamento, hoje: DataISO): { tom: 'vermelho' | 'ambar' | 'neutro'; texto: string } {
@@ -77,6 +71,8 @@ export function ContaItem({ conta, compacto, mostrarCobrar }: { conta: Lancament
     baixar(() => registrarPagamento(conta.id, d), valor, texto)
   }
   const nome = receber ? conta.contraparte || conta.descricao : conta.descricao || conta.contraparte
+  // Atrasada a receber: o botão de cobrar aparece em qualquer lista.
+  const cobranca = receber && (mostrarCobrar || atrasada) ? linkCobranca(conta, dados) : null
 
   return (
     // Mede a largura da própria lista (e não da tela): a mesma linha serve no celular e na coluna estreita do painel.
@@ -98,13 +94,14 @@ export function ContaItem({ conta, compacto, mostrarCobrar }: { conta: Lancament
         </span>
         {/* No celular os botões ficam numa linha própria, alinhados ao texto: o nome da conta não some. */}
         <div className="flex shrink-0 basis-full justify-end gap-2 pl-[56px] @md:basis-auto @md:pl-0">
-          {mostrarCobrar && receber && (
+          {cobranca && (
             <a
-              href={linkCobranca(conta, dados.empresa.nomeFantasia)}
+              href={cobranca.url}
               target="_blank"
               rel="noreferrer"
-              aria-label={`Cobrar ${conta.contraparte} no WhatsApp`}
-              className="hidden h-10 items-center gap-1.5 rounded-[12px] border-[1.5px] border-[#bfe6d1] px-3.5 text-[13px] font-semibold text-success transition-colors hover:bg-success-soft @xs:inline-flex"
+              aria-label={`Cobrar ${conta.contraparte || 'o cliente'} no WhatsApp${cobranca.comNumero ? '' : ' (escolha o contato)'}`}
+              title={cobranca.comNumero ? 'Abre a conversa com o cliente, com a mensagem pronta' : 'Abre o WhatsApp com a mensagem pronta para você escolher o contato'}
+              className="inline-flex h-10 items-center gap-1.5 rounded-[12px] border-[1.5px] border-[#bfe6d1] px-3.5 text-[13px] font-semibold text-success transition-colors hover:bg-success-soft"
             >
               <MessageCircle size={15} aria-hidden />
               Cobrar

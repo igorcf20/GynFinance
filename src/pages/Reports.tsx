@@ -1,4 +1,4 @@
-import { CalendarCheck, ChevronRight, LineChart, PieChart, TrendingDown, TrendingUp, UserRound, AlertCircle, type LucideIcon } from 'lucide-react'
+import { CalendarCheck, FileDown, ChevronRight, LineChart, PieChart, TrendingDown, TrendingUp, UserRound, AlertCircle, type LucideIcon } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { BarrasHorizontais } from '../components/financial/charts'
@@ -7,6 +7,7 @@ import { Card, CardTitulo, EstadoVazio, IconeBox } from '../components/ui/Card'
 import { contasAbertas, gastosPorCategoria, receitasPorCategoria, resumoMes, serieMensal } from '../domain/calc'
 import { useStore } from '../data/store'
 import { brl, mesAno, nomeMes } from '../lib/format'
+import { ButtonLink } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
 import { ContaItem } from '../components/financial/ContaItem'
 import { ValorAnimado } from '../components/ui/ValorAnimado'
@@ -136,9 +137,19 @@ export function Reports() {
               )}
             </Card>
           )}
-          <p className="text-[12px] text-ink-2">
-            Exportar em PDF chega numa próxima versão. Para planilha, use "Exportar CSV" em Lançamentos.
-          </p>
+          <Card className="flex flex-wrap items-center gap-3">
+            <IconeBox tom="azul">
+              <FileDown size={19} strokeWidth={2} />
+            </IconeBox>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[15px] font-bold text-ink">Relatório de {mesAno(mes)} em PDF</span>
+              <span className="block text-[13px] text-ink-2">Resumo, categorias, contas em aberto e lançamentos do mês. Bom para o contador ou o banco.</span>
+            </span>
+            <ButtonLink to={`/imprimir/relatorio?mes=${mes}`} variante="contorno">
+              Salvar em PDF
+            </ButtonLink>
+          </Card>
+          <p className="text-[12px] text-ink-2">Para planilha, use "Exportar CSV" em Lançamentos.</p>
         </div>
       </div>
     </>

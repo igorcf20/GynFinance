@@ -343,7 +343,7 @@ export function alertas(dados: Dados, hoje: DataISO): Alerta[] {
 
   // Teto de gasto por categoria (Configurações > Metas e tetos).
   for (const t of usoDosTetos(dados, mes)) {
-    if (t.uso >= 1) {
+    if (t.gasto > t.limite) {
       lista.push({ id: `teto-100:${t.categoriaId}:${mes}`, nivel: 'perigo', painel: true, dispensavel: true, texto: `${t.nome} passou do teto do mês: ${brl(t.gasto)} de ${brl(t.limite)}.`, acao: { rotulo: 'Ver', para: '/relatorios' } })
     } else if (t.uso >= 0.8) {
       lista.push({ id: `teto-80:${t.categoriaId}:${mes}`, nivel: 'atencao', painel: true, dispensavel: true, texto: `${t.nome} já usou ${Math.round(t.uso * 100)}% do teto do mês. Restam ${brl(t.limite - t.gasto)}.`, acao: { rotulo: 'Ver', para: '/relatorios' } })

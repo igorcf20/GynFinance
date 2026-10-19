@@ -7,6 +7,7 @@ import { useStore } from '../../data/store'
 import { addMeses, mesAno } from '../../lib/format'
 import { LogoMarca } from './Logo'
 import { BotaoTema } from './BotaoTema'
+import { BotaoValores } from './BotaoValores'
 
 export function SeletorMes({ className = '' }: { className?: string }) {
   const { mes, setMes, hoje } = useStore()
@@ -177,7 +178,11 @@ export function Header({ titulo, subtitulo, periodo, acoes }: { titulo: ReactNod
           </span>
         )}
         <AvisoSalvamento />
-        <BotaoTema />
+        <BotaoValores />
+        {/* No celular o tema fica em Configurações, Aparência: o topo já tem o olho, o sino e o menu. */}
+        <span className="hidden sm:contents">
+          <BotaoTema />
+        </span>
         <Notificacoes />
         <Perfil />
         <BotaoMenu />

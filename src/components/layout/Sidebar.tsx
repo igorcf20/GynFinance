@@ -1,6 +1,7 @@
 import { ChevronRight, Plus, UserRound } from 'lucide-react'
 import { Fragment } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
+import { TrocaNegocio } from './TrocaNegocio'
 import { useStore } from '../../data/store'
 import { useNaoLidosSuporte } from '../../data/suporte'
 import { emAtraso } from '../../domain/calc'
@@ -143,6 +144,7 @@ export function Sidebar() {
             Já tem conta? Entrar
           </Link>
         )}
+        <TrocaNegocio className="mb-3 hidden xl:flex" />
         <Link
           to="/configuracoes"
           className="flex items-center justify-center gap-3 rounded-[14px] border border-[#e3e9f1] bg-surface p-2 shadow-[var(--shadow-card)] transition-all duration-150 hover:-translate-y-px xl:justify-start xl:p-3"
