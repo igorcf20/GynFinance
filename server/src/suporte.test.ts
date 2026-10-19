@@ -61,7 +61,11 @@ describe.skipIf(!URL_BASE)('suporte', () => {
 
   let contas = 0
   async function criarConta(email: string, nome = 'Ana') {
+    // E-mail de admin não se cadastra pelo site: a conta da equipe nasce antes de entrar na lista.
+    const lista = process.env.ADMIN_EMAILS
+    process.env.ADMIN_EMAILS = ''
     const r = await app.inject({ method: 'POST', url: '/api/conta/criar', remoteAddress: `10.1.0.${++contas}`, payload: { nome, email, senha: 'senha-forte-1', aceiteTermos: true } })
+    process.env.ADMIN_EMAILS = lista
     expect(r.statusCode).toBe(201)
     return { gyn_sessao: r.cookies.find((x) => x.name === 'gyn_sessao')!.value }
   }

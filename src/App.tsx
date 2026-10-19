@@ -28,6 +28,7 @@ import { Reports } from './pages/Reports'
 import { Settings } from './pages/Settings'
 import { Suporte } from './pages/Suporte'
 import { Transactions } from './pages/Transactions'
+import { AceiteTermos } from './components/layout/AceiteTermos'
 
 /**
  * Enquanto descobre se há servidor (e quem está logado), mostra só a marca, para não piscar a
@@ -49,7 +50,12 @@ function Portao({ children }: { children: ReactNode }) {
   }
   // O superadmin entra no painel mesmo sem ter configurado um negócio próprio.
   if (conta && !conta.temNegocio && pathname !== '/comecar' && pathname !== '/redefinir-senha' && !(conta.admin && pathname === '/admin')) return <Navigate to="/comecar" replace />
-  return <>{children}</>
+  return (
+    <>
+      {children}
+      {conta && pathname !== '/redefinir-senha' && <AceiteTermos />}
+    </>
+  )
 }
 
 /**

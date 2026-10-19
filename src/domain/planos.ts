@@ -59,6 +59,10 @@ export interface MinhaAssinatura {
   temIa: boolean
   situacao: SituacaoAssinatura
   proximoVencimento?: DataISO
+  /** Mensalidade desta conta, em centavos (vem do servidor). */
+  valorCentavos?: number
+  /** Quando a pessoa pediu o cancelamento pelo sistema (ISO). */
+  cancelamentoPedidoEm?: string
 }
 
 /** Suspensa ou cancelada: o cliente vê e exporta os dados, mas não grava nada novo. */

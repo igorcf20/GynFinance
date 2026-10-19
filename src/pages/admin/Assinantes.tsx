@@ -9,7 +9,7 @@ import { Chips } from '../../components/ui/Tabs'
 import { FORMAS_MENSALIDADE, maisUmMes, mensalidadeDe, vencida, type Assinante, type FonteAdmin, type FormaMensalidade, type PagamentoMensalidade, type PlanoAdmin } from '../../data/admin'
 import { SITUACOES_ASSINATURA, type SituacaoAssinatura } from '../../domain/planos'
 import type { DataISO } from '../../domain/types'
-import { addMeses, brl, centavosParaTexto, dataBR, lerValor, mesAno } from '../../lib/format'
+import { addMeses, brl, centavosParaTexto, dataBR, lerValor, mesAno, textoSeguro } from '../../lib/format'
 import { mensagemCobranca } from './Resumo'
 import { haQuanto, SeloSituacao, telefoneLegivel, Texto } from './comum'
 
@@ -18,7 +18,7 @@ type Filtro = 'todos' | SituacaoAssinatura | 'vencidos'
 const ATIVIDADES: Record<string, string> = { servico: 'Serviços', comercio: 'Comércio', industria: 'Indústria', misto: 'Comércio e serviços' }
 
 function baixarContatos(lista: Assinante[]) {
-  const cel = (v: string) => `"${v.replace(/"/g, '""')}"`
+  const cel = (v: string) => `"${textoSeguro(v).replace(/"/g, '""')}"`
   const linhas = [
     ['Nome', 'Negócio', 'E-mail', 'WhatsApp', 'Cidade', 'Plano', 'Situação', 'Mensalidade', 'Próximo vencimento', 'Cliente desde'],
     ...lista.map((a) => [

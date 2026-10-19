@@ -111,3 +111,10 @@ export function uid(): string {
   const h = Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('')
   return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`
 }
+
+/**
+ * Texto digitado (ou vindo do extrato do banco) que começa com =, +, -, @ viraria fórmula ao abrir a
+ * planilha no Excel e poderia abrir links ou rodar comandos no computador de quem abre: o apóstrofo
+ * na frente faz o Excel mostrar como texto.
+ */
+export const textoSeguro = (v: string) => (/^[=+\-@\t\r]/.test(v) ? `'${v}` : v)

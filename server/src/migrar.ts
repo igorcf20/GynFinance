@@ -6,6 +6,18 @@ import pg from 'pg'
 import { config } from './config.ts'
 
 const pasta = new URL('../migrations/', import.meta.url)
+const pastaLegal = new URL('../legal/', import.meta.url)
+
+/** Termos de uso e política de privacidade: grava o texto inicial se ainda não houver versão publicada. */
+async function textosLegaisIniciais(c: pg.Client) {
+  await c.query("select set_config('app.superadmin', 'on', false)")
+  for (const tipo of ['termos', 'privacidade']) {
+    const ja = await c.query('select 1 from documento_legal where tipo = $1', [tipo])
+    if (ja.rowCount) continue
+    const texto = await readFile(new URL(`${tipo}.md`, pastaLegal), 'utf8')
+    await c.query("insert into documento_legal (tipo, versao, texto, publicado_por) values ($1, $2, $3, 'versão inicial')", [tipo, '2026-10-19', texto.trim()])
+  }
+}
 
 export async function migrar(urlAdmin: string, senhaApp?: string): Promise<string[]> {
   const c = new pg.Client({ connectionString: urlAdmin })
@@ -29,6 +41,7 @@ export async function migrar(urlAdmin: string, senhaApp?: string): Promise<strin
         throw new Error(`Migração ${nome} falhou: ${(e as Error).message}`)
       }
     }
+    await textosLegaisIniciais(c)
     if (senhaApp) {
       const existe = (await c.query("select 1 from pg_roles where rolname = 'gynfinance_app'")).rowCount
       const senha = c.escapeLiteral(senhaApp)
@@ -38,6 +51,11 @@ export async function migrar(urlAdmin: string, senhaApp?: string): Promise<strin
       await c.query('grant execute on all functions in schema public to gynfinance_app')
       // Números de chamado (identity) usam sequência.
       await c.query('grant usage on all sequences in schema public to gynfinance_app')
+      // O controle de migrações não é assunto do servidor.
+      await c.query('revoke all on migracao from gynfinance_app')
+      // Um pedido travado não segura uma conexão do banco para sempre.
+      await c.query("alter role gynfinance_app set statement_timeout = '30s'")
+      await c.query("alter role gynfinance_app set idle_in_transaction_session_timeout = '60s'")
     }
   } finally {
     await c.end()

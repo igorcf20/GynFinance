@@ -61,7 +61,11 @@ describe.skipIf(!URL_ADMIN)('servidor', () => {
   let contas = 0
   async function criarConta(email: string) {
     // Cada conta vem de um endereço diferente, para não esbarrar no limite de 10 cadastros por minuto.
+    // E-mail de admin não se cadastra pelo site: a conta nasce antes de o e-mail entrar na lista.
+    const lista = process.env.ADMIN_EMAILS
+    process.env.ADMIN_EMAILS = ''
     const r = await app.inject({ method: 'POST', url: '/api/conta/criar', remoteAddress: `10.0.0.${++contas}`, payload: { nome: 'Ana', email, senha: 'senha-forte-1', aceiteTermos: true } })
+    process.env.ADMIN_EMAILS = lista
     expect(r.statusCode).toBe(201)
     const c = r.cookies.find((x) => x.name === 'gyn_sessao')!
     return { gyn_sessao: c.value }
@@ -295,12 +299,13 @@ describe.skipIf(!URL_ADMIN)('servidor', () => {
   })
 
   it('superadmin: só quem está em ADMIN_EMAILS entra e não vê lançamentos', async () => {
+    // A conta do admin existe antes de o e-mail entrar na lista (pelo site ele não se cadastra).
+    const igor = await criarConta('igor@exemplo.com')
     process.env.ADMIN_EMAILS = 'igor@exemplo.com'
     const cliente = await criarConta('cliente@exemplo.com')
     expect((await pedir(cliente, 'GET', '/api/admin/resumo')).statusCode).toBe(403)
     expect((await app.inject({ method: 'GET', url: '/api/admin/assinantes' })).statusCode).toBe(401)
 
-    const igor = await criarConta('igor@exemplo.com')
     expect((await pedir(igor, 'GET', '/api/conta')).json().admin).toBe(true)
     const lista = (await pedir(igor, 'GET', '/api/admin/assinantes')).json().assinantes
     const c = lista.find((x: { email: string }) => x.email === 'cliente@exemplo.com')

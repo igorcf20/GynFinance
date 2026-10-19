@@ -15,6 +15,8 @@ export interface Conta {
   sistema?: { aviso: string; manutencao: boolean; iaLigada: boolean }
   /** Chamados de suporte com resposta que a pessoa ainda não leu. */
   suporte?: { naoLidos: number }
+  /** Termos de uso ou política de privacidade com versão nova que a pessoa ainda não aceitou. */
+  aceitesPendentes?: { tipo: 'termos' | 'privacidade'; versao: string; titulo: string }[]
 }
 
 export class ErroApi extends Error {
