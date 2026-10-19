@@ -97,7 +97,7 @@ export async function criarApp(pool: pg.Pool, opcoes: { site?: boolean; logger?:
     rep.header('x-content-type-options', 'nosniff')
     rep.header('x-frame-options', 'DENY')
     rep.header('referrer-policy', 'strict-origin-when-cross-origin')
-    rep.header('permissions-policy', 'camera=(self), microphone=(), geolocation=(), payment=()')
+    rep.header('permissions-policy', 'camera=(self), microphone=(self), geolocation=(), payment=()')
     if (config.cookieSeguro) rep.header('strict-transport-security', 'max-age=31536000; includeSubDomains')
     // Respostas com dados da conta nunca ficam guardadas em cache compartilhado.
     if (req.url.startsWith('/api/') && !req.url.startsWith('/api/publico/') && !rep.hasHeader('cache-control')) rep.header('cache-control', 'no-store')

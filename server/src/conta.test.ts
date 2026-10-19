@@ -157,6 +157,9 @@ describe.skipIf(!URL_BASE)('conta e base legal', () => {
     expect(r.headers['x-frame-options']).toBe('DENY')
     expect(r.headers['x-content-type-options']).toBe('nosniff')
     expect(r.headers['cache-control']).toBe('no-store')
+    // Câmera (comprovantes, Assistente) e microfone (ditado do Assistente) liberados só para o próprio site.
+    expect(r.headers['permissions-policy']).toContain('camera=(self)')
+    expect(r.headers['permissions-policy']).toContain('microphone=(self)')
     expect((await app.inject({ method: 'POST', url: '/api/conta/sair', headers: { origin: 'null' } })).statusCode).toBe(403)
   })
 
