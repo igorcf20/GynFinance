@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Gynfinance</title>
+    <!-- Abre dentro do app das lojas quando não há internet na primeira vez. Tudo aqui, sem arquivo de fora. -->
+    <style>
+      body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #f5f7fa; color: #13213d;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: env(safe-area-inset-top) 24px env(safe-area-inset-bottom); box-sizing: border-box; }
+      .card { background: #fff; border: 1px solid #e7ecf3; border-radius: 20px; box-shadow: 0 10px 30px -18px rgba(31, 63, 120, 0.35); padding: 28px; max-width: 360px; width: 100%; text-align: center; }
+      .icone { width: 56px; height: 56px; border-radius: 50%; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; background: linear-gradient(#fff4e6, #ffe4c4); color: #e8640c; }
+      h1 { font-size: 19px; margin: 0; }
+      p { font-size: 14px; line-height: 1.6; color: #52637d; margin: 8px 0 20px; }
+      button { width: 100%; height: 48px; border: 0; border-radius: 14px; font: 600 15px inherit; font-family: inherit; color: #fff; background: linear-gradient(#4b8dfb, #2b6ae9); box-shadow: 0 10px 20px -10px rgba(52, 120, 246, 0.8); }
+      @media (prefers-color-scheme: dark) { body { background: #0e1626; color: #e8eef8; } .card { background: #16213a; border-color: #24324f; } p { color: #9fb0ca; } }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="icone">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h.01M8.5 16.43a5 5 0 0 1 7 0M2 8.82a15 15 0 0 1 4.17-2.65M10.66 5c4.01-.36 8.14.9 11.34 3.76M16.85 11.25a10 10 0 0 1 2.22 1.68M5 13a10 10 0 0 1 5.24-2.76M2 2l20 20"/></svg>
+      </div>
+      <h1>Sem internet agora</h1>
+      <p>O Gynfinance precisa de internet para abrir na primeira vez. Confira o Wi-Fi ou os dados móveis e tente de novo.</p>
+      <button type="button" onclick="location.href = 'https://gynfinance.kodemi.pt/app/'">Tentar de novo</button>
+    </div>
+    <script>
+      window.addEventListener('online', function () { location.href = 'https://gynfinance.kodemi.pt/app/' })
+    </script>
+  </body>
+</html>

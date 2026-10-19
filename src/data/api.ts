@@ -47,19 +47,37 @@ export async function api<T>(metodo: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
   return json as T
 }
 
-export type Servidor = { tem: false } | { tem: true; conta: Conta | null }
+export type Servidor = { tem: false } | { tem: 'fora' } | { tem: true; conta: Conta | null }
+
+// Este aparelho já falou com o servidor: se depois não responder, é falta de internet (ou o
+// servidor fora do ar), não a demonstração publicada. Sem isso, o app instalado abriria sem
+// internet mostrando os dados de exemplo no lugar do negócio da pessoa.
+const CHAVE_SERVIDOR = 'gynfinance:tem-servidor'
+const jaTeveServidor = () => {
+  try {
+    return localStorage.getItem(CHAVE_SERVIDOR) === '1'
+  } catch {
+    return false
+  }
+}
 
 /** Há servidor? Se houver, quem está logado? */
 export async function verificarServidor(): Promise<Servidor> {
   if (dentroDeMoldura) return { tem: false }
+  const semResposta: Servidor = jaTeveServidor() ? { tem: 'fora' } : { tem: false }
   try {
     const r = await fetch('api/conta', { credentials: 'same-origin' })
     const tipo = r.headers.get('content-type') ?? ''
-    if (!tipo.includes('application/json')) return { tem: false }
-    if (r.status === 401) return { tem: true, conta: null }
-    if (r.ok) return { tem: true, conta: (await r.json()) as Conta }
-    return { tem: false }
+    if (!tipo.includes('application/json')) return semResposta
+    const s: Servidor | null = r.status === 401 ? { tem: true, conta: null } : r.ok ? { tem: true, conta: (await r.json()) as Conta } : null
+    if (!s) return semResposta
+    try {
+      localStorage.setItem(CHAVE_SERVIDOR, '1')
+    } catch {
+      /* sem armazenamento: segue igual */
+    }
+    return s
   } catch {
-    return { tem: false }
+    return semResposta
   }
 }

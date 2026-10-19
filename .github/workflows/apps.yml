@@ -1,0 +1,57 @@
+# Monta os apps do Gynfinance (Capacitor) para conferir que o projeto compila. O APK de teste do
+# Android fica para baixar na aba Actions; dá para instalar direto num celular Android.
+# O do iPhone só roda quando pedido à mão (máquina Mac na nuvem gasta mais minutos).
+name: Apps
+
+on:
+  push:
+    branches: [feat/modulo-inicial, main]
+    paths: ['android/**', 'ios/**', 'capacitor.config.ts', 'resources/**', 'package.json', '.github/workflows/apps.yml']
+  pull_request:
+    paths: ['android/**', 'ios/**', 'capacitor.config.ts', 'resources/**', 'package.json', '.github/workflows/apps.yml']
+  workflow_dispatch:
+    inputs:
+      iphone:
+        description: 'Montar também o app do iPhone (simulador)'
+        type: boolean
+        default: false
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm ci
+      - run: npx vite build
+      - run: npx cap sync android
+      - name: APK de teste
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gynfinance-android-teste
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+
+  iphone:
+    if: github.event_name == 'workflow_dispatch' && inputs.iphone
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx vite build
+      - run: npx cap sync ios
+      - name: Compilar para o simulador (sem assinatura)
+        working-directory: ios/App
+        run: xcodebuild -project App.xcodeproj -scheme App -sdk iphonesimulator -configuration Debug CODE_SIGNING_ALLOWED=NO build

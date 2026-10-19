@@ -10,7 +10,11 @@
     "test": "vitest run",
     "preview": "vite preview",
     "servidor": "node server/src/index.ts",
-    "migrar": "node server/src/migrar.ts"
+    "migrar": "node server/src/migrar.ts",
+    "app:preparar": "vite build && cap sync",
+    "app:android": "cap open android",
+    "app:iphone": "cap open ios",
+    "app:icones": "npx @capacitor/assets generate --iconBackgroundColor '#ffffff' --iconBackgroundColorDark '#0e1626' --splashBackgroundColor '#F5F7FA' --splashBackgroundColorDark '#0e1626'"
   },
   "dependencies": {
     "@fastify/cookie": "^11.1.3",
@@ -31,6 +35,10 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/cli": "^8.5.3",
+    "@capacitor/core": "^8.5.3",
+    "@capacitor/ios": "^8.5.3",
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^24.13.3",
     "@types/nodemailer": "^8.0.2",
@@ -43,7 +51,9 @@
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.2",
     "vite": "^8.3.0",
-    "vitest": "^5.0.4"
+    "vite-plugin-pwa": "^2.0.0",
+    "vitest": "^5.0.4",
+    "workbox-window": "^7.4.1"
   },
   "engines": {
     "node": ">=22.18"
