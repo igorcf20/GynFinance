@@ -8,6 +8,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import type pg from 'pg'
 import { z } from 'zod'
 import type { GuardaAdmin } from './admin.ts'
+import { ErroDeDados } from './dados.ts'
 import { comAdmin, comUsuario, type Cliente } from './db.ts'
 
 type Linha = Record<string, unknown>
@@ -100,7 +101,18 @@ function lerFotos(lista: z.infer<typeof esquemaAnexo>[]): { fotos: Foto[] } | { 
   return { fotos }
 }
 
+// Espaço de fotos por cliente (somando todos os chamados), para ninguém encher o disco do servidor.
+const ESPACO_FOTOS = 300 * 1024 * 1024
+
 async function gravarFotos(c: Cliente, ticketId: string, mensagemId: string, fotos: Foto[]) {
+  if (!fotos.length) return
+  const usado = await c.query<{ total: string }>(
+    `select coalesce(sum(a.tamanho), 0) as total from ticket_anexo a join ticket t on t.id = a.ticket_id
+     where t.usuario_id = (select usuario_id from ticket where id = $1)`,
+    [ticketId],
+  )
+  if (Number(usado.rows[0]?.total ?? 0) + fotos.reduce((s, f) => s + f.dados.length, 0) > ESPACO_FOTOS)
+    throw new ErroDeDados('O espaço para fotos nos chamados acabou. Mande a mensagem sem foto ou fale com a gente pelo WhatsApp.')
   for (const f of fotos)
     await c.query('insert into ticket_anexo (id, ticket_id, mensagem_id, nome, tipo, tamanho, dados) values ($1, $2, $3, $4, $5, $6, $7) on conflict (id) do nothing', [
       f.id,
@@ -282,6 +294,18 @@ export async function rotasSuporte(
   const logado = { preHandler: exigirLogin }
   const so = { preHandler: exigirAdmin }
   const comFotos = (preHandler: Guarda) => ({ preHandler, bodyLimit: LIMITE_CORPO })
+  const anonimos = (() => {
+    let hora = 0
+    let total = 0
+    return {
+      cabe(n: number) {
+        const agora = Math.floor(Date.now() / 3_600_000)
+        if (agora !== hora) [hora, total] = [agora, 0]
+        total += n
+        return total <= 300
+      },
+    }
+  })()
   const naoEncontrado = (rep: FastifyReply) => rep.code(404).send({ erro: 'Chamado não encontrado.' })
 
   const enviarFoto = (rep: FastifyReply, f: { tipo: string; nome: string; dados: Buffer } | undefined) => {
@@ -345,7 +369,7 @@ export async function rotasSuporte(
     return { ticket }
   })
 
-  app.post('/api/suporte/tickets/:id/mensagens', comFotos(exigirLogin), async (req, rep) => {
+  app.post('/api/suporte/tickets/:id/mensagens', { ...comFotos(exigirLogin), config: { rateLimit: { max: 20, timeWindow: '1 minute' } } }, async (req, rep) => {
     const { id: ticketId } = z.object({ id }).parse(req.params)
     const d = esquemaMensagem.parse(req.body)
     const lidas = lerFotos(d.anexos)
@@ -390,6 +414,8 @@ export async function rotasSuporte(
   app.post('/api/suporte/erros', { config: { rateLimit: { max: 20, timeWindow: '1 minute' } } }, async (req, rep) => {
     const d = esquemaErros.parse(req.body)
     const usuarioId = await lerSessao(req)
+    // Sem login, no máximo 300 erros por hora no total: o painel não vira depósito de lixo.
+    if (!usuarioId && !anonimos.cabe(d.erros.length)) return rep.code(204).send()
     const { pagina: paginaAtual, paginaNome, ...aparelho } = d.contexto ?? esquemaContexto.parse({})
     await gravarErros(
       pool,

@@ -8,6 +8,7 @@ import { Input } from '../components/ui/Field'
 import { Segmentado } from '../components/ui/Tabs'
 import { api } from '../data/api'
 import { useStore } from '../data/store'
+import { LINK_PRIVACIDADE, LINK_TERMOS } from '../lib/legal'
 
 type Aba = 'entrar' | 'criar'
 
@@ -98,7 +99,7 @@ export function Entrar() {
     if (aba === 'criar') {
       if (!nome.trim()) return setErro('Diga como podemos te chamar.')
       if (senha.length < 8) return setErro('A senha precisa de pelo menos 8 caracteres.')
-      if (!aceite) return setErro('Para criar a conta, aceite os termos de uso e o tratamento dos dados.')
+      if (!aceite) return setErro('Para criar a conta, leia e aceite os Termos de Uso e a Política de Privacidade.')
     }
     setEnviando(true)
     try {
@@ -175,7 +176,17 @@ export function Entrar() {
             {aba === 'criar' && (
               <label className="flex cursor-pointer items-start gap-2.5 text-[13px] leading-relaxed text-ink-2">
                 <input type="checkbox" checked={aceite} onChange={(e) => setAceite(e.target.checked)} className="mt-0.5 size-4 shrink-0 accent-[#3478f6]" />
-                Aceito os termos de uso e o tratamento dos meus dados para o funcionamento do Gynfinance, conforme a LGPD.
+                <span>
+                  Li e aceito os{' '}
+                  <a href={LINK_TERMOS} target="_blank" rel="noopener" className="font-semibold text-primary hover:underline">
+                    Termos de Uso
+                  </a>{' '}
+                  e a{' '}
+                  <a href={LINK_PRIVACIDADE} target="_blank" rel="noopener" className="font-semibold text-primary hover:underline">
+                    Política de Privacidade
+                  </a>
+                  , e declaro ter 18 anos ou mais.
+                </span>
               </label>
             )}
             {erro && (

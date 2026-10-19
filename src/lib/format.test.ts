@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { brl, lerValor } from './format'
+import { brl, lerValor, textoSeguro } from './format'
 
 describe('valores em centavos', () => {
   it('lê o que a pessoa digita', () => {
@@ -18,5 +18,14 @@ describe('valores em centavos', () => {
     expect(brl(248000)).toBe('R$ 2.480')
     expect(brl(9990)).toBe('R$ 99,90')
     expect(brl(35000, { centavos: true })).toBe('R$ 350,00')
+  })
+})
+
+describe('textoSeguro', () => {
+  it('não deixa texto virar fórmula no Excel', () => {
+    expect(textoSeguro('=HYPERLINK("http://x")')).toBe(`'=HYPERLINK("http://x")`)
+    expect(textoSeguro('-2+3')).toBe(`'-2+3`)
+    expect(textoSeguro('@SUM(A1)')).toBe(`'@SUM(A1)`)
+    expect(textoSeguro('Pix recebido')).toBe('Pix recebido')
   })
 })

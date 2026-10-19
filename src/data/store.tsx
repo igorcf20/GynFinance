@@ -179,6 +179,8 @@ interface Store {
   /** Senha nova pelo link do e-mail; já entra na conta. */
   redefinirSenha: (codigo: string, senha: string) => Promise<Conta>
   sair: () => Promise<void>
+  /** Lê de novo a conta (depois de aceitar termos, pedir cancelamento etc.). */
+  recarregarConta: () => Promise<void>
 }
 
 export type Desfazer = () => void
@@ -569,6 +571,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     restaurarDemo()
   }, [restaurarDemo])
 
+  const recarregarConta = useCallback(async () => {
+    setConta(await api<Conta>('GET', 'conta'))
+  }, [])
+
   const valor = useMemo<Store>(
     () => ({
       dados: salvo.dados,
@@ -605,8 +611,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       criarConta,
       redefinirSenha,
       sair,
+      recarregarConta,
     }),
-    [salvo, hoje, mes, salvarLancamento, excluirLancamento, marcarComoPago, registrarPagamento, anexarComprovante, marcarDasPago, separarReserva, recorrenciaDe, salvarAtendimento, excluirAtendimento, salvarParceiro, excluirParceiro, vincularLancamentos, cadastrarSugeridos, importarExtrato, atualizarEmpresa, atualizarPreferencias, dispensarAviso, comecar, restaurarDemo, servidor, conta, salvamento, bloqueio, entrar, criarConta, redefinirSenha, sair],
+    [salvo, hoje, mes, salvarLancamento, excluirLancamento, marcarComoPago, registrarPagamento, anexarComprovante, marcarDasPago, separarReserva, recorrenciaDe, salvarAtendimento, excluirAtendimento, salvarParceiro, excluirParceiro, vincularLancamentos, cadastrarSugeridos, importarExtrato, atualizarEmpresa, atualizarPreferencias, dispensarAviso, comecar, restaurarDemo, servidor, conta, salvamento, bloqueio, entrar, criarConta, redefinirSenha, sair, recarregarConta],
   )
   return <Ctx.Provider value={valor}>{children}</Ctx.Provider>
 }

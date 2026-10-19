@@ -12,7 +12,7 @@ import { Segmentado } from '../components/ui/Tabs'
 import Papa from 'papaparse'
 import type { Categoria, Lancamento, Natureza } from '../domain/types'
 import { useStore } from '../data/store'
-import { brl, dataBR, diaMes, mesDe } from '../lib/format'
+import { brl, dataBR, diaMes, mesDe, textoSeguro } from '../lib/format'
 import { temModulo } from '../domain/planos'
 import { FORMAS } from '../data/formas'
 
@@ -51,13 +51,13 @@ export function csvDoMes(linhas: Lancamento[], categorias: Categoria[]): string 
     'Data de competência': dataBR(l.dataCompetencia),
     Vencimento: l.dataVencimento ? dataBR(l.dataVencimento) : '',
     Tipo: NATUREZA[l.natureza],
-    Categoria: cat(l.categoriaId)?.nome ?? '',
+    Categoria: textoSeguro(cat(l.categoriaId)?.nome ?? ''),
     'Grupo da categoria': NOMES_GRUPO_CSV[cat(l.categoriaId)?.grupo ?? ''] ?? '',
-    Descrição: l.descricao ?? '',
-    'Cliente ou fornecedor': l.contraparte ?? '',
-    'Nº da fatura': l.numeroFatura ?? '',
-    'Nº da pro forma': l.numeroProforma ?? '',
-    'Nº do orçamento': l.numeroOrcamento ?? '',
+    Descrição: textoSeguro(l.descricao ?? ''),
+    'Cliente ou fornecedor': textoSeguro(l.contraparte ?? ''),
+    'Nº da fatura': textoSeguro(l.numeroFatura ?? ''),
+    'Nº da pro forma': textoSeguro(l.numeroProforma ?? ''),
+    'Nº do orçamento': textoSeguro(l.numeroOrcamento ?? ''),
     'Forma de pagamento': FORMAS.find((f) => f.valor === l.formaPagamento)?.rotulo ?? '',
     Valor: ((sinal(l) * l.valor) / 100).toFixed(2).replace('.', ','),
     Situação: situacaoBadge(l).texto,

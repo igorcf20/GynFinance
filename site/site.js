@@ -329,6 +329,8 @@
       if (!v) return;
       var alvo = e.querySelector('span') || e;
       alvo.textContent = v;
+      // Documento que não é CNPJ (ex.: "NIF 123456789"): tira o "CNPJ" da frente.
+      if (e.getAttribute('data-empresa') === 'cnpj' && /[a-z]/i.test(v) && e.firstChild && e.firstChild.nodeType === 3) e.firstChild.textContent = '';
       e.hidden = false;
     });
 

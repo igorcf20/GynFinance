@@ -80,6 +80,18 @@ export interface NovoPagamento {
   avancarVencimento: boolean
 }
 
+/** Uma versão publicada dos termos de uso ou da política de privacidade. */
+export interface DocumentoLegal {
+  id: number
+  tipo: 'termos' | 'privacidade'
+  versao: string
+  texto: string
+  publicadoEm: string
+  publicadoPor: string
+  /** Quantas contas aceitaram esta versão. */
+  aceites: number
+}
+
 export interface FonteAdmin {
   demonstracao: boolean
   assinantes(): Promise<Assinante[]>
@@ -100,6 +112,10 @@ export interface FonteAdmin {
   registro(): Promise<RegistroAdmin[]>
   /** Mensalidades recebidas no mês de hoje. */
   recebidoNoMes(hoje: DataISO): Promise<Centavos>
+  /** Termos de uso e política de privacidade: todas as versões, a mais nova primeiro. */
+  documentos(): Promise<DocumentoLegal[]>
+  /** Publica uma versão nova; devolve o nome da versão (a data). */
+  publicarDocumento(tipo: DocumentoLegal['tipo'], texto: string): Promise<string>
 }
 
 export const FORMAS_MENSALIDADE: { valor: FormaMensalidade; rotulo: string }[] = [
@@ -186,6 +202,8 @@ export const fonteServidor: FonteAdmin = {
   salvarConfig: async (c) => void (await api('PUT', 'admin/config', c)),
   registro: async () => (await api<{ registro: RegistroAdmin[] }>('GET', 'admin/registro')).registro,
   recebidoNoMes: async () => (await api<{ recebidoNoMesCentavos: Centavos }>('GET', 'admin/resumo')).recebidoNoMesCentavos,
+  documentos: async () => (await api<{ documentos: DocumentoLegal[] }>('GET', 'admin/legal')).documentos,
+  publicarDocumento: async (tipo, texto) => (await api<{ versao: string }>('POST', 'admin/legal', { tipo, texto })).versao,
 }
 
 // ---------- Demonstração (na memória) ----------
@@ -233,6 +251,7 @@ export function criarFonteDemo(hoje: DataISO = hojeReal()): FonteAdmin {
   let config: ConfigSistema = { cadastroAberto: true, diasTeste: 7, planoPadrao: 'essencial', iaLigada: false, aviso: '', manutencao: false }
   let conteudo: Record<string, string> = {}
   const imagens: ImagemSite[] = []
+  const documentos: DocumentoLegal[] = []
   const registro: RegistroAdmin[] = [{ quando: quando(-1), admin: 'voce@exemplo.com', acao: 'mensalidade recebida', detalhe: 'Mendes Refrigeração: R$ 25,00' }]
   const anotar = (acao: string, detalhe = '') => registro.unshift({ quando: new Date().toISOString(), admin: 'voce@exemplo.com', acao, detalhe })
   const espera = <T,>(v: T) => new Promise<T>((r) => setTimeout(() => r(structuredClone(v)), 120))
@@ -339,6 +358,25 @@ export function criarFonteDemo(hoje: DataISO = hojeReal()): FonteAdmin {
       await espera(null)
     },
     registro: () => espera(registro),
+    documentos: async () => {
+      if (!documentos.length) {
+        // Os textos iniciais são os mesmos do servidor (server/legal), carregados só quando abre a aba.
+        const [termos, privacidade] = await Promise.all([import('../../server/legal/termos.md?raw'), import('../../server/legal/privacidade.md?raw')])
+        const inicial = (id: number, tipo: DocumentoLegal['tipo'], texto: string): DocumentoLegal => ({ id, tipo, versao: '2026-10-19', texto: texto.trim(), publicadoEm: '2026-10-19T12:00:00.000Z', publicadoPor: 'versão inicial', aceites: 6 })
+        documentos.push(inicial(1, 'termos', termos.default), inicial(2, 'privacidade', privacidade.default))
+      }
+      return espera(documentos)
+    },
+    publicarDocumento: async (tipo, texto) => {
+      const versao = hoje
+      const atual = documentos.find((d) => d.tipo === tipo)
+      if (atual?.texto === texto.trim()) throw new Error('O texto é igual ao da versão em vigor.')
+      const iguais = documentos.filter((d) => d.tipo === tipo && d.versao.startsWith(versao)).length
+      const nome = iguais ? `${versao}.${iguais + 1}` : versao
+      documentos.unshift({ id: documentos.length + 1, tipo, versao: nome, texto: texto.trim(), publicadoEm: new Date().toISOString(), publicadoPor: 'voce@exemplo.com', aceites: 0 })
+      anotar('documento legal publicado', `${tipo === 'termos' ? 'Termos de Uso' : 'Política de Privacidade'}, versão ${nome}`)
+      return espera(nome)
+    },
     recebidoNoMes: (h) =>
       espera(
         [...pagamentos.values()]

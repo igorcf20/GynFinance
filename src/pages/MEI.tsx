@@ -218,6 +218,10 @@ export function MEI() {
           </a>
         </div>
       </div>
+      <p className="mt-5 text-[12px] leading-relaxed text-ink-2">
+        Os valores do limite e do DAS são estimativas, feitas com as regras públicas conhecidas e com o que você lançou. Antes de pagar ou declarar, confira no Portal do Empreendedor ou com o
+        seu contador.
+      </p>
     </>
   )
 }

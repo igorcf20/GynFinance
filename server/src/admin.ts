@@ -488,6 +488,10 @@ export interface Acesso {
     temIa: boolean
     situacao: (typeof SITUACOES)[number]
     proximoVencimento?: string
+    /** Mensalidade desta conta (preço combinado ou o do plano), em centavos. */
+    valorCentavos?: number
+    /** Quando a pessoa pediu o cancelamento pelo sistema. */
+    cancelamentoPedidoEm?: string
   }
   sistema: { aviso: string; manutencao: boolean; iaLigada: boolean }
 }
@@ -496,7 +500,7 @@ export interface Acesso {
 export async function lerAcesso(c: Cliente): Promise<Acesso> {
   // Uma consulta de cada vez: a mesma conexão não roda duas ao mesmo tempo.
   const a = await c.query<Linha>(
-    `select a.situacao, a.proximo_vencimento, p.id, p.nome, p.modulos, p.tem_ia
+    `select a.situacao, a.proximo_vencimento, a.cancelamento_pedido_em, coalesce(a.valor, p.preco) as valor, p.id, p.nome, p.modulos, p.tem_ia
      from assinatura a join plano p on p.id = a.plano_id where a.usuario_id = app_usuario()`,
   )
   const cfg = await c.query<Linha>('select aviso, manutencao, ia_ligada from config_sistema')
@@ -511,6 +515,8 @@ export async function lerAcesso(c: Cliente): Promise<Acesso> {
           temIa: (x.tem_ia as boolean) && (s.ia_ligada as boolean),
           situacao: x.situacao as (typeof SITUACOES)[number],
           proximoVencimento: (x.proximo_vencimento as string | null) ?? undefined,
+          valorCentavos: Number(x.valor),
+          cancelamentoPedidoEm: x.cancelamento_pedido_em ? new Date(x.cancelamento_pedido_em as string).toISOString() : undefined,
         }
       : // Conta sem assinatura (não deveria acontecer): tudo liberado, como no teste.
         { planoId: 'essencial', planoNome: 'Essencial', modulos: MODULOS_SERVIDOR.filter((m) => m.pronto).map((m) => m.id), temIa: false, situacao: 'teste' },

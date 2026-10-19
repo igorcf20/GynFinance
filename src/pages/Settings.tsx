@@ -1,4 +1,4 @@
-import { Bell, Building2, CreditCard, Landmark, LogOut, Monitor, Moon, RotateCcw, Sparkles, Sun, Tags, Users, type LucideIcon } from 'lucide-react'
+import { Bell, Building2, CreditCard, Download, ExternalLink, KeyRound, Landmark, LogOut, Monitor, Moon, RotateCcw, ShieldCheck, Sparkles, Sun, Tags, Trash2, Users, XCircle, type LucideIcon } from 'lucide-react'
 import { useTema } from '../components/layout/BotaoTema'
 import type { Tema } from '../lib/tema'
 import { useState } from 'react'
@@ -12,8 +12,10 @@ import { Input, Select, Toggle } from '../components/ui/Field'
 import { Modal, useToast } from '../components/ui/Modal'
 import { saldoPorConta } from '../domain/calc'
 import type { Atividade, Categoria } from '../domain/types'
+import { api } from '../data/api'
 import { useStore } from '../data/store'
 import { brl } from '../lib/format'
+import { LINK_PRIVACIDADE, LINK_TERMOS } from '../lib/legal'
 
 const SECOES: { id: string; rotulo: string; icone: LucideIcon }[] = [
   { id: 'empresa', rotulo: 'Empresa', icone: Building2 },
@@ -23,6 +25,7 @@ const SECOES: { id: string; rotulo: string; icone: LucideIcon }[] = [
   { id: 'aparencia', rotulo: 'Aparência', icone: Moon },
   { id: 'usuarios', rotulo: 'Usuários', icone: Users },
   { id: 'assinatura', rotulo: 'Assinatura', icone: CreditCard },
+  { id: 'privacidade', rotulo: 'Privacidade e dados', icone: ShieldCheck },
 ]
 
 const UFS = 'AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO'.split(' ')
@@ -211,8 +214,252 @@ function Usuarios() {
   )
 }
 
+const SITUACAO_TEXTO: Record<string, string> = {
+  teste: 'Você está no período de teste grátis, sem cobrança automática.',
+  ativa: 'Assinatura em dia.',
+  atrasada: 'A mensalidade está atrasada. Fale com a gente para regularizar.',
+  suspensa: 'Assinatura suspensa: você vê e baixa os seus dados, mas não grava coisas novas.',
+  cancelada: 'Assinatura cancelada: você ainda vê e baixa os seus dados.',
+}
+const dataBr = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`
+
+/** Cancelamento pelo próprio sistema, com protocolo (CDC e Decreto 7.962/2013). */
+function Cancelamento() {
+  const { conta, recarregarConta } = useStore()
+  const toast = useToast()
+  const [aberto, setAberto] = useState(false)
+  const [motivo, setMotivo] = useState('')
+  const [enviando, setEnviando] = useState(false)
+  const [protocolo, setProtocolo] = useState<number | null>(null)
+  const [erro, setErro] = useState('')
+  const pedido = conta?.assinatura?.cancelamentoPedidoEm
+  async function pedir() {
+    setEnviando(true)
+    setErro('')
+    try {
+      const r = await api<{ protocolo: number }>('POST', 'conta/cancelamento', { motivo })
+      setProtocolo(r.protocolo)
+      await recarregarConta()
+      toast(`Pedido de cancelamento registrado. Protocolo nº ${r.protocolo}.`)
+    } catch (e) {
+      setErro((e as Error).message)
+    } finally {
+      setEnviando(false)
+    }
+  }
+  return (
+    <Card>
+      <CardTitulo>Cancelar a assinatura</CardTitulo>
+      {pedido ? (
+        <p className="text-[13px] text-ink-2">
+          Você pediu o cancelamento em <b className="text-ink">{dataBr(pedido.slice(0, 10))}</b>. A resposta chega em Ajuda e suporte. O acesso continua até o fim do período já pago.
+        </p>
+      ) : (
+        <>
+          <p className="mb-4 text-[13px] text-ink-2">
+            Sem multa e sem fidelidade. O acesso continua até o fim do período já pago. Se contratou há menos de 7 dias, você tem direito à devolução integral do que pagou.
+          </p>
+          <Button variante="secundario" icone={<XCircle size={16} />} onClick={() => setAberto(true)}>
+            Pedir cancelamento
+          </Button>
+        </>
+      )}
+      <Modal
+        aberto={aberto}
+        onFechar={() => {
+          setAberto(false)
+          setProtocolo(null)
+        }}
+        titulo={protocolo ? 'Pedido registrado' : 'Pedir cancelamento'}
+        rodape={
+          protocolo ? (
+            <Button
+              onClick={() => {
+                setAberto(false)
+                setProtocolo(null)
+              }}
+            >
+              Entendi
+            </Button>
+          ) : (
+            <>
+              <Button variante="secundario" onClick={() => setAberto(false)}>
+                Voltar
+              </Button>
+              <Button variante="perigo" carregando={enviando} onClick={pedir}>
+                Pedir cancelamento
+              </Button>
+            </>
+          )
+        }
+      >
+        {protocolo ? (
+          <p className="text-[14px]">
+            Seu protocolo é o <b className="text-ink">nº {protocolo}</b>. A confirmação chega em Ajuda e suporte. Até o fim do período já pago, tudo continua funcionando.
+          </p>
+        ) : (
+          <div className="flex flex-col gap-3 text-[14px]">
+            <p>Antes de ir, baixe os seus dados em Configurações &gt; Privacidade e dados, se quiser guardar uma cópia.</p>
+            <label className="flex flex-col gap-1.5 text-[13px] font-medium text-ink">
+              Quer contar o motivo? (opcional)
+              <textarea value={motivo} onChange={(e) => setMotivo(e.target.value)} maxLength={1000} rows={3} className="rounded-[12px] border border-line bg-surface px-3.5 py-2.5 text-[14px] font-normal text-ink outline-none focus:border-primary focus:ring-4 focus:ring-primary/12" />
+            </label>
+            {erro && (
+              <p role="alert" className="rounded-[12px] bg-danger-soft px-3.5 py-2.5 text-[13px] text-[#9b1c2e]">
+                {erro}
+              </p>
+            )}
+          </div>
+        )}
+      </Modal>
+    </Card>
+  )
+}
+
+/** Direitos do titular (LGPD, art. 18): documentos, senha, cópia dos dados e exclusão da conta. */
+function Privacidade() {
+  const { modo, conta, sair } = useStore()
+  const navigate = useNavigate()
+  const toast = useToast()
+  const [senhaAtual, setSenhaAtual] = useState('')
+  const [senhaNova, setSenhaNova] = useState('')
+  const [trocando, setTrocando] = useState(false)
+  const [erroSenha, setErroSenha] = useState('')
+  const [excluir, setExcluir] = useState(false)
+  const [senhaExcluir, setSenhaExcluir] = useState('')
+  const [excluindo, setExcluindo] = useState(false)
+  const [erroExcluir, setErroExcluir] = useState('')
+  const comConta = modo === 'real' && !!conta
+
+  async function trocarSenha() {
+    setErroSenha('')
+    if (senhaNova.length < 8) return setErroSenha('A senha nova precisa de pelo menos 8 caracteres.')
+    setTrocando(true)
+    try {
+      await api('POST', 'conta/senha', { atual: senhaAtual, nova: senhaNova })
+      setSenhaAtual('')
+      setSenhaNova('')
+      toast('Senha trocada. Os outros aparelhos precisam entrar de novo.')
+    } catch (e) {
+      setErroSenha((e as Error).message)
+    } finally {
+      setTrocando(false)
+    }
+  }
+
+  async function excluirConta() {
+    setErroExcluir('')
+    setExcluindo(true)
+    try {
+      await api('POST', 'conta/excluir', { senha: senhaExcluir })
+      await sair()
+      navigate('/entrar', { replace: true })
+    } catch (e) {
+      setErroExcluir((e as Error).message)
+      setExcluindo(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-4 md:gap-5">
+      <Card>
+        <CardTitulo>Termos e privacidade</CardTitulo>
+        <p className="mb-4 text-[13px] text-ink-2">
+          Seus dados são usados só para o Gynfinance funcionar para você. Não vendemos dados e a nossa equipe não lê os seus lançamentos.
+        </p>
+        <div className="flex flex-col gap-2.5 sm:flex-row">
+          <a href={LINK_TERMOS} target="_blank" rel="noopener" className="inline-flex items-center gap-1.5 text-[14px] font-semibold text-primary hover:underline">
+            Termos de Uso <ExternalLink size={14} aria-hidden />
+          </a>
+          <a href={LINK_PRIVACIDADE} target="_blank" rel="noopener" className="inline-flex items-center gap-1.5 text-[14px] font-semibold text-primary hover:underline sm:ml-4">
+            Política de Privacidade <ExternalLink size={14} aria-hidden />
+          </a>
+        </div>
+      </Card>
+      {!comConta ? (
+        <Card>
+          <CardTitulo>Seus dados</CardTitulo>
+          <p className="text-[13px] text-ink-2">Na demonstração os dados ficam só neste navegador e nada é enviado. Com uma conta, aqui você troca a senha, baixa uma cópia dos seus dados e exclui a conta.</p>
+        </Card>
+      ) : (
+        <>
+          <Card>
+            <CardTitulo>Trocar a senha</CardTitulo>
+            <form
+              className="grid grid-cols-1 gap-4 sm:grid-cols-2"
+              onSubmit={(e) => {
+                e.preventDefault()
+                void trocarSenha()
+              }}
+            >
+              <Input label="Senha atual" type="password" autoComplete="current-password" value={senhaAtual} onChange={(e) => setSenhaAtual(e.target.value)} />
+              <Input label="Senha nova" type="password" autoComplete="new-password" placeholder="Pelo menos 8 caracteres" value={senhaNova} onChange={(e) => setSenhaNova(e.target.value)} />
+              {erroSenha && (
+                <p role="alert" className="rounded-[12px] bg-danger-soft px-3.5 py-2.5 text-[13px] text-[#9b1c2e] sm:col-span-2">
+                  {erroSenha}
+                </p>
+              )}
+              <div className="sm:col-span-2">
+                <Button type="submit" variante="secundario" icone={<KeyRound size={16} />} carregando={trocando}>
+                  Trocar a senha
+                </Button>
+              </div>
+            </form>
+          </Card>
+          <Card>
+            <CardTitulo>Baixar meus dados</CardTitulo>
+            <p className="mb-4 text-[13px] text-ink-2">
+              Um arquivo com tudo o que está guardado da sua conta: cadastro, negócio, lançamentos, clientes e fornecedores, chamados, mensalidades e acessos. Serve para guardar uma cópia
+              ou levar para outro sistema.
+            </p>
+            <a href="api/conta/meus-dados" download className="inline-flex h-11 items-center gap-2 rounded-[12px] border border-line bg-surface px-5 text-[14px] font-semibold text-ink hover:border-[#d3dce8]">
+              <Download size={16} aria-hidden /> Baixar meus dados
+            </a>
+          </Card>
+          <Card>
+            <CardTitulo>Excluir minha conta</CardTitulo>
+            <p className="mb-4 text-[13px] text-ink-2">
+              Apaga a conta, o negócio, os lançamentos, os comprovantes e os chamados. Não dá para desfazer. Ficam guardados só o que a lei obriga: os registros de acesso (6 meses) e as
+              mensalidades pagas (5 anos).
+            </p>
+            <Button variante="secundario" icone={<Trash2 size={16} />} onClick={() => setExcluir(true)} className="text-danger">
+              Excluir minha conta
+            </Button>
+          </Card>
+        </>
+      )}
+      <Modal
+        aberto={excluir}
+        onFechar={() => setExcluir(false)}
+        titulo="Excluir a conta para sempre?"
+        rodape={
+          <>
+            <Button variante="secundario" onClick={() => setExcluir(false)}>
+              Cancelar
+            </Button>
+            <Button variante="perigo" icone={<Trash2 size={16} />} carregando={excluindo} disabled={!senhaExcluir} onClick={excluirConta}>
+              Excluir para sempre
+            </Button>
+          </>
+        }
+      >
+        <div className="flex flex-col gap-3 text-[14px]">
+          <p>Tudo o que está no Gynfinance será apagado agora e não volta. Se quiser uma cópia, baixe os seus dados antes.</p>
+          <Input label="Digite a sua senha para confirmar" type="password" autoComplete="current-password" value={senhaExcluir} onChange={(e) => setSenhaExcluir(e.target.value)} />
+          {erroExcluir && (
+            <p role="alert" className="rounded-[12px] bg-danger-soft px-3.5 py-2.5 text-[13px] text-[#9b1c2e]">
+              {erroExcluir}
+            </p>
+          )}
+        </div>
+      </Modal>
+    </div>
+  )
+}
+
 function Assinatura() {
   const { restaurarDemo, modo, conta, sair } = useStore()
+  const assinatura = conta?.assinatura
   const navigate = useNavigate()
   const toast = useToast()
   const [confirmar, setConfirmar] = useState(false)
@@ -221,13 +468,28 @@ function Assinatura() {
       <Card>
         <CardTitulo>Assinatura</CardTitulo>
         <div className="rounded-[14px] border border-[#d6e4fb] bg-[#f4f8ff] p-5">
-          <p className="text-[13px] font-semibold text-primary">Plano Essencial</p>
+          <p className="text-[13px] font-semibold text-primary">Plano {assinatura?.planoNome ?? 'Essencial'}</p>
           <p className="num mt-1 text-[28px] font-bold text-ink">
-            R$ 25<span className="text-[14px] font-medium text-ink-2"> por mês</span>
+            {brl(assinatura?.valorCentavos ?? 2500)}
+            <span className="text-[14px] font-medium text-ink-2"> por mês</span>
           </p>
-          <p className="mt-2 text-[13px] text-ink-2">Entradas e saídas, contas a pagar e receber, Meu MEI e relatórios. Sem fidelidade.</p>
+          {assinatura ? (
+            <p className="mt-2 text-[13px] text-ink-2">
+              {SITUACAO_TEXTO[assinatura.situacao]}
+              {assinatura.proximoVencimento && assinatura.situacao !== 'cancelada' && (
+                <>
+                  {' '}
+                  {assinatura.situacao === 'teste' ? 'O teste vai até' : 'Próximo vencimento:'} <b className="text-ink">{dataBr(assinatura.proximoVencimento)}</b>.
+                </>
+              )}{' '}
+              Sem fidelidade.
+            </p>
+          ) : (
+            <p className="mt-2 text-[13px] text-ink-2">Entradas e saídas, contas a pagar e receber, Meu MEI e relatórios. Sem fidelidade.</p>
+          )}
         </div>
       </Card>
+      {modo === 'real' && conta && <Cancelamento />}
       {modo === 'demo' && (
         <Card>
           <CardTitulo>Demonstração</CardTitulo>
@@ -306,7 +568,7 @@ function Assinatura() {
   )
 }
 
-const CONTEUDO: Record<string, () => React.JSX.Element> = { empresa: Empresa, categorias: Categorias, contas: Contas, notificacoes: Notificacoes, aparencia: Aparencia, usuarios: Usuarios, assinatura: Assinatura }
+const CONTEUDO: Record<string, () => React.JSX.Element> = { empresa: Empresa, categorias: Categorias, contas: Contas, notificacoes: Notificacoes, aparencia: Aparencia, usuarios: Usuarios, assinatura: Assinatura, privacidade: Privacidade }
 
 export function Settings() {
   const { secao = 'empresa' } = useParams()

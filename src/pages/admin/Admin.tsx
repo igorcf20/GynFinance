@@ -1,6 +1,6 @@
 // Painel de superadmin: mensalidades, assinantes e contatos, planos com módulos e IA, textos e
 // imagens do site e o funcionamento geral do sistema.
-import { Bug, CreditCard, FileClock, Globe, LayoutDashboard, LifeBuoy, Settings2, ShieldAlert, Users } from 'lucide-react'
+import { Bug, CreditCard, FileClock, FileText, Globe, LayoutDashboard, LifeBuoy, Settings2, ShieldAlert, Users } from 'lucide-react'
 import { useCallback, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Header } from '../../components/layout/Header'
@@ -16,10 +16,11 @@ import { AbaConfig, AbaRegistro } from './Config'
 import { AbaPlanos } from './Planos'
 import { AbaResumo } from './Resumo'
 import { AbaSite } from './Site'
+import { AbaTermos } from './Termos'
 import { AbaErros, AbaSuporte } from './Suporte'
 import { useCarregar } from './comum'
 
-type Aba = 'resumo' | 'suporte' | 'erros' | 'assinantes' | 'planos' | 'site' | 'config' | 'registro'
+type Aba = 'resumo' | 'suporte' | 'erros' | 'assinantes' | 'planos' | 'site' | 'termos' | 'config' | 'registro'
 
 const ABAS: { valor: Aba; rotulo: string; icone: typeof Users }[] = [
   { valor: 'resumo', rotulo: 'Resumo', icone: LayoutDashboard },
@@ -28,6 +29,7 @@ const ABAS: { valor: Aba; rotulo: string; icone: typeof Users }[] = [
   { valor: 'assinantes', rotulo: 'Assinantes', icone: Users },
   { valor: 'planos', rotulo: 'Planos', icone: CreditCard },
   { valor: 'site', rotulo: 'Site', icone: Globe },
+  { valor: 'termos', rotulo: 'Termos', icone: FileText },
   { valor: 'config', rotulo: 'Sistema', icone: Settings2 },
   { valor: 'registro', rotulo: 'Histórico', icone: FileClock },
 ]
@@ -88,6 +90,7 @@ function Painel({ fonte, hoje }: { fonte: FonteAdmin; hoje: DataISO }) {
       {aba === 'assinantes' && <AbaAssinantes assinantes={assinantes.dados} planos={planos.dados ?? []} hoje={hoje} onAbrir={setAberto} />}
       {aba === 'planos' && <AbaPlanos fonte={fonte} planos={planos.dados} onMudou={recarregarTudo} />}
       {aba === 'site' && <AbaSite fonte={fonte} />}
+      {aba === 'termos' && <AbaTermos fonte={fonte} />}
       {aba === 'config' && <AbaConfig fonte={fonte} planos={planos.dados ?? []} />}
       {aba === 'registro' && <AbaRegistro fonte={fonte} />}
 

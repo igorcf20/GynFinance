@@ -1,6 +1,15 @@
 /* Gynfinance — site de venda
    Identidade visual do app: Modern Light Fintech (Inter, azul #3478F6, fundo #F5F7FA). */
 
+/* Fonte servida pelo próprio site (sem Google Fonts: o IP do visitante não vai para terceiros). */
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("fonts/inter.woff2") format("woff2-variations"), url("fonts/inter.woff2") format("woff2");
+}
+
 :root {
   --bg: #f5f7fa;
   --surface: #ffffff;
@@ -692,6 +701,8 @@ ul { margin: 0; padding: 0; list-style: none; }
 }
 .footer-legal { display: flex; flex-wrap: wrap; gap: 4px 16px; }
 .footer-legal > span:not(:first-child)::before { content: "·"; margin-right: 16px; color: var(--muted); }
+.footer-legal a { color: inherit; text-decoration: none; }
+.footer-legal a:hover { color: var(--primary); text-decoration: underline; }
 .credito {
   display: inline-flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink-2);
   padding: 6px 10px; margin: -6px -10px; border-radius: 12px; transition: background-color 160ms ease;
