@@ -2,6 +2,7 @@
 // Painel em regime de caixa (data de pagamento); faturamento do MEI pela data da venda.
 import { addMeses, brl, diasEntre, mesDe, nomeMes, prazo, capitalizar } from '../lib/format'
 import { parametroDoAno } from './parametros'
+import { previsaoCaixa, usoDosTetos } from './planejamento'
 import type { Categoria, Centavos, ContaFinanceira, Dados, DataISO, Lancamento, MesISO, PagamentoDas } from './types'
 
 const realizadoNoMes = (l: Lancamento, mes: MesISO) =>
@@ -324,6 +325,29 @@ export function alertas(dados: Dados, hoje: DataISO): Alerta[] {
   const r = resumoMes(dados.lancamentos, mes)
   if (r.retirei > r.sobrou && r.sobrou >= 0 && r.retirei > 0) {
     lista.push({ id: `retirada:${mes}`, nivel: 'atencao', painel: true, dispensavel: true, texto: `Você tirou ${brl(r.retirei - r.sobrou)} a mais do que o negócio gerou este mês.` })
+  }
+
+  // Vai faltar dinheiro nos próximos 30 dias, se nada mudar (Fluxo de caixa mostra a previsão inteira).
+  const neg = previsaoCaixa(dados, hoje, 30).primeiroNegativo
+  if (neg) {
+    const quando = neg.dia === hoje ? 'Hoje' : `No dia ${neg.dia.slice(8, 10)}/${neg.dia.slice(5, 7)}`
+    lista.push({
+      id: `caixa-negativo:${neg.dia}`,
+      nivel: diasEntre(hoje, neg.dia) <= 7 ? 'perigo' : 'atencao',
+      painel: true,
+      dispensavel: true,
+      texto: `${quando} o caixa fica ${brl(-neg.saldo)} no vermelho, se nada mudar. Cobre quem deve ou adie uma conta.`,
+      acao: { rotulo: 'Ver previsão', para: '/fluxo' },
+    })
+  }
+
+  // Teto de gasto por categoria (Configurações > Metas e tetos).
+  for (const t of usoDosTetos(dados, mes)) {
+    if (t.uso >= 1) {
+      lista.push({ id: `teto-100:${t.categoriaId}:${mes}`, nivel: 'perigo', painel: true, dispensavel: true, texto: `${t.nome} passou do teto do mês: ${brl(t.gasto)} de ${brl(t.limite)}.`, acao: { rotulo: 'Ver', para: '/relatorios' } })
+    } else if (t.uso >= 0.8) {
+      lista.push({ id: `teto-80:${t.categoriaId}:${mes}`, nivel: 'atencao', painel: true, dispensavel: true, texto: `${t.nome} já usou ${Math.round(t.uso * 100)}% do teto do mês. Restam ${brl(t.limite - t.gasto)}.`, acao: { rotulo: 'Ver', para: '/relatorios' } })
+    }
   }
 
   const aportes = dados.lancamentos.filter((l) => l.natureza === 'aporte' && l.espelhoDe && l.dataPagamento && mesDe(l.dataPagamento) === mes)

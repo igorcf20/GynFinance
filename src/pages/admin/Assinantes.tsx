@@ -338,6 +338,17 @@ export function FichaAssinante({
           </p>
         </div>
         <Texto label="Anotações (só você vê)" value={observacao} onChange={(e) => setObservacao(e.target.value)} placeholder="Ex.: paga sempre no dia 10" />
+        {(a.indicadoPor || !!a.indicacoes) && (
+          <div className="rounded-[12px] border border-line bg-hover/60 px-3.5 py-3 text-[13px] text-ink-2">
+            <p className="font-semibold text-ink">Indique e ganhe</p>
+            {a.indicadoPor && (
+              <p className="mt-1">
+                Chegou pelo link de <b className="text-ink">{a.indicadoPor.nome}</b> ({a.indicadoPor.email}). Quando pagar a primeira mensalidade, dê 1 mês grátis para os dois (próximo vencimento + 1 mês).
+              </p>
+            )}
+            {!!a.indicacoes && <p className="mt-1">Já trouxe {a.indicacoes} {a.indicacoes === 1 ? 'pessoa' : 'pessoas'} pelo link dela.</p>}
+          </div>
+        )}
 
         {/* Mensalidades */}
         <div>

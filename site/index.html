@@ -361,11 +361,11 @@
       </div>
     </section>
 
-    <!-- Grade de recursos -->
+    <!-- Grade de destaques (a lista completa, por plano, fica em #tudo, depois do preço) -->
     <section class="section all-features" aria-labelledby="titulo-tudo">
       <div class="container">
         <div class="section-head revela">
-          <h2 class="h2" id="titulo-tudo">Tudo incluído no Gynfinance</h2>
+          <h2 class="h2" id="titulo-tudo">O que você vai usar todo dia</h2>
           <p class="lead">Feito para o dia a dia de quem vende, presta serviço ou fabrica o que vende.</p>
         </div>
         <div class="feat-grid">
@@ -430,12 +430,7 @@
             <p>Responda poucas perguntas e o painel já fica montado.</p>
           </article>
         </div>
-        <div class="breve revela">
-          <span>Em breve:</span>
-          <span class="chip"><svg class="icon" aria-hidden="true"><use href="#i-recibo"/></svg>Emissão de nota fiscal <em>em breve</em></span>
-          <span class="chip"><svg class="icon" aria-hidden="true"><use href="#i-caixa"/></svg>Controle de estoque <em>em breve</em></span>
-          <span class="chip"><svg class="icon" aria-hidden="true"><use href="#i-qr"/></svg>Pix integrado <em>em breve</em></span>
-        </div>
+        <p class="ver-tudo revela"><a href="#tudo">Ver a lista completa, com o que vem em cada plano <svg class="icon icon-arrow" aria-hidden="true"><use href="#i-seta"/></svg></a></p>
       </div>
     </section>
 
@@ -529,6 +524,355 @@
         </div>
         <!-- Planos vindos do painel (site.js preenche; sem JS fica o cartão acima) -->
         <div class="planos" data-planos hidden></div>
+      </div>
+    </section>
+
+    <!-- Tudo o que o Gynfinance faz: lista completa por área, com o que vem em cada plano.
+         site.js troca as colunas pelos planos ativos do painel; sem servidor fica o Essencial. -->
+    <section class="section secao-tudo" id="tudo" aria-labelledby="titulo-tudo-faz">
+      <div class="container">
+        <div class="section-head revela">
+          <span class="eyebrow"><span class="dot"></span>Funcionalidades</span>
+          <h2 class="h2" id="titulo-tudo-faz">Tudo o que o Gynfinance faz</h2>
+          <p class="lead">A lista completa, separada por assunto. Toque em cada grupo para ver os detalhes.</p>
+        </div>
+        <div class="comp revela" data-comp>
+          <div class="comp-barra">
+            <p class="comp-resumo" data-comp-resumo>46 funcionalidades em 10 áreas</p>
+            <button type="button" class="btn btn-secondary btn-sm comp-alternar" data-comp-alternar aria-controls="comp-grupos">
+              <svg class="icon" aria-hidden="true"><use href="#i-seta-baixo"/></svg><span>Abrir tudo</span>
+            </button>
+          </div>
+          <div class="comp-cabeca comp-n1" data-comp-cabeca aria-hidden="true">
+            <span class="comp-cabeca-rotulo">O que vem no plano</span>
+            <div class="comp-planos"><span class="comp-plano"><strong>Essencial</strong><small>R$ 25/mês</small></span></div>
+          </div>
+          <div class="comp-grupos comp-n1" id="comp-grupos" data-comp-grupos>
+          <details class="comp-grupo" id="tudo-dia" open>
+            <summary>
+              <span class="comp-ic"><svg class="icon" aria-hidden="true"><use href="#i-raio"/></svg></span>
+              <span class="comp-titulo">O dia a dia do dinheiro</span>
+              <span class="comp-qtd" data-comp-qtd>9 funcionalidades</span>
+              <svg class="icon comp-seta" aria-hidden="true"><use href="#i-seta-baixo"/></svg>
+            </summary>
+            <ul class="comp-lista">
+              <li class="comp-linha" data-req="base">
+                <div class="comp-nome"><strong>Painel com quanto sobrou no mês</strong><span>O número mais importante logo na primeira tela, com o que entrou e o que saiu.</span></div>
+                <div class="comp-marcas"><span class="comp-marca sim"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span class="sr-only">Incluído no Essencial</span></span></div>
+              </li>
+              <li class="comp-linha" data-req="base">
+                <div class="comp-nome"><strong>Resumo da semana no início</strong><span>Ao abrir, um resumo do que entrou, do que saiu e do que vence nos próximos dias.</span></div>
+                <div class="comp-marcas"><span class="comp-marca sim"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span class="sr-only">Incluído no Essencial</span></span></div>
+              </li>
+              <li class="comp-linha" data-req="base">
+                <div class="comp-nome"><strong>Lançamentos de entradas e saídas</strong><span>Anote vendas e gastos em poucos toques, no celular ou no computador.</span></div>
+                <div class="comp-marcas"><span class="comp-marca sim"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span class="sr-only">Incluído no Essencial</span></span></div>
+              </li>
+              <li class="comp-linha" data-req="ia" data-pronto="nao">
+                <div class="comp-nome"><strong>Assistente por voz, foto e texto</strong><span>Fale, mande a foto do cupom ou escreva, e o lançamento fica pronto para conferir.</span></div>
+                <div class="comp-marcas"><span class="comp-breve">em breve</span></div>
+              </li>
+              <li class="comp-linha" data-req="base">
+                <div class="comp-nome"><strong>Categorias próprias</strong><span>Crie as categorias com os nomes que o seu negócio usa.</span></div>
+                <div class="comp-marcas"><span class="comp-marca sim"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span class="sr-only">Incluído no Essencial</span></span></div>
+              </li>
+              <li class="comp-linha" data-req="comprovantes">
+                <div class="comp-nome"><strong>Comprovantes guardados</strong><span>Foto ou PDF do comprovante junto de cada pagamento.</span></div>
+                <div class="comp-marcas"><span class="comp-marca sim"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span class="sr-only">Incluído no Essencial</span></span></div>
+              </li>
+              <li class="comp-linha" data-req="base">
+                <div class="comp-nome"><strong>Número da fatura, pro forma e orçamento</strong><span>Guarde esses números no lançamento para achar tudo depois.</span></div>
+                <div class="comp-marcas"><span class="comp-marca sim"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span class="sr-only">Incluído no Essencial</span></span></div>
+              </li>
+              <li class="comp-linha" data-req="base">
+                <div class="comp-nome"><strong>Botão de esconder valores</strong><span>Esconda os números da tela quando tiver alguém por perto.</span></div>
+                <div class="comp-marcas"><span class="comp-marca sim"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span class="sr-only">Incluído no Essencial</span></span></div>
+              </li>
+              <li class="comp-linha" data-req="base">
+                <div class="comp-nome"><strong>Lixeira de 30 dias</strong><span>Apagou sem querer? Dá para recuperar em até 30 dias.</span></div>
+                <div class="comp-marcas"><span class="comp-marca sim"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span class="sr-only">Incluído no Essencial</span></span></div>
+              </li>
+            </ul>
+          </details>
+          <details class="comp-grupo" id="tudo-contas">
+            <summary>
+              <span class="comp-ic"><svg class="icon" aria-hidden="true"><use href="#i-conversa"/></svg></span>
+              <span class="comp-titulo">Contas e cobranças</span>
+              <span class="comp-qtd" data-comp-qtd>6 funcionalidades</span>
+              <svg class="icon comp-seta" aria-hidden="true"><use href="#i-seta-baixo"/></svg>
+            </summary>
+            <ul class="comp-lista">
+              <li class="comp-linha" data-req="base">
+                <div class="comp-nome"><strong>Contas a pagar e a receber</strong><span>Tudo o que vence, separado do que já foi pago, com destaque para o que atrasou.</span></div>
+                <div class="comp-marcas"><span class="comp-marca sim"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span class="sr-only">Incluído no Essencial</span></span></div>
+              </li>
+              <li class="comp-linha" data-req="base">
+                <div class="comp-nome"><strong>Contas fixas que se repetem</strong><span>Aluguel, internet e outras contas lançadas sozinhas todo mês.</span></div>
+                <div class="comp-marcas"><span class="comp-marca sim"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span class="sr-only">Incluído no Essencial</span></span></div>
+              </li>
+              <li class="comp-linha" data-req="base">
+                <div class="comp-nome"><strong>Pagamento parcial ou parcelado</strong><span>Registre que pagou só uma parte ou dividiu em parcelas.</span></div>
+                <div class="comp-marcas"><span class="comp-marca sim"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span class="sr-only">Incluído no Essencial</span></span></div>
+              </li>
+              <li class="comp-linha" data-req="base">
+                <div class="comp-nome"><strong>Cobrar o cliente pelo WhatsApp</strong><span>Com um toque, a mensagem sai pronta com valor, vencimento e chave Pix.</span></div>
+                <div class="comp-marcas"><span class="comp-marca sim"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span class="sr-only">Incluído no Essencial</span></span></div>
+              </li>
+              <li class="comp-linha" data-req="base">
+                <div class="comp-nome"><strong>Recibo simples para o cliente</strong><span>Mande pelo WhatsApp ou imprima.</span></div>
+                <div class="comp-marcas"><span class="comp-marca sim"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span class="sr-only">Incluído no Essencial</span></span></div>
+              </li>
+              <li class="comp-linha" data-req="base">
+                <div class="comp-nome"><strong>Avisos no celular</strong><span>Lembrete de contas vencendo, do DAS e do fechamento do mês.</span></div>
+                <div class="comp-marcas"><span class="comp-marca sim"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span class="sr-only">Incluído no Essencial</span></span></div>
+              </li>
+            </ul>
+          </details>
+          <details class="comp-grupo" id="tudo-planejar">
+            <summary>
+              <span class="comp-ic"><svg class="icon" aria-hidden="true"><use href="#i-tendencia"/></svg></span>
+              <span class="comp-titulo">Planejamento</span>
+              <span class="comp-qtd" data-comp-qtd>5 funcionalidades</span>
+              <svg class="icon comp-seta" aria-hidden="true"><use href="#i-seta-baixo"/></svg>
+            </summary>
+            <ul class="comp-lista">
+              <li class="comp-linha" data-req="base">
+                <div class="comp-nome"><strong>Fluxo de caixa</strong><span>Entradas e saídas mês a mês, para ver para onde o dinheiro vai.</span></div>
+                <div class="comp-marcas"><span class="comp-marca sim"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span class="sr-only">Incluído no Essencial</span></span></div>
+              </li>
+              <li class="comp-linha" data-req="base">
+                <div class="comp-nome"><strong>Vai faltar dinheiro?</strong><span>Previsão do caixa para os próximos 60 dias, com as contas que já estão marcadas.</span></div>
+                <div class="comp-marcas"><span class="comp-marca sim"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span class="sr-only">Incluído no Essencial</span></span></div>
+              </li>
+              <li class="comp-linha" data-req="base">
+                <div class="comp-nome"><strong>Meta de faturamento do mês</strong><span>Diga quanto quer vender e acompanhe quanto falta.</span></div>
+                <div class="comp-marcas"><span class="comp-marca sim"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span class="sr-only">Incluído no Essencial</span></span></div>
+              </li>
+              <li class="comp-linha" data-req="base">
+                <div class="comp-nome"><strong>Teto de gasto por categoria</strong><span>Aviso quando um tipo de gasto passar do limite que você definiu.</span></div>
+                <div class="comp-marcas"><span class="comp-marca sim"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span class="sr-only">Incluído no Essencial</span></span></div>
+              </li>
+              <li class="comp-linha" data-req="base">
+                <div class="comp-nome"><strong>Reserva para imprevistos</strong><span>Quanto guardar todo mês, com sugestão no fechamento.</span></div>
+                <div class="comp-marcas"><span class="comp-marca sim"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span class="sr-only">Incluído no Essencial</span></span></div>
+              </li>
+            </ul>
+          </details>
+          <details class="comp-grupo" id="tudo-pessoal">
+            <summary>
+              <span class="comp-ic"><svg class="icon" aria-hidden="true"><use href="#i-separar"/></svg></span>
+              <span class="comp-titulo">Pessoal e empresa separados</span>
+              <span class="comp-qtd" data-comp-qtd>4 funcionalidades</span>
+              <svg class="icon comp-seta" aria-hidden="true"><use href="#i-seta-baixo"/></svg>
+            </summary>
+            <ul class="comp-lista">
+              <li class="comp-linha" data-req="base">
+                <div class="comp-nome"><strong>Dinheiro pessoal separado do da empresa</strong><span>O resultado do negócio não se mistura com as contas da casa.</span></div>
+                <div class="comp-marcas"><span class="comp-marca sim"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span class="sr-only">Incluído no Essencial</span></span></div>
+              </li>
+              <li class="comp-linha" data-req="base">
+                <div class="comp-nome"><strong>Pró-labore</strong><span>A sua retirada fica registrada à parte do resultado do negócio.</span></div>
+                <div class="comp-marcas"><span class="comp-marca sim"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span class="sr-only">Incluído no Essencial</span></span></div>
+              </li>
+              <li class="comp-linha" data-req="base">
+                <div class="comp-nome"><strong>Quanto posso tirar para mim este mês</strong><span>Sugestão de pró-labore que não aperta o caixa do negócio.</span></div>
+                <div class="comp-marcas"><span class="comp-marca sim"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span class="sr-only">Incluído no Essencial</span></span></div>
+              </li>
+              <li class="comp-linha" data-req="base">
+                <div class="comp-nome"><strong>Paguei com dinheiro pessoal</strong><span>Gasto da empresa pago do seu bolso fica registrado do jeito certo.</span></div>
+                <div class="comp-marcas"><span class="comp-marca sim"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span class="sr-only">Incluído no Essencial</span></span></div>
+              </li>
+            </ul>
+          </details>
+          <details class="comp-grupo" id="tudo-contador">
+            <summary>
+              <span class="comp-ic"><svg class="icon" aria-hidden="true"><use href="#i-arquivo"/></svg></span>
+              <span class="comp-titulo">Relatórios e contador</span>
+              <span class="comp-qtd" data-comp-qtd>5 funcionalidades</span>
+              <svg class="icon comp-seta" aria-hidden="true"><use href="#i-seta-baixo"/></svg>
+            </summary>
+            <ul class="comp-lista">
+              <li class="comp-linha" data-req="base">
+                <div class="comp-nome"><strong>Relatórios</strong><span>Entradas, saídas e categorias de cada mês, em gráficos simples.</span></div>
+                <div class="comp-marcas"><span class="comp-marca sim"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span class="sr-only">Incluído no Essencial</span></span></div>
+              </li>
+              <li class="comp-linha" data-req="base">
+                <div class="comp-nome"><strong>Fechamento do mês</strong><span>Resumo do mês que terminou, com sugestão de reserva.</span></div>
+                <div class="comp-marcas"><span class="comp-marca sim"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span class="sr-only">Incluído no Essencial</span></span></div>
+              </li>
+              <li class="comp-linha" data-req="base">
+                <div class="comp-nome"><strong>Relatório em PDF</strong><span>Pronto para mandar ao contador ou levar ao banco.</span></div>
+                <div class="comp-marcas"><span class="comp-marca sim"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span class="sr-only">Incluído no Essencial</span></span></div>
+              </li>
+              <li class="comp-linha" data-req="base">
+                <div class="comp-nome"><strong>Planilha para o contador</strong><span>Os lançamentos do mês em planilha, que abre no Excel.</span></div>
+                <div class="comp-marcas"><span class="comp-marca sim"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span class="sr-only">Incluído no Essencial</span></span></div>
+              </li>
+              <li class="comp-linha" data-req="base">
+                <div class="comp-nome"><strong>Acesso do contador só para ver</strong><span>O contador entra e consulta, sem poder mudar nada.</span></div>
+                <div class="comp-marcas"><span class="comp-marca sim"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span class="sr-only">Incluído no Essencial</span></span></div>
+              </li>
+            </ul>
+          </details>
+          <details class="comp-grupo" id="tudo-mei">
+            <summary>
+              <span class="comp-ic"><svg class="icon" aria-hidden="true"><use href="#i-escudo"/></svg></span>
+              <span class="comp-titulo">Para o MEI</span>
+              <span class="comp-qtd" data-comp-qtd>2 funcionalidades</span>
+              <svg class="icon comp-seta" aria-hidden="true"><use href="#i-seta-baixo"/></svg>
+            </summary>
+            <ul class="comp-lista">
+              <li class="comp-linha" data-req="mei">
+                <div class="comp-nome"><strong>Limite anual do MEI</strong><span>Veja quanto já faturou no ano e receba alerta antes de chegar no limite.</span></div>
+                <div class="comp-marcas"><span class="comp-marca sim"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span class="sr-only">Incluído no Essencial</span></span></div>
+              </li>
+              <li class="comp-linha" data-req="mei">
+                <div class="comp-nome"><strong>Controle do DAS</strong><span>Saiba quando vence e marque como pago.</span></div>
+                <div class="comp-marcas"><span class="comp-marca sim"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span class="sr-only">Incluído no Essencial</span></span></div>
+              </li>
+            </ul>
+          </details>
+          <details class="comp-grupo" id="tudo-agenda">
+            <summary>
+              <span class="comp-ic"><svg class="icon" aria-hidden="true"><use href="#i-calendario"/></svg></span>
+              <span class="comp-titulo">Agenda</span>
+              <span class="comp-qtd" data-comp-qtd>3 funcionalidades</span>
+              <svg class="icon comp-seta" aria-hidden="true"><use href="#i-seta-baixo"/></svg>
+            </summary>
+            <ul class="comp-lista">
+              <li class="comp-linha" data-req="agenda">
+                <div class="comp-nome"><strong>Agenda de atendimentos</strong><span>Marque horários com clientes e veja o dia, a semana ou o mês.</span></div>
+                <div class="comp-marcas"><span class="comp-marca sim"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span class="sr-only">Incluído no Essencial</span></span></div>
+              </li>
+              <li class="comp-linha" data-req="agenda">
+                <div class="comp-nome"><strong>Situação de cada atendimento</strong><span>Confirmado, concluído, cliente faltou ou cancelado.</span></div>
+                <div class="comp-marcas"><span class="comp-marca sim"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span class="sr-only">Incluído no Essencial</span></span></div>
+              </li>
+              <li class="comp-linha" data-req="agenda">
+                <div class="comp-nome"><strong>Contas no calendário</strong><span>Os vencimentos aparecem junto dos atendimentos.</span></div>
+                <div class="comp-marcas"><span class="comp-marca sim"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span class="sr-only">Incluído no Essencial</span></span></div>
+              </li>
+            </ul>
+          </details>
+          <details class="comp-grupo" id="tudo-banco">
+            <summary>
+              <span class="comp-ic"><svg class="icon" aria-hidden="true"><use href="#i-carteira"/></svg></span>
+              <span class="comp-titulo">Banco e extrato</span>
+              <span class="comp-qtd" data-comp-qtd>2 funcionalidades</span>
+              <svg class="icon comp-seta" aria-hidden="true"><use href="#i-seta-baixo"/></svg>
+            </summary>
+            <ul class="comp-lista">
+              <li class="comp-linha" data-req="extrato">
+                <div class="comp-nome"><strong>Importar o extrato do banco</strong><span>Traga o arquivo do banco (OFX ou CSV) em vez de digitar tudo.</span></div>
+                <div class="comp-marcas"><span class="comp-marca sim"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span class="sr-only">Incluído no Essencial</span></span></div>
+              </li>
+              <li class="comp-linha" data-req="extrato">
+                <div class="comp-nome"><strong>Baixa automática nas contas</strong><span>O que bate com o extrato é marcado como pago sozinho.</span></div>
+                <div class="comp-marcas"><span class="comp-marca sim"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span class="sr-only">Incluído no Essencial</span></span></div>
+              </li>
+            </ul>
+          </details>
+          <details class="comp-grupo" id="tudo-clientes" hidden>
+            <summary>
+              <span class="comp-ic"><svg class="icon" aria-hidden="true"><use href="#i-usuarios"/></svg></span>
+              <span class="comp-titulo">Clientes e fornecedores</span>
+              <span class="comp-qtd" data-comp-qtd>0 funcionalidades</span>
+              <svg class="icon comp-seta" aria-hidden="true"><use href="#i-seta-baixo"/></svg>
+            </summary>
+            <ul class="comp-lista">
+              <li class="comp-linha" data-req="clientes" hidden>
+                <div class="comp-nome"><strong>Ficha de cada cliente e fornecedor</strong><span>Quanto você ganhou e gastou com cada um, mês a mês.</span></div>
+                <div class="comp-marcas"><span class="comp-marca nao" aria-hidden="true">–</span><span class="sr-only">Não incluído no Essencial</span></div>
+              </li>
+              <li class="comp-linha" data-req="clientes" hidden>
+                <div class="comp-nome"><strong>Contatos</strong><span>Telefone, e-mail e endereço, com WhatsApp a um toque.</span></div>
+                <div class="comp-marcas"><span class="comp-marca nao" aria-hidden="true">–</span><span class="sr-only">Não incluído no Essencial</span></div>
+              </li>
+              <li class="comp-linha" data-req="clientes" hidden>
+                <div class="comp-nome"><strong>Anotações e tarefas</strong><span>Lembre o que combinou e o que falta fazer com cada um.</span></div>
+                <div class="comp-marcas"><span class="comp-marca nao" aria-hidden="true">–</span><span class="sr-only">Não incluído no Essencial</span></div>
+              </li>
+            </ul>
+          </details>
+          <details class="comp-grupo" id="tudo-conta">
+            <summary>
+              <span class="comp-ic"><svg class="icon" aria-hidden="true"><use href="#i-cadeado"/></svg></span>
+              <span class="comp-titulo">Conta, acesso e ajuda</span>
+              <span class="comp-qtd" data-comp-qtd>7 funcionalidades</span>
+              <svg class="icon comp-seta" aria-hidden="true"><use href="#i-seta-baixo"/></svg>
+            </summary>
+            <ul class="comp-lista">
+              <li class="comp-linha" data-req="negocios" hidden>
+                <div class="comp-nome"><strong>Mais de um negócio na mesma conta</strong><span>Cuide de cada negócio separado, com um único login.</span></div>
+                <div class="comp-marcas"><span class="comp-marca nao" aria-hidden="true">–</span><span class="sr-only">Não incluído no Essencial</span></div>
+              </li>
+              <li class="comp-linha" data-req="base">
+                <div class="comp-nome"><strong>Funciona no celular e no computador</strong><span>Abre no navegador. Não precisa instalar nada.</span></div>
+                <div class="comp-marcas"><span class="comp-marca sim"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span class="sr-only">Incluído no Essencial</span></span></div>
+              </li>
+              <li class="comp-linha" data-req="base">
+                <div class="comp-nome"><strong>Modo escuro</strong><span>Descansa a vista à noite.</span></div>
+                <div class="comp-marcas"><span class="comp-marca sim"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span class="sr-only">Incluído no Essencial</span></span></div>
+              </li>
+              <li class="comp-linha" data-req="base">
+                <div class="comp-nome"><strong>Dados guardados com segurança</strong><span>Conexão protegida e cada empresa só vê os próprios dados.</span></div>
+                <div class="comp-marcas"><span class="comp-marca sim"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span class="sr-only">Incluído no Essencial</span></span></div>
+              </li>
+              <li class="comp-linha" data-req="base">
+                <div class="comp-nome"><strong>Pronto em 2 minutos</strong><span>Responda poucas perguntas e o painel já fica montado.</span></div>
+                <div class="comp-marcas"><span class="comp-marca sim"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span class="sr-only">Incluído no Essencial</span></span></div>
+              </li>
+              <li class="comp-linha" data-req="base">
+                <div class="comp-nome"><strong>Demonstração com dados de exemplo</strong><span>Teste à vontade antes de começar. Nada fica salvo.</span></div>
+                <div class="comp-marcas"><span class="comp-marca sim"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span class="sr-only">Incluído no Essencial</span></span></div>
+              </li>
+              <li class="comp-linha" data-req="base">
+                <div class="comp-nome"><strong>Suporte por chamados</strong><span>Peça ajuda dentro do sistema e acompanhe a resposta.</span></div>
+                <div class="comp-marcas"><span class="comp-marca sim"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span class="sr-only">Incluído no Essencial</span></span></div>
+              </li>
+              <li class="comp-linha" data-req="base">
+                <div class="comp-nome"><strong>Indique e ganhe</strong><span>Indique o Gynfinance para outro negócio e ganhe vantagens na sua assinatura.</span></div>
+                <div class="comp-marcas"><span class="comp-marca sim"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span class="sr-only">Incluído no Essencial</span></span></div>
+              </li>
+            </ul>
+          </details>
+          <details class="comp-grupo" id="tudo-breve">
+            <summary>
+              <span class="comp-ic"><svg class="icon" aria-hidden="true"><use href="#i-caixa"/></svg></span>
+              <span class="comp-titulo">Estoque, nota fiscal e Pix</span>
+              <span class="comp-qtd" data-comp-qtd>3 funcionalidades</span>
+              <svg class="icon comp-seta" aria-hidden="true"><use href="#i-seta-baixo"/></svg>
+            </summary>
+            <ul class="comp-lista">
+              <li class="comp-linha" data-req="estoque" data-pronto="nao">
+                <div class="comp-nome"><strong>Controle de estoque</strong><span>Produtos, entradas e saídas de estoque.</span></div>
+                <div class="comp-marcas"><span class="comp-breve">em breve</span></div>
+              </li>
+              <li class="comp-linha" data-req="nota" data-pronto="nao">
+                <div class="comp-nome"><strong>Emissão de nota fiscal</strong><span>Nota fiscal direto pelo sistema.</span></div>
+                <div class="comp-marcas"><span class="comp-breve">em breve</span></div>
+              </li>
+              <li class="comp-linha" data-req="pix" data-pronto="nao">
+                <div class="comp-nome"><strong>Pix integrado</strong><span>Cobrança por Pix com baixa automática.</span></div>
+                <div class="comp-marcas"><span class="comp-breve">em breve</span></div>
+              </li>
+            </ul>
+          </details>
+          </div>
+          <div class="comp-rodape">
+            <p>Ficou com dúvida sobre alguma funcionalidade? A gente explica.</p>
+            <div class="comp-acoes">
+              <a class="btn btn-whats" href="https://wa.me/351914125381?text=Ol%C3%A1!%20Quero%20saber%20mais%20sobre%20o%20Gynfinance." data-whats target="_blank" rel="noopener">
+                <svg class="icon" aria-hidden="true"><use href="#i-conversa"/></svg>
+                Perguntar no WhatsApp
+              </a>
+              <a class="btn btn-primary" href="/app/#/entrar?depois=comecar" data-cadastro>
+                Começar agora
+                <svg class="icon icon-arrow" aria-hidden="true"><use href="#i-seta"/></svg>
+              </a>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 

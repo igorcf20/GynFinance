@@ -24,6 +24,7 @@ const esquemaPlano = z.object({
   destaque: z.boolean(),
   ativo: z.boolean(),
   ordem: z.number().int().min(0).max(1000),
+  negocios: z.number().int().min(1).max(50).default(1),
 })
 
 const esquemaAssinante = z.object({
@@ -72,6 +73,7 @@ const plano = (r: Linha) => ({
   destaque: r.destaque as boolean,
   ativo: r.ativo as boolean,
   ordem: r.ordem as number,
+  negocios: (r.negocios as number | undefined) ?? 1,
 })
 
 const configSistema = (r: Linha) => ({
@@ -212,8 +214,11 @@ export async function rotasAdmin(app: FastifyInstance, pool: pg.Pool, exigirLogi
                 e.nome_fantasia, e.cnpj, e.eh_mei, e.uf, e.municipio, e.atividade,
                 a.plano_id, a.situacao, a.valor, a.proximo_vencimento, a.observacao,
                 p.nome as plano_nome, p.preco as plano_preco,
-                (select max(pg.pago_em) from pagamento_assinatura pg where pg.usuario_id = u.id) as ultimo_pagamento
+                (select max(pg.pago_em) from pagamento_assinatura pg where pg.usuario_id = u.id) as ultimo_pagamento,
+                ind.nome as indicado_por_nome, ind.email as indicado_por_email,
+                (select count(*)::int from usuario x where x.indicado_por = u.id) as indicacoes
          from usuario u
+         left join usuario ind on ind.id = u.indicado_por
          left join lateral (select * from empresa where usuario_id = u.id order by criado_em limit 1) e on true
          left join assinatura a on a.usuario_id = u.id
          left join plano p on p.id = a.plano_id
@@ -245,6 +250,8 @@ export async function rotasAdmin(app: FastifyInstance, pool: pg.Pool, exigirLogi
           proximoVencimento: (x.proximo_vencimento as string | null) ?? undefined,
           observacao: (x.observacao as string | null) ?? '',
           ultimoPagamento: (x.ultimo_pagamento as string | null) ?? undefined,
+          indicadoPor: x.indicado_por_email ? { nome: x.indicado_por_nome as string, email: x.indicado_por_email as string } : undefined,
+          indicacoes: x.indicacoes as number,
         })),
       }
     }),
@@ -351,7 +358,7 @@ export async function rotasAdmin(app: FastifyInstance, pool: pg.Pool, exigirLogi
       const base = slug(d.nome)
       let novoId = base
       for (let i = 2; (await c.query('select 1 from plano where id = $1', [novoId])).rowCount; i++) novoId = `${base}-${i}`
-      await c.query('insert into plano (id, nome, descricao, preco, modulos, tem_ia, destaque, ativo, ordem) values ($1, $2, $3, $4, $5, $6, $7, $8, $9)', [
+      await c.query('insert into plano (id, nome, descricao, preco, modulos, tem_ia, destaque, ativo, ordem, negocios) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)', [
         novoId,
         d.nome,
         d.descricao,
@@ -361,6 +368,7 @@ export async function rotasAdmin(app: FastifyInstance, pool: pg.Pool, exigirLogi
         d.destaque,
         d.ativo,
         d.ordem,
+        d.negocios,
       ])
       await registrar(c, req, 'plano criado', `${novoId}: ${d.nome}`)
       return novoId
@@ -373,8 +381,8 @@ export async function rotasAdmin(app: FastifyInstance, pool: pg.Pool, exigirLogi
     const d = esquemaPlano.parse(req.body)
     const ok = await comAdmin(pool, async (c) => {
       const r = await c.query(
-        'update plano set nome = $2, descricao = $3, preco = $4, modulos = $5, tem_ia = $6, destaque = $7, ativo = $8, ordem = $9, atualizado_em = now() where id = $1',
-        [planoId, d.nome, d.descricao, d.precoCentavos, [...new Set(['financeiro', ...d.modulos])], d.temIa, d.destaque, d.ativo, d.ordem],
+        'update plano set nome = $2, descricao = $3, preco = $4, modulos = $5, tem_ia = $6, destaque = $7, ativo = $8, ordem = $9, negocios = $10, atualizado_em = now() where id = $1',
+        [planoId, d.nome, d.descricao, d.precoCentavos, [...new Set(['financeiro', ...d.modulos])], d.temIa, d.destaque, d.ativo, d.ordem, d.negocios],
       )
       if (r.rowCount) await registrar(c, req, 'plano alterado', `${planoId}: ${JSON.stringify(d)}`)
       return !!r.rowCount

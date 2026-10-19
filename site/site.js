@@ -422,19 +422,29 @@
     return card;
   }
 
+  // Planos que aparecem no site: ativos, na ordem do painel, no máximo 4.
+  function planosAtivos(planos) {
+    planos = planos.filter(function (p) { return p && typeof p === 'object' && p.ativo !== false && typeof p.nome === 'string'; });
+    if (planos.some(function (p) { return typeof p.ordem === 'number'; })) {
+      planos = planos.slice().sort(function (a, b) { return (a.ordem || 0) - (b.ordem || 0); });
+    }
+    return planos.slice(0, 4);
+  }
+
+  function catalogoModulos(modulos) {
+    var catalogo = {};
+    (Array.isArray(modulos) ? modulos : []).forEach(function (m) { if (m && typeof m.id === 'string') catalogo[m.id] = m; });
+    return catalogo;
+  }
+
   function aplicarPlanos(planos, modulos, conteudo) {
     var destino = document.querySelector('[data-planos]');
     var estatico = document.querySelector('[data-preco-estatico]');
     if (!destino || !estatico) return;
-    planos = planos.filter(function (p) { return p && typeof p === 'object' && p.ativo !== false && typeof p.nome === 'string'; });
+    planos = planosAtivos(planos);
     if (!planos.length) return;
-    if (planos.some(function (p) { return typeof p.ordem === 'number'; })) {
-      planos = planos.slice().sort(function (a, b) { return (a.ordem || 0) - (b.ordem || 0); });
-    }
-    planos = planos.slice(0, 4);
 
-    var catalogo = {};
-    (Array.isArray(modulos) ? modulos : []).forEach(function (m) { if (m && typeof m.id === 'string') catalogo[m.id] = m; });
+    var catalogo = catalogoModulos(modulos);
 
     // Textos que vivem no cartão estático e são aproveitados (já com as edições aplicadas)
     var alt = estatico.querySelector('.alt');
@@ -490,6 +500,155 @@
     }
   }
 
+  // ---------- Tudo o que o Gynfinance faz ----------
+  // Cada linha diz do que depende (data-req): "base" (todo plano), o id de um módulo, "ia" (plan.temIa)
+  // ou "negocios" (quantos negócios o plano permite). As colunas são os planos ativos do painel.
+
+  function plural(n, um, varios) { return n + ' ' + (n === 1 ? um : varios); }
+
+  function marcaSim(nomePlano) {
+    var s = el('span', 'comp-marca sim');
+    s.appendChild(icone('i-check'));
+    s.appendChild(el('span', 'sr-only', 'Incluído no ' + nomePlano));
+    return [s];
+  }
+
+  function marcaNao(nomePlano) {
+    var s = el('span', 'comp-marca nao', '–');
+    s.setAttribute('aria-hidden', 'true');
+    return [s, el('span', 'sr-only', 'Não incluído no ' + nomePlano)];
+  }
+
+  function marcaQtd(n, nomePlano) {
+    var s = el('span', 'comp-marca qtd');
+    var v = el('span', null, String(n));
+    v.setAttribute('aria-hidden', 'true');
+    s.appendChild(v);
+    s.appendChild(el('span', 'sr-only', nomePlano + ': ' + plural(n, 'negócio', 'negócios')));
+    return [s];
+  }
+
+  function negociosDo(p) { return Math.max(1, Math.round(Number(p.negocios) || 1)); }
+
+  function temModuloPlano(p, id) { return id === 'financeiro' || (Array.isArray(p.modulos) && p.modulos.indexOf(id) !== -1); }
+
+  // Devolve as marcas da linha, 'breve' (ainda não existe) ou null (nenhum plano oferece: some da lista).
+  function marcasDaLinha(linha, planos, catalogo) {
+    var req = linha.getAttribute('data-req') || 'base';
+    var nome = function (p) { return p.nome; };
+    if (req === 'base') return planos.map(function (p) { return marcaSim(nome(p)); });
+    if (req === 'ia') {
+      if (!planos.some(function (p) { return p.temIa === true; })) return 'breve';
+      return planos.map(function (p) { return p.temIa === true ? marcaSim(nome(p)) : marcaNao(nome(p)); });
+    }
+    if (req === 'negocios') {
+      if (!planos.some(function (p) { return negociosDo(p) > 1; })) return null;
+      return planos.map(function (p) { return marcaQtd(negociosDo(p), nome(p)); });
+    }
+    var m = catalogo[req];
+    var pronto = m ? m.pronto !== false : linha.getAttribute('data-pronto') !== 'nao';
+    if (!pronto) return 'breve';
+    if (!planos.some(function (p) { return temModuloPlano(p, req); })) return null;
+    return planos.map(function (p) { return temModuloPlano(p, req) ? marcaSim(nome(p)) : marcaNao(nome(p)); });
+  }
+
+  function aplicarComparacao(planos, modulos) {
+    var caixa = document.querySelector('[data-comp]');
+    if (!caixa) return;
+    planos = planosAtivos(planos);
+    if (!planos.length) return;
+    var catalogo = catalogoModulos(modulos);
+    var varios = planos.length > 1;
+    var classeN = 'comp-n' + planos.length;
+
+    var cabeca = caixa.querySelector('[data-comp-cabeca]');
+    var grupos = caixa.querySelector('[data-comp-grupos]');
+    [cabeca, grupos].forEach(function (e) {
+      if (e) e.className = e.className.replace(/\bcomp-n\d\b/g, '').trim() + ' ' + classeN;
+    });
+    if (cabeca) {
+      var rotulo = cabeca.querySelector('.comp-cabeca-rotulo');
+      if (rotulo) rotulo.textContent = varios ? 'Compare os planos' : 'O que vem no plano';
+      var colunas = cabeca.querySelector('.comp-planos');
+      colunas.textContent = '';
+      planos.forEach(function (p) {
+        var c = el('span', 'comp-plano' + (varios && p.destaque ? ' destaque' : ''));
+        c.appendChild(el('strong', null, p.nome));
+        var centavos = Math.max(0, Math.round(Number(p.precoCentavos) || 0));
+        c.appendChild(el('small', null, centavos === 0 ? 'Grátis' : formatarPreco(centavos) + '/mês'));
+        colunas.appendChild(c);
+      });
+    }
+
+    caixa.querySelectorAll('.comp-linha').forEach(function (linha) {
+      var alvo = linha.querySelector('.comp-marcas');
+      var marcas = marcasDaLinha(linha, planos, catalogo);
+      linha.hidden = marcas === null;
+      if (!alvo || marcas === null) return;
+      alvo.textContent = '';
+      if (marcas === 'breve') { alvo.appendChild(el('span', 'comp-breve', 'em breve')); return; }
+      marcas.forEach(function (partes) { partes.forEach(function (n) { alvo.appendChild(n); }); });
+    });
+    contarComparacao(caixa);
+  }
+
+  // Quantas funcionalidades cada grupo mostra; grupo sem nenhuma linha visível some.
+  function contarComparacao(caixa) {
+    var total = 0;
+    var areas = 0;
+    caixa.querySelectorAll('.comp-grupo').forEach(function (g) {
+      var n = 0;
+      g.querySelectorAll('.comp-linha').forEach(function (l) { if (!l.hidden) n++; });
+      g.hidden = n === 0;
+      var qtd = g.querySelector('[data-comp-qtd]');
+      if (qtd) qtd.textContent = plural(n, 'funcionalidade', 'funcionalidades');
+      total += n;
+      if (n) areas++;
+    });
+    var resumo = caixa.querySelector('[data-comp-resumo]');
+    if (resumo) resumo.textContent = plural(total, 'funcionalidade', 'funcionalidades') + ' em ' + plural(areas, 'área', 'áreas');
+    atualizarAlternar(caixa);
+  }
+
+  function gruposVisiveis(caixa) {
+    return Array.prototype.filter.call(caixa.querySelectorAll('.comp-grupo'), function (g) { return !g.hidden; });
+  }
+
+  // "Abrir tudo" quando falta algum grupo aberto; "Fechar tudo" quando todos estão abertos.
+  function atualizarAlternar(caixa) {
+    var botao = caixa.querySelector('[data-comp-alternar]');
+    if (!botao) return;
+    var todos = gruposVisiveis(caixa).every(function (g) { return g.open; });
+    botao.setAttribute('aria-expanded', todos ? 'true' : 'false');
+    botao.querySelector('span').textContent = todos ? 'Fechar tudo' : 'Abrir tudo';
+  }
+
+  function prepararComparacao() {
+    var caixa = document.querySelector('[data-comp]');
+    if (!caixa) return;
+    var botao = caixa.querySelector('[data-comp-alternar]');
+    caixa.querySelectorAll('.comp-grupo').forEach(function (g) {
+      g.addEventListener('toggle', function () { atualizarAlternar(caixa); });
+    });
+    if (botao) {
+      botao.addEventListener('click', function () {
+        var abrir = botao.getAttribute('aria-expanded') !== 'true';
+        gruposVisiveis(caixa).forEach(function (g) { g.open = abrir; });
+        atualizarAlternar(caixa);
+      });
+    }
+    // Link para um grupo (#tudo-mei, por exemplo) já chega com ele aberto.
+    var abrirDoEndereco = function () {
+      var g = location.hash && document.getElementById(location.hash.slice(1));
+      if (g && g.classList.contains('comp-grupo')) g.open = true;
+    };
+    window.addEventListener('hashchange', abrirDoEndereco);
+    abrirDoEndereco();
+    contarComparacao(caixa);
+  }
+
+  try { prepararComparacao(); } catch (e) { /* os grupos continuam abrindo pelo navegador */ }
+
   function iniciar() {
     if (!window.fetch) return;
     fetch('/api/publico/site', { headers: { Accept: 'application/json' }, credentials: 'omit' })
@@ -500,6 +659,7 @@
         try { aplicarConteudo(conteudo); } catch (e) { /* mantém o HTML */ }
         if (Array.isArray(dados.planos)) {
           try { aplicarPlanos(dados.planos, dados.modulos, conteudo); } catch (e) { /* mantém o cartão estático */ }
+          try { aplicarComparacao(dados.planos, dados.modulos); } catch (e) { /* mantém a lista estática */ }
         }
         if (dados.cadastroAberto === false) {
           try { aplicarListaEspera(conteudo); } catch (e) { /* mantém os botões de cadastro */ }

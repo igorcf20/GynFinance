@@ -3,13 +3,14 @@ import { config } from './config.ts'
 import { criarApp } from './app.ts'
 import { criarPool } from './db.ts'
 import { agendarLembretes, criarCarteiro } from './email.ts'
+import { enviarAvisos } from './avisos.ts'
 
 const pool = criarPool(config.bancoApp())
 const carteiro = criarCarteiro()
 const app = await criarApp(pool, { logger: true, carteiro })
 await app.listen({ port: config.porta, host: '0.0.0.0' })
 if (!carteiro.ligado) app.log.warn('Sem provedor de e-mail (SMTP_HOST): lembretes e "Esqueci minha senha" não enviam nada.')
-const pararLembretes = agendarLembretes(pool, carteiro)
+const pararLembretes = agendarLembretes(pool, carteiro, (hoje) => enviarAvisos(pool, hoje))
 
 for (const sinal of ['SIGINT', 'SIGTERM'] as const) {
   process.on(sinal, async () => {

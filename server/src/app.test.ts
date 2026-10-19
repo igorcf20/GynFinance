@@ -17,6 +17,7 @@ import { maisUmMes } from './admin.ts'
 import { MODULOS_SERVIDOR } from './modulos.ts'
 import { migrar } from './migrar.ts'
 import { enviarLembretes, agoraBrasilia, type Carteiro, type Email } from './email.ts'
+import { enviarAvisos } from './avisos.ts'
 
 const URL_ADMIN = process.env.TEST_DATABASE_URL
 
@@ -406,6 +407,157 @@ describe.skipIf(!URL_ADMIN)('servidor', () => {
     expect(de_novo.statusCode).toBe(400)
     const entra = await app.inject({ method: 'POST', url: '/api/conta/entrar', payload: { email: 'esqueci@exemplo.com', senha: 'senha-nova-123' } })
     expect(entra.statusCode).toBe(200)
+  })
+
+  it('melhorias: chave Pix, meta, tetos, categoria própria e lixeira', async () => {
+    const bia = await criarConta('bia-melhorias@exemplo.com')
+    const inicial = dadosIniciais(config, '2026-10-16')
+    expect((await pedir(bia, 'POST', '/api/negocio', paraNovoNegocio(inicial))).statusCode).toBe(201)
+    const banco = inicial.contas.find((c) => c.tipo === 'banco')!.id
+    const cat = { id: uid(), empresaId: inicial.empresa.id, nome: 'Esmaltes', grupo: 'custo' as const, contaNoFaturamento: false, ativa: true }
+    const venda: Lancamento = {
+      id: uid(), empresaId: inicial.empresa.id, natureza: 'saida', valor: 3000, categoriaId: cat.id, contaFinanceiraId: banco, situacao: 'realizado',
+      dataCompetencia: '2026-10-16', dataPagamento: '2026-10-16', formaPagamento: 'pix', notaEmitida: 'nao_se_aplica',
+    }
+    const depois: Dados = {
+      ...inicial,
+      empresa: { ...inicial.empresa, chavePix: 'ana@pix.com', metaFaturamento: 800000, limitesCategoria: { [cat.id]: 50000 }, mensagemCobranca: 'Oi {nome}, {valor}' },
+      categorias: [...inicial.categorias.map((c) => (c.id === 'marketing' ? { ...c, ativa: false } : c)), cat],
+      lancamentos: [venda],
+    }
+    expect((await pedir(bia, 'POST', '/api/sincronizar', diferencas(inicial, depois))).statusCode).toBe(200)
+    let lido: Dados = (await pedir(bia, 'GET', '/api/dados')).json().dados
+    expect(lido.empresa).toEqual(depois.empresa)
+    expect(lido.categorias.find((c) => c.id === 'marketing')?.ativa).toBe(false)
+    expect(lido.categorias.find((c) => c.id === cat.id)).toEqual(cat)
+    expect(lido.lancamentos).toEqual([venda])
+
+    // Apagar manda para a lixeira; restaurar devolve.
+    const apagado: Dados = { ...lido, lancamentos: [], lixeira: [{ id: uid(), excluidoEm: '2026-10-16', lancamentos: [venda] }] }
+    expect((await pedir(bia, 'POST', '/api/sincronizar', diferencas(lido, apagado))).statusCode).toBe(200)
+    lido = (await pedir(bia, 'GET', '/api/dados')).json().dados
+    expect(lido.lancamentos).toEqual([])
+    expect(lido.lixeira).toEqual(apagado.lixeira)
+    const volta: Dados = { ...lido, lancamentos: [venda], lixeira: [] }
+    expect((await pedir(bia, 'POST', '/api/sincronizar', diferencas(lido, volta))).statusCode).toBe(200)
+    lido = (await pedir(bia, 'GET', '/api/dados')).json().dados
+    expect(lido.lancamentos).toEqual([venda])
+    expect(lido.lixeira).toBeUndefined()
+
+    // Categoria própria de outro negócio não se altera daqui.
+    const outro = await criarConta('beto-categoria@exemplo.com')
+    const ini2 = dadosIniciais(config, '2026-10-16')
+    await pedir(outro, 'POST', '/api/negocio', paraNovoNegocio(ini2))
+    const roubo = { categorias: { salvar: [{ ...cat, nome: 'Roubada' }] } }
+    expect((await pedir(outro, 'POST', '/api/sincronizar', roubo)).statusCode).toBe(400)
+  })
+
+  it('vários negócios: limite do plano, trocar e cada um com seus dados', async () => {
+    const duo = await criarConta('duo@exemplo.com')
+    const um = dadosIniciais(config, '2026-10-16')
+    await pedir(duo, 'POST', '/api/negocio', paraNovoNegocio(um))
+    const dois = dadosIniciais({ ...config, nomeFantasia: 'Bolos da Ana' }, '2026-10-16')
+    // Essencial: um negócio só.
+    expect((await pedir(duo, 'POST', '/api/negocio?adicional=1', paraNovoNegocio(dois))).statusCode).toBe(403)
+    await mudarPlano('duo@exemplo.com', 'plus')
+    expect((await pedir(duo, 'POST', '/api/negocio?adicional=1', paraNovoNegocio(dois))).statusCode).toBe(201)
+    let conta = (await pedir(duo, 'GET', '/api/conta')).json()
+    expect(conta.negocio).toEqual({ id: dois.empresa.id, nome: 'Bolos da Ana', papel: 'dono' })
+    expect(conta.negocios.map((n: { nome: string }) => n.nome)).toEqual(['Doces da Ana', 'Bolos da Ana'])
+    expect(conta.limiteNegocios).toBe(3)
+    expect((await pedir(duo, 'GET', '/api/dados')).json().dados.empresa.nomeFantasia).toBe('Bolos da Ana')
+    expect((await pedir(duo, 'POST', '/api/negocios/abrir', { empresaId: um.empresa.id })).statusCode).toBe(200)
+    expect((await pedir(duo, 'GET', '/api/dados')).json().dados.empresa.nomeFantasia).toBe('Doces da Ana')
+    // Refazer a configuração inicial apaga só o negócio aberto.
+    const refeito = dadosIniciais({ ...config, nomeFantasia: 'Doces Novos' }, '2026-10-16')
+    await pedir(duo, 'POST', '/api/negocio', paraNovoNegocio(refeito))
+    conta = (await pedir(duo, 'GET', '/api/conta')).json()
+    expect(conta.negocios.map((n: { nome: string }) => n.nome).sort()).toEqual(['Bolos da Ana', 'Doces Novos'])
+    // Negócio de outra pessoa não abre.
+    const estranho = await criarConta('estranho@exemplo.com')
+    expect((await pedir(estranho, 'POST', '/api/negocios/abrir', { empresaId: dois.empresa.id })).statusCode).toBe(404)
+  })
+
+  it('contador: convite, só leitura, módulos do dono e tirar o acesso', async () => {
+    const dona = await criarConta('dona@exemplo.com')
+    const neg = dadosIniciais(config, '2026-10-16')
+    await pedir(dona, 'POST', '/api/negocio', paraNovoNegocio(neg))
+    await mudarPlano('dona@exemplo.com', 'plus')
+    const { link } = (await pedir(dona, 'POST', '/api/contador/convite')).json()
+    const codigo = new URL(link.replace('#/', '')).searchParams.get('codigo')!
+    expect((await app.inject({ method: 'GET', url: `/api/convite/${codigo}` })).json()).toEqual({ negocio: 'Doces da Ana' })
+
+    // Com os cadastros fechados, o contador convidado ainda cria a conta.
+    const admin = new pg.Client({ connectionString: URL_ADMIN })
+    await admin.connect()
+    await admin.query('update config_sistema set cadastro_aberto = false')
+    const cria = await app.inject({ method: 'POST', url: '/api/conta/criar', remoteAddress: '10.9.9.9', payload: { nome: 'Carlos', email: 'contador@exemplo.com', senha: 'senha-forte-1', aceiteTermos: true, convite: codigo } })
+    const semConvite = await app.inject({ method: 'POST', url: '/api/conta/criar', remoteAddress: '10.9.9.8', payload: { nome: 'X', email: 'x@exemplo.com', senha: 'senha-forte-1', aceiteTermos: true } })
+    await admin.query('update config_sistema set cadastro_aberto = true')
+    await admin.end()
+    expect(cria.statusCode).toBe(201)
+    expect(semConvite.statusCode).toBe(403)
+    const contador = { gyn_sessao: cria.cookies.find((x) => x.name === 'gyn_sessao')!.value }
+    expect((await pedir(contador, 'POST', '/api/convite/aceitar', { codigo })).statusCode).toBe(200)
+    // O convite vale uma vez só.
+    expect((await app.inject({ method: 'GET', url: `/api/convite/${codigo}` })).statusCode).toBe(404)
+
+    const conta = (await pedir(contador, 'GET', '/api/conta')).json()
+    expect(conta.temNegocio).toBe(true)
+    expect(conta.negocio).toEqual({ id: neg.empresa.id, nome: 'Doces da Ana', papel: 'contador' })
+    expect(conta.assinatura.modulos).toContain('clientes')
+    const lido: Dados = (await pedir(contador, 'GET', '/api/dados')).json().dados
+    expect(lido.empresa.id).toBe(neg.empresa.id)
+    // Não grava nada, nem pelo app nem direto no banco.
+    const mexe = diferencas(lido, { ...lido, empresa: { ...lido.empresa, nomeFantasia: 'Hackeado' } })
+    expect((await pedir(contador, 'POST', '/api/sincronizar', mexe)).statusCode).toBe(403)
+    expect((await pedir(contador, 'POST', '/api/contador/convite')).statusCode).toBe(403)
+    expect((await pedir(dona, 'GET', '/api/dados')).json().dados.empresa.nomeFantasia).toBe('Doces da Ana')
+
+    const lista = (await pedir(dona, 'GET', '/api/contador')).json().contadores
+    expect(lista).toMatchObject([{ nome: 'Carlos', email: 'contador@exemplo.com' }])
+    expect((await pedir(dona, 'DELETE', `/api/contador/${lista[0].id}`)).statusCode).toBe(200)
+    expect((await pedir(contador, 'GET', '/api/conta')).json().temNegocio).toBe(false)
+  })
+
+  it('indique e ganhe: o cadastro guarda quem indicou', async () => {
+    const madrinha = await criarConta('madrinha@exemplo.com')
+    const { indicacao } = (await pedir(madrinha, 'GET', '/api/conta')).json()
+    expect(indicacao).toMatchObject({ cadastros: 0, assinantes: 0 })
+    expect(indicacao.codigo).toMatch(/^[0-9a-f]{8}$/)
+    const r = await app.inject({ method: 'POST', url: '/api/conta/criar', remoteAddress: '10.8.8.8', payload: { nome: 'Afilhada', email: 'afilhada@exemplo.com', senha: 'senha-forte-1', aceiteTermos: true, indicacao: indicacao.codigo.toUpperCase() } })
+    expect(r.statusCode).toBe(201)
+    expect((await pedir(madrinha, 'GET', '/api/conta')).json().indicacao).toMatchObject({ cadastros: 1, assinantes: 0 })
+  })
+
+  it('avisos no celular: chave, inscrição e lembrete do dia uma vez só', async () => {
+    const chave = (await app.inject({ method: 'GET', url: '/api/avisos/chave' })).json().chave
+    expect(chave.length).toBeGreaterThan(40)
+    const cel = await criarConta('celular@exemplo.com')
+    const neg = dadosIniciais({ ...config, ehMei: false }, '2026-10-16')
+    await pedir(cel, 'POST', '/api/negocio', paraNovoNegocio(neg))
+    // Sem e-mail: os avisos saem mesmo assim.
+    const semEmail = { ...neg, preferencias: { ...neg.preferencias, lembreteEmail: false } }
+    const conta: Lancamento = {
+      id: uid(), empresaId: neg.empresa.id, natureza: 'saida', valor: 12000, categoriaId: 'aluguel', contaFinanceiraId: neg.contas[0].id, situacao: 'previsto',
+      dataCompetencia: '2026-11-05', dataVencimento: '2026-11-05', formaPagamento: 'boleto', notaEmitida: 'nao_se_aplica', descricao: 'Aluguel', lembreteDias: 0,
+    }
+    await pedir(cel, 'POST', '/api/sincronizar', diferencas(neg, { ...semEmail, lancamentos: [conta] }))
+    const endpoint = 'https://push.exemplo.com/abc123'
+    expect((await pedir(cel, 'POST', '/api/avisos/inscrever', { endpoint, keys: { p256dh: 'B'.repeat(87), auth: 'a'.repeat(22) } })).statusCode).toBe(200)
+    const saidas: { endpoint: string; conteudo: string }[] = []
+    const fake = async (i: { endpoint: string }, conteudo: string) => void saidas.push({ endpoint: i.endpoint, conteudo })
+    expect(await enviarAvisos(pool, '2026-11-05', fake)).toBeGreaterThanOrEqual(1)
+    const meu = saidas.find((x) => x.endpoint === endpoint)!
+    expect(JSON.parse(meu.conteudo)).toMatchObject({ titulo: 'Doces da Ana', texto: 'Vence hoje: Aluguel, R$ 120.' })
+    saidas.length = 0
+    await enviarAvisos(pool, '2026-11-05', fake)
+    expect(saidas.find((x) => x.endpoint === endpoint)).toBeUndefined()
+    // Aparelho desligado (410) é esquecido.
+    const sumiu = async () => { throw Object.assign(new Error('Gone'), { statusCode: 410 }) }
+    await pedir(cel, 'POST', '/api/sincronizar', diferencas(semEmail, { ...semEmail, lancamentos: [{ ...conta, id: uid(), dataVencimento: '2026-11-06', dataCompetencia: '2026-11-06' }] }))
+    await enviarAvisos(pool, '2026-11-06', sumiu)
+    expect((await pool.query('select * from aparelhos_do_negocio($1)', [neg.empresa.id])).rowCount).toBe(0)
   })
 
   it('lembretes por e-mail: conta no dia escolhido, sem lembrete, a receber e DAS, sem repetir', async () => {

@@ -1,6 +1,6 @@
 // Tradução entre as tabelas do banco e o formato Dados que o app usa (src/domain/types.ts).
 import type { z } from 'zod'
-import type { Atendimento, Categoria, Dados, Lancamento, PagamentoDas, Parceiro, Recorrencia } from '../../src/domain/types.ts'
+import type { Atendimento, Categoria, Dados, ItemLixeira, Lancamento, PagamentoDas, Parceiro, Recorrencia } from '../../src/domain/types.ts'
 import type { Cliente } from './db.ts'
 import type { mudancas as esquemaMudancas, novoNegocio as esquemaNovoNegocio } from './esquemas.ts'
 
@@ -10,17 +10,32 @@ const opc = <T>(v: T | null): T | undefined => (v === null ? undefined : v)
 
 export class ErroDeDados extends Error {}
 
-/** Empresa da pessoa logada (a primeira; o modelo já aceita várias). */
+/**
+ * Negócio aberto na sessão (app.empresa_id, ver comUsuario), se a pessoa ainda o enxerga; senão
+ * o primeiro negócio dela e, por último, o primeiro em que ela é contadora.
+ */
 export async function empresaDaSessao(c: Cliente): Promise<string | null> {
-  const r = await c.query<{ id: string }>('select id from empresa order by criado_em limit 1')
+  const r = await c.query<{ id: string }>(
+    `select id from empresa
+     order by id = nullif(current_setting('app.empresa_id', true), '')::uuid desc, usuario_id = app_usuario() desc, criado_em
+     limit 1`,
+  )
   return r.rows[0]?.id ?? null
 }
 
+/** O negócio aberto é de outra pessoa (a pessoa logada só tem acesso de contador)? */
+export async function ehSoLeitura(c: Cliente, empresaId: string): Promise<boolean> {
+  const r = await c.query<{ dono: boolean }>('select usuario_id = app_usuario() as dono from empresa where id = $1', [empresaId])
+  return !r.rows[0]?.dono
+}
+
 export async function lerDados(c: Cliente): Promise<Dados | null> {
-  const e = (await c.query<Linha>('select * from empresa order by criado_em limit 1')).rows[0]
+  const empresaAberta = await empresaDaSessao(c)
+  if (!empresaAberta) return null
+  const e = (await c.query<Linha>('select * from empresa where id = $1', [empresaAberta])).rows[0]
   if (!e) return null
   const empresaId = e.id as string
-  const [contas, categorias, desligadas, lancamentos, recorrencias, das, avisos, atendimentos, parceiros] = await Promise.all([
+  const [contas, categorias, desligadas, lancamentos, recorrencias, das, avisos, atendimentos, parceiros, lixeira] = await Promise.all([
     c.query<Linha>('select * from conta_financeira where empresa_id = $1 order by criado_em', [empresaId]),
     c.query<Linha>('select * from categoria where empresa_id is null or empresa_id = $1', [empresaId]),
     c.query<{ categoria_id: string }>('select categoria_id from categoria_desativada where empresa_id = $1', [empresaId]),
@@ -35,6 +50,7 @@ export async function lerDados(c: Cliente): Promise<Dados | null> {
     c.query<{ aviso_id: string }>('select aviso_id from aviso_dispensado where empresa_id = $1', [empresaId]),
     c.query<Linha>("select *, to_char(inicio, 'HH24:MI') as hora from atendimento where empresa_id = $1 order by data, inicio", [empresaId]),
     c.query<Linha>("select *, to_char(criado_em, 'YYYY-MM-DD') as criado from parceiro where empresa_id = $1 order by nome", [empresaId]),
+    c.query<Linha>("select * from lixeira where empresa_id = $1 and excluido_em > current_date - 30 order by excluido_em desc", [empresaId]),
   ])
   const fora = new Set(desligadas.rows.map((r) => r.categoria_id))
   // Ordem das categorias padrão igual à do app.
@@ -55,6 +71,10 @@ export async function lerDados(c: Cliente): Promise<Dados | null> {
       prolaboreDesejado: opc(e.prolabore_desejado as number | null),
       faturadoAntes: e.faturado_antes_ano !== null ? { ano: e.faturado_antes_ano as number, valor: e.faturado_antes_valor as number } : undefined,
       modulosAtivos: e.modulos_ativos as string[],
+      chavePix: opc(e.chave_pix as string | null),
+      metaFaturamento: opc(e.meta_faturamento as number | null),
+      limitesCategoria: Object.keys((e.limites_categoria as object | null) ?? {}).length ? (e.limites_categoria as Record<string, number>) : undefined,
+      mensagemCobranca: opc(e.mensagem_cobranca as string | null),
     },
     contas: contas.rows.map((r) => ({
       id: r.id as string,
@@ -182,6 +202,7 @@ export async function lerDados(c: Cliente): Promise<Dados | null> {
     ),
     preferencias: { lembreteDias: e.lembrete_dias as 0 | 1 | 3, lembreteEmail: e.lembrete_email as boolean, resumoMensal: e.resumo_mensal as boolean },
     avisosDispensados: avisos.rows.map((r) => r.aviso_id),
+    lixeira: lixeira.rows.length ? lixeira.rows.map((r): ItemLixeira => ({ id: r.id as string, excluidoEm: r.excluido_em as string, lancamentos: (r.lancamentos as Lancamento[]).map((l) => ({ ...l, empresaId })) })) : undefined,
   }
 }
 
@@ -190,9 +211,11 @@ type Empresa = z.infer<typeof esquemaNovoNegocio>['empresa']
 async function gravarEmpresa(c: Cliente, empresaId: string, e: Omit<Empresa, 'id'>) {
   await c.query(
     `update empresa set nome_dono = $2, nome_fantasia = $3, cnpj = $4, eh_mei = $5, data_abertura = $6, atividade = $7, uf = $8,
-       municipio = $9, prolabore_desejado = $10, faturado_antes_ano = $11, faturado_antes_valor = $12, modulos_ativos = $13, atualizado_em = now()
+       municipio = $9, prolabore_desejado = $10, faturado_antes_ano = $11, faturado_antes_valor = $12, modulos_ativos = $13,
+       chave_pix = $14, meta_faturamento = $15, limites_categoria = $16, mensagem_cobranca = $17, atualizado_em = now()
      where id = $1`,
-    [empresaId, e.nomeDono, e.nomeFantasia, e.cnpj || null, e.ehMei, e.dataAbertura, e.atividade, e.uf.toUpperCase(), e.municipio || null, e.prolaboreDesejado ?? null, e.faturadoAntes?.ano ?? null, e.faturadoAntes?.valor ?? null, e.modulosAtivos],
+    [empresaId, e.nomeDono, e.nomeFantasia, e.cnpj || null, e.ehMei, e.dataAbertura, e.atividade, e.uf.toUpperCase(), e.municipio || null, e.prolaboreDesejado ?? null, e.faturadoAntes?.ano ?? null, e.faturadoAntes?.valor ?? null, e.modulosAtivos,
+     e.chavePix || null, e.metaFaturamento || null, JSON.stringify(e.limitesCategoria ?? {}), e.mensagemCobranca || null],
   )
 }
 
@@ -208,9 +231,15 @@ async function gravarDas(c: Cliente, empresaId: string, lista: z.infer<typeof es
   }
 }
 
-/** Configuração inicial: apaga o negócio anterior da pessoa (se houver) e cria o novo. */
-export async function criarNegocio(c: Cliente, usuarioId: string, n: z.infer<typeof esquemaNovoNegocio>): Promise<void> {
-  await c.query('delete from empresa where usuario_id = $1', [usuarioId])
+/**
+ * Configuração inicial: apaga o negócio aberto da pessoa (refazer do zero) e cria o novo. Com
+ * `adicional`, só cria: é mais um negócio na mesma conta.
+ */
+export async function criarNegocio(c: Cliente, usuarioId: string, n: z.infer<typeof esquemaNovoNegocio>, adicional = false): Promise<void> {
+  if (!adicional) {
+    const aberto = await empresaDaSessao(c)
+    if (aberto) await c.query('delete from empresa where id = $1 and usuario_id = $2', [aberto, usuarioId])
+  }
   await c.query(
     `insert into empresa (id, usuario_id, nome_dono, nome_fantasia, eh_mei, data_abertura, atividade, uf, lembrete_dias, lembrete_email, resumo_mensal)
      values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
@@ -236,6 +265,22 @@ export async function aplicarMudancas(c: Cliente, empresaId: string, m: z.infer<
       m.preferencias.lembreteEmail,
       m.preferencias.resumoMensal,
     ])
+  }
+
+  // Categorias próprias (as padrão só ligam e desligam).
+  for (const cat of m.categorias?.salvar ?? []) {
+    if (cat.empresaId === undefined) {
+      if (cat.ativa) await c.query('delete from categoria_desativada where empresa_id = $1 and categoria_id = $2', [empresaId, cat.id])
+      else await c.query('insert into categoria_desativada (empresa_id, categoria_id) select $1, id from categoria where id = $2 and empresa_id is null on conflict do nothing', [empresaId, cat.id])
+      continue
+    }
+    const r = await c.query(
+      `insert into categoria (id, empresa_id, nome, grupo, conta_no_faturamento, ativa) values ($1, $2, $3, $4, $5, $6)
+       on conflict (id) do update set nome = excluded.nome, grupo = excluded.grupo, conta_no_faturamento = excluded.conta_no_faturamento, ativa = excluded.ativa
+       where categoria.empresa_id = excluded.empresa_id`,
+      [cat.id, empresaId, cat.nome, cat.grupo, cat.contaNoFaturamento, cat.ativa],
+    )
+    if (!r.rowCount) throw new ErroDeDados('Categoria de outro negócio.')
   }
 
   // As contas citadas precisam ser desta empresa (a chave estrangeira sozinha não garante).
@@ -330,6 +375,11 @@ export async function aplicarMudancas(c: Cliente, empresaId: string, m: z.infer<
     await c.query('delete from parceiro where empresa_id = $1 and id = any($2::uuid[])', [empresaId, m.parceiros.excluir])
   }
   if (m.pagamentosDas) await gravarDas(c, empresaId, m.pagamentosDas.salvar)
+  if (m.lixeira?.excluir.length) await c.query('delete from lixeira where empresa_id = $1 and id = any($2::uuid[])', [empresaId, m.lixeira.excluir])
+  for (const item of m.lixeira?.salvar ?? []) {
+    await c.query('insert into lixeira (id, empresa_id, excluido_em, lancamentos) values ($1, $2, $3, $4) on conflict (id) do nothing', [item.id, empresaId, item.excluidoEm, JSON.stringify(item.lancamentos)])
+  }
+  if (m.lixeira) await c.query("delete from lixeira where empresa_id = $1 and excluido_em <= current_date - 30", [empresaId])
   for (const a of m.avisosDispensados ?? []) {
     await c.query('insert into aviso_dispensado (empresa_id, aviso_id) values ($1, $2) on conflict do nothing', [empresaId, a])
   }
