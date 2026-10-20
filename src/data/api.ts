@@ -15,6 +15,20 @@ export interface Conta {
   sistema?: { aviso: string; manutencao: boolean; iaLigada: boolean }
   /** Chamados de suporte com resposta que a pessoa ainda não leu. */
   suporte?: { naoLidos: number }
+  /** O negócio aberto agora: do dono ou de um cliente do contador. */
+  negocio?: NegocioDaConta
+  /** Todos os negócios que a pessoa pode abrir. */
+  negocios?: NegocioDaConta[]
+  /** Quantos negócios próprios o plano permite. */
+  limiteNegocios?: number
+  /** Link de indicação e quantas pessoas já se cadastraram por ele. */
+  indicacao?: { codigo: string; cadastros: number; assinantes: number }
+}
+
+export interface NegocioDaConta {
+  id: string
+  nome: string
+  papel: 'dono' | 'contador'
 }
 
 export class ErroApi extends Error {

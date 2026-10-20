@@ -151,9 +151,10 @@ export function agoraBrasilia(d = new Date()): { hoje: string; hora: number } {
  */
 export async function enviarLembretes(pool: pg.Pool, carteiro: Carteiro, hoje: string): Promise<number> {
   if (!carteiro.ligado) return 0
-  const r = await pool.query<{ empresa_id: string; email: string; nome_dono: string; nome_fantasia: string } & ItemLembrete>('select * from lembretes_do_dia($1)', [hoje])
+  const r = await pool.query<{ empresa_id: string; email: string; nome_dono: string; nome_fantasia: string; por_email: boolean } & ItemLembrete>('select * from lembretes_do_dia($1)', [hoje])
   const porEmpresa = new Map<string, typeof r.rows>()
-  for (const l of r.rows) porEmpresa.set(l.empresa_id, [...(porEmpresa.get(l.empresa_id) ?? []), l])
+  // Quem só ligou os avisos no celular também aparece na lista: o e-mail vai só para quem pediu.
+  for (const l of r.rows.filter((x) => x.por_email)) porEmpresa.set(l.empresa_id, [...(porEmpresa.get(l.empresa_id) ?? []), l])
   let enviados = 0
   for (const [empresaId, todos] of porEmpresa) {
     const ja = new Set((await pool.query<{ emails_enviados: string }>('select emails_enviados($1, $2)', [empresaId, todos.map((l) => l.chave)])).rows.map((x) => x.emails_enviados))
@@ -173,9 +174,11 @@ export async function enviarLembretes(pool: pg.Pool, carteiro: Carteiro, hoje: s
   return enviados
 }
 
-/** A cada 15 minutos, a partir das 8h de Brasília, manda os lembretes do dia que faltam. */
-export function agendarLembretes(pool: pg.Pool, carteiro: Carteiro): () => void {
-  if (!carteiro.ligado) return () => {}
+/**
+ * A cada 15 minutos, a partir das 8h de Brasília, manda os lembretes do dia que faltam: por e-mail
+ * (quando há provedor) e nos avisos do celular (sempre).
+ */
+export function agendarLembretes(pool: pg.Pool, carteiro: Carteiro, avisos?: (hoje: string) => Promise<number>): () => void {
   let rodando = false
   const volta = async () => {
     const { hoje, hora } = agoraBrasilia()
@@ -184,6 +187,8 @@ export function agendarLembretes(pool: pg.Pool, carteiro: Carteiro): () => void 
     try {
       const n = await enviarLembretes(pool, carteiro, hoje)
       if (n) console.log(`Lembretes do dia enviados: ${n} e-mail(s).`)
+      const a = avisos ? await avisos(hoje).catch((e) => (console.error('Falha nos avisos do celular:', (e as Error).message), 0)) : 0
+      if (a) console.log(`Avisos no celular enviados: ${a} negócio(s).`)
     } catch (e) {
       console.error('Falha ao enviar lembretes:', (e as Error).message)
     } finally {

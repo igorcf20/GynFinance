@@ -6,6 +6,7 @@ import { Card } from '../components/ui/Card'
 import { CartaoComecar } from '../components/layout/CartaoComecar'
 import { CartaoInstalar } from '../components/layout/AppInstalavel'
 import { useStore } from '../data/store'
+import { TrocaNegocio } from '../components/layout/TrocaNegocio'
 
 /** No celular, o menu completo: os mesmos grupos do menu lateral do computador. */
 export function More() {
@@ -25,6 +26,7 @@ export function More() {
           )}
         </div>
       )}
+      <TrocaNegocio className="mb-4" />
       <div className="mb-4 empty:hidden">
         <CartaoInstalar />
       </div>

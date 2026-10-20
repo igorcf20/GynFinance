@@ -1,7 +1,8 @@
 import { useId } from 'react'
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Legend, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type { ResumoMes } from '../../domain/calc'
-import { brl, nomeMesCurto } from '../../lib/format'
+import { brl, diaMes, nomeMesCurto } from '../../lib/format'
+import type { PontoPrevisao } from '../../domain/planejamento'
 import { useTema } from '../layout/BotaoTema'
 
 const AZUL = '#3478F6'
@@ -121,6 +122,59 @@ export function FluxoChart({ serie }: { serie: ResumoMes[] }) {
           <Bar dataKey="Entradas" fill="url(#gEntradas)" radius={[6, 6, 2, 2]} maxBarSize={30} animationDuration={900} animationEasing="ease-out" />
           <Bar dataKey="Saídas" fill="url(#gSaidas)" radius={[6, 6, 2, 2]} maxBarSize={30} animationBegin={120} animationDuration={900} animationEasing="ease-out" />
         </BarChart>
+      </ResponsiveContainer>
+    </div>
+  )
+}
+
+const reaisCurto = (centavos: number) => {
+  const v = centavos / 100
+  return Math.abs(v) >= 1000 ? `R$ ${(v / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} mil` : `R$ ${Math.round(v)}`
+}
+
+function DicaPrevisao({ active, payload }: { active?: boolean; payload?: { payload: PontoPrevisao }[] }) {
+  if (!active || !payload?.length) return null
+  const p = payload[0].payload
+  return (
+    <div className="rounded-[10px] border border-line bg-surface px-3 py-2 text-[12px] shadow-[var(--shadow-card-hover)]">
+      <p className="mb-1 font-semibold text-ink">{diaMes(p.dia)}</p>
+      <p className={`num font-bold ${p.saldo < 0 ? 'text-danger' : 'text-ink'}`}>Saldo: {brl(p.saldo)}</p>
+      {p.entra > 0 && <p className="num text-success">Entra {brl(p.entra)}</p>}
+      {p.sai > 0 && <p className="num text-danger">Sai {brl(p.sai)}</p>}
+    </div>
+  )
+}
+
+/** Saldo previsto dia a dia (Fluxo de caixa): azul acima de zero, vermelho abaixo. */
+export function PrevisaoChart({ pontos }: { pontos: PontoPrevisao[] }) {
+  const id = useId().replace(/:/g, '')
+  const max = Math.max(0, ...pontos.map((p) => p.saldo))
+  const min = Math.min(0, ...pontos.map((p) => p.saldo))
+  // Onde o zero cai na altura do gráfico: dali para baixo a cor vira vermelha.
+  const corte = max === min ? 1 : max / (max - min)
+  return (
+    <div className="h-[260px]" role="img" aria-label={`Saldo previsto: hoje ${brl(pontos[0]?.saldo ?? 0)}, menor ${brl(min)}, no fim ${brl(pontos.at(-1)?.saldo ?? 0)}`}>
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={pontos} margin={{ top: 8, right: 4, bottom: 0, left: 4 }}>
+          <defs>
+            <linearGradient id={`${id}l`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset={corte} stopColor={AZUL} />
+              <stop offset={corte} stopColor="#E5484D" />
+            </linearGradient>
+            <linearGradient id={`${id}a`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={AZUL} stopOpacity={0.22} />
+              <stop offset={corte} stopColor={AZUL} stopOpacity={0.04} />
+              <stop offset={corte} stopColor="#E5484D" stopOpacity={0.08} />
+              <stop offset="100%" stopColor="#E5484D" stopOpacity={0.24} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid vertical={false} stroke="var(--color-line)" />
+          <XAxis dataKey="dia" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--color-ink-2)' }} tickFormatter={(d: string) => diaMes(d)} minTickGap={28} dy={6} />
+          <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--color-ink-2)' }} tickFormatter={reaisCurto} width={74} />
+          <ReferenceLine y={0} stroke="var(--color-ink-2)" strokeDasharray="4 4" />
+          <Tooltip content={<DicaPrevisao />} />
+          <Area type="stepAfter" dataKey="saldo" stroke={`url(#${id}l)`} strokeWidth={2.4} fill={`url(#${id}a)`} animationDuration={1100} animationEasing="ease-out" />
+        </AreaChart>
       </ResponsiveContainer>
     </div>
   )

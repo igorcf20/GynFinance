@@ -6,6 +6,7 @@ import { Aviso, iconeDoAviso } from '../components/financial/Aviso'
 import { ContaItem } from '../components/financial/ContaItem'
 import { FinancialSummary } from '../components/financial/FinancialSummary'
 import { ReceberEAtraso } from '../components/financial/ReceberEAtraso'
+import { MetaDoMes, QuantoPossoTirar, ResumoDaSemana, TetosDoMes } from '../components/financial/Planejamento'
 import { Header } from '../components/layout/Header'
 import { Button, ButtonLink } from '../components/ui/Button'
 import { Card, CardTitulo, EstadoVazio, IconeBox } from '../components/ui/Card'
@@ -134,6 +135,7 @@ export function Dashboard() {
         </div>
 
         <div className="flex flex-col gap-4 md:gap-5">
+          {ehMesAtual && <ResumoDaSemana />}
           <Card>
             <CardTitulo
               explica={
@@ -166,6 +168,10 @@ export function Dashboard() {
               {a.texto}
             </Aviso>
           ))}
+
+          {ehMesAtual && <QuantoPossoTirar />}
+          <MetaDoMes />
+          <TetosDoMes />
 
           {ehMesAtual && reserva > 0 && (
             <button onClick={() => setConfirmarReserva(true)} className="text-left">

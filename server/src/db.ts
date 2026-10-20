@@ -17,11 +17,13 @@ export function criarPool(url: string): pg.Pool {
  * Roda fn numa transação marcada com a pessoa logada: as regras de acesso do banco (RLS)
  * só deixam ver e gravar as empresas dela.
  */
-export async function comUsuario<T>(pool: pg.Pool, usuarioId: string, fn: (c: Cliente) => Promise<T>): Promise<T> {
+export async function comUsuario<T>(pool: pg.Pool, usuarioId: string, fn: (c: Cliente) => Promise<T>, empresaId?: string | null): Promise<T> {
   const c = await pool.connect()
   try {
     await c.query('begin')
     await c.query("select set_config('app.usuario_id', $1, true)", [usuarioId])
+    // Negócio aberto na sessão (vários negócios ou acesso de contador); as regras de acesso continuam valendo.
+    await c.query("select set_config('app.empresa_id', $1, true)", [empresaId ?? ''])
     const r = await fn(c)
     await c.query('commit')
     return r

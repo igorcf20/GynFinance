@@ -24,6 +24,10 @@ export interface Assinante {
   proximoVencimento?: DataISO
   observacao: string
   ultimoPagamento?: DataISO
+  /** Quem indicou (link "Indique e ganhe"): a recompensa é dada à mão, nas duas assinaturas. */
+  indicadoPor?: { nome: string; email: string }
+  /** Quantas pessoas se cadastraram pelo link desta conta. */
+  indicacoes?: number
 }
 
 export type FormaMensalidade = 'pix' | 'boleto' | 'cartao' | 'dinheiro' | 'transferencia' | 'outro'

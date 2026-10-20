@@ -23,6 +23,8 @@ export default defineConfig({
         navigateFallback: 'index.html',
         navigateFallbackDenylist: [/\/api\//],
         cleanupOutdatedCaches: true,
+        // Um service worker só por endereço: os avisos no celular (push) entram neste.
+        importScripts: ['avisos-sw.js'],
       },
     }),
   ],

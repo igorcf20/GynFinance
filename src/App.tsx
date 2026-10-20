@@ -11,6 +11,8 @@ import { StoreProvider, useStore } from './data/store'
 import { definirPagina } from './lib/erros'
 import { dentroDeMoldura, rotaInicial } from './lib/moldura'
 import { Entrar } from './pages/Entrar'
+import { RelatorioImpresso, ReciboImpresso } from './pages/Imprimir'
+import { Convite } from './pages/Convite'
 import { RedefinirSenha } from './pages/RedefinirSenha'
 import { Accounts } from './pages/Accounts'
 import { Agenda } from './pages/Agenda'
@@ -50,7 +52,7 @@ function Portao({ children }: { children: ReactNode }) {
   }
   if (servidor === 'fora') return <TelaSemInternet onTentar={() => void conectar()} />
   // O superadmin entra no painel mesmo sem ter configurado um negócio próprio.
-  if (conta && !conta.temNegocio && pathname !== '/comecar' && pathname !== '/redefinir-senha' && !(conta.admin && pathname === '/admin')) return <Navigate to="/comecar" replace />
+  if (conta && !conta.temNegocio && pathname !== '/comecar' && pathname !== '/redefinir-senha' && pathname !== '/convite' && !(conta.admin && pathname === '/admin')) return <Navigate to="/comecar" replace />
   return <>{children}</>
 }
 
@@ -80,6 +82,9 @@ export default function App() {
               <Route path="entrar" element={<Entrar />} />
               <Route path="redefinir-senha" element={<RedefinirSenha />} />
               <Route path="comecar" element={<Onboarding />} />
+              <Route path="convite" element={<Convite />} />
+              <Route path="imprimir/relatorio" element={<RelatorioImpresso />} />
+              <Route path="imprimir/recibo/:id" element={<ReciboImpresso />} />
               <Route element={<MainLayout />}>
                 <Route index element={<Dashboard />} />
                 <Route path="lancamentos" element={<Transactions />} />

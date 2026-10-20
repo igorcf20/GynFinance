@@ -3,8 +3,17 @@ import type { DataISO, MesISO } from '../domain/types'
 const brl0 = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0, minimumFractionDigits: 0 })
 const brl2 = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
+// "Esconder valores" (olho no topo): troca os números por pontinhos na tela, para abrir o app perto de
+// outras pessoas. Textos que saem do app (cobrança, recibo) usam `sempre` e mostram o valor.
+let ocultos = false
+export function definirValoresOcultos(v: boolean) {
+  ocultos = v
+}
+export const VALOR_OCULTO = 'R$ •••'
+
 /** Recebe centavos. R$ 2.480 para valores redondos, R$ 99,90 quando há centavos. */
-export function brl(centavos: number, opts: { centavos?: boolean } = {}): string {
+export function brl(centavos: number, opts: { centavos?: boolean; sempre?: boolean } = {}): string {
+  if (ocultos && !opts.sempre) return VALOR_OCULTO
   const temCentavos = centavos % 100 !== 0
   const reais = centavos / 100
   const s = (opts.centavos ?? temCentavos) ? brl2.format(reais) : brl0.format(reais)
