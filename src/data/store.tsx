@@ -1,0 +1,732 @@
+// Estado do aplicativo. Nesta primeira versão os dados ficam no navegador (localStorage);
+// as ações abaixo são o contrato que o back-end vai implementar depois. No servidor, toda
+// consulta filtra pela empresa da sessão (nunca por um id vindo do navegador).
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { vencimentoDas } from '../domain/calc'
+import { parametroDoAno } from '../domain/parametros'
+import { excluirAtendimento as tirarAtendimento, salvarAtendimento as gravarAtendimento, type NovoAtendimento } from '../domain/agenda'
+import { aplicarImportacao, type LinhaImportacao } from '../domain/extrato'
+import { aplicarPagamento, reverterDados, type DetalhesPagamento } from '../domain/pagamento'
+import { gerarPrevistos } from '../domain/recorrencia'
+import { cadastrarSugeridos as gravarSugeridos, excluirParceiro as tirarParceiro, salvarParceiro as gravarParceiro, vincularLancamentos as vincular, type NomeSugerido, type NovoParceiro } from '../domain/parceiros'
+import type { IdModulo } from '../domain/planos'
+import type { Atividade, Categoria, Centavos, Comprovante, Dados, DataISO, Empresa, Lancamento, MesISO, Preferencias, Recorrencia, SeFimDeSemana } from '../domain/types'
+import { addDias, hojeReal, mesDe, uid } from '../lib/format'
+import { api, ErroApi, verificarServidor, type Conta } from './api'
+import { categoriasDoNegocio } from './categorias'
+import { lerComprovante } from './comprovante'
+import { dadosDemo, DEMO_HOJE } from './demo'
+import { diferencas, juntar, paraNovoNegocio, type Mudancas } from './sincronizar'
+
+// v2: valores em centavos e contas fixas como Recorrencia.
+const CHAVE = 'gynfinance:v2'
+/** Convite de contador aberto antes de entrar, e o código de quem indicou (o site também grava). */
+export const CHAVE_CONVITE = 'gynfinance:convite'
+export const CHAVE_INDICACAO = 'gynfinance:indicacao'
+export function lerGuardado(chave: string): string | undefined {
+  try {
+    return localStorage.getItem(chave) || undefined
+  } catch {
+    return undefined
+  }
+}
+export function guardar(chave: string, valor: string | undefined) {
+  try {
+    if (valor) localStorage.setItem(chave, valor)
+    else localStorage.removeItem(chave)
+  } catch {
+    /* sem armazenamento: segue sem guardar */
+  }
+}
+
+interface Salvo {
+  modo: 'demo' | 'real'
+  dados: Dados
+  /** Dados do negócio vindos do servidor: cada mudança é enviada para lá, não fica no navegador. */
+  noServidor?: boolean
+}
+
+const hojeDo = (modo: Salvo['modo']) => (modo === 'demo' ? DEMO_HOJE : hojeReal())
+
+/** Roda o gerador de contas fixas: cria os previstos que faltam até o fim do mês seguinte. */
+function comPrevistos(d: Dados, hoje: DataISO): Dados {
+  const { novos, recorrencias } = gerarPrevistos(d.recorrencias, d.lancamentos, hoje, uid)
+  if (!novos.length && recorrencias.every((r, i) => r === d.recorrencias[i])) return d
+  return { ...d, lancamentos: [...d.lancamentos, ...novos], recorrencias }
+}
+
+/** A lixeira guarda 30 dias: o que passou disso some ao abrir o app. */
+function semLixoVelho(d: Dados, hoje: DataISO): Dados {
+  const limite = addDias(hoje, -30)
+  if (!d.lixeira?.some((i) => i.excluidoEm <= limite)) return d
+  return { ...d, lixeira: d.lixeira.filter((i) => i.excluidoEm > limite) }
+}
+
+function carregar(): Salvo {
+  try {
+    const bruto = localStorage.getItem(CHAVE)
+    if (bruto) {
+      const s = JSON.parse(bruto) as Salvo
+      // A demonstração nunca fica gravada: cada visita começa com os dados de exemplo.
+      // Dados gravados antes da agenda não têm a lista de atendimentos.
+      if (s.modo !== 'demo') return { modo: s.modo, dados: comPrevistos(semLixoVelho({ ...s.dados, atendimentos: s.dados.atendimentos ?? [] }, hojeDo(s.modo)), hojeDo(s.modo)) }
+    }
+  } catch {
+    /* sem armazenamento: segue com a demonstração */
+  }
+  return { modo: 'demo', dados: dadosDemo() }
+}
+
+export type NovoLancamento = Omit<Lancamento, 'id' | 'empresaId'>
+
+/** Respostas da configuração inicial (tela 0 do planejamento). */
+export interface ConfigInicial {
+  nomeDono: string
+  nomeFantasia: string
+  cnpj?: string
+  uf: string
+  ehMei: boolean
+  /** Mês de abertura da empresa (AAAA-MM). */
+  mesAbertura: MesISO
+  atividade: Atividade
+  saldoBanco: Centavos
+  saldoCaixa: Centavos
+  prolaboreDesejado?: Centavos
+  /** MEI: vendas deste ano antes de começar a usar o sistema. */
+  faturadoAntes?: Centavos
+  /** MEI: os DAS deste ano até o mês passado já estão pagos. */
+  dasEmDia?: boolean
+}
+
+/** Monta os dados de um negócio novo, sem nenhum lançamento. */
+export function dadosIniciais(c: ConfigInicial, hoje: DataISO): Dados {
+  const empresaId = uid()
+  const ano = Number(hoje.slice(0, 4))
+  const abertura = `${c.mesAbertura}-01`
+  const pagamentosDas = []
+  if (c.ehMei && c.dasEmDia) {
+    // Do mês de abertura (ou janeiro) até o mês passado: pagos antes do Gynfinance, sem gerar saída.
+    let m = c.mesAbertura > `${ano}-01` ? c.mesAbertura : `${ano}-01`
+    const atual = mesDe(hoje)
+    while (m < atual) {
+      const valor = parametroDoAno(ano).dasValorPorAtividade[c.atividade]
+      pagamentosDas.push({ empresaId, competencia: m, valor, vencimento: vencimentoDas(m), pagoForaDoSistema: true })
+      const [a, mm] = m.split('-').map(Number)
+      m = mm === 12 ? `${a + 1}-01` : `${a}-${String(mm + 1).padStart(2, '0')}`
+    }
+  }
+  return {
+    empresa: {
+      id: empresaId,
+      nomeDono: c.nomeDono.trim(),
+      nomeFantasia: c.nomeFantasia.trim(),
+      cnpj: c.cnpj?.trim() || undefined,
+      ehMei: c.ehMei,
+      dataAbertura: abertura,
+      atividade: c.atividade,
+      uf: c.uf,
+      prolaboreDesejado: c.prolaboreDesejado || undefined,
+      faturadoAntes: c.ehMei && c.faturadoAntes ? { ano, valor: c.faturadoAntes } : undefined,
+      modulosAtivos: ['financeiro'],
+    },
+    // As telas escolhem a conta pelo tipo (dinheiro vai para o caixa; Pix, cartão e boleto para o banco).
+    contas: [
+      { id: uid(), empresaId, nome: 'Conta da empresa', tipo: 'banco', saldoInicial: c.saldoBanco, ativa: true },
+      { id: uid(), empresaId, nome: 'Caixa (dinheiro)', tipo: 'caixa', saldoInicial: c.saldoCaixa, ativa: true },
+      { id: uid(), empresaId, nome: 'Reserva', tipo: 'reserva', saldoInicial: 0, ativa: true },
+    ],
+    categorias: categoriasDoNegocio(c.atividade),
+    lancamentos: [],
+    recorrencias: [],
+    pagamentosDas,
+    atendimentos: [],
+    parceiros: [],
+    preferencias: { lembreteDias: 1, lembreteEmail: true, resumoMensal: true },
+    avisosDispensados: [],
+  }
+}
+
+/** Opções de conta fixa ao salvar um lançamento previsto. */
+export interface OpcoesRepetir {
+  repetir: boolean
+  seFimDeSemana: SeFimDeSemana
+  valorVaria: boolean
+}
+
+interface Store {
+  dados: Dados
+  modo: 'demo' | 'real'
+  hoje: DataISO
+  /** Mês que o seletor do cabeçalho está mostrando. */
+  mes: MesISO
+  setMes: (m: MesISO) => void
+  salvarLancamento: (l: NovoLancamento, id?: string, repetir?: OpcoesRepetir) => string
+  /** Apaga o lançamento (vai para a lixeira por 30 dias). Devolve a função que desfaz. */
+  excluirLancamento: (id: string) => Desfazer
+  /** Devolve à lista um lançamento da lixeira. */
+  restaurarLancamento: (itemId: string) => void
+  /** Cria ou altera uma categoria própria; nas padrão, só liga e desliga. */
+  salvarCategoria: (c: Categoria) => void
+  /** Baixa uma conta prevista com os dados de hoje. Devolve a função que desfaz. */
+  marcarComoPago: (id: string, valorReal?: Centavos) => Desfazer
+  /** Baixa com detalhes: valor, data, conta, forma, comprovante, parcial ou parcelado. */
+  registrarPagamento: (id: string, detalhes: DetalhesPagamento) => Desfazer
+  /** Lê (e, com servidor, envia) a foto ou PDF de um comprovante. */
+  anexarComprovante: (arquivo: File) => Promise<Comprovante>
+  marcarDasPago: (competencia: MesISO) => Desfazer
+  /** Separa para a reserva a sobra de um mês (competência); a transferência acontece hoje. */
+  separarReserva: (valor: Centavos, mes: MesISO) => Desfazer
+  recorrenciaDe: (l: Lancamento) => Recorrencia | undefined
+  /** Marca ou altera um atendimento; com valor e gerarConta, cria a conta a receber junto. */
+  salvarAtendimento: (a: NovoAtendimento, id: string | undefined, gerarConta: boolean) => Desfazer
+  excluirAtendimento: (id: string) => Desfazer
+  /** Cadastra (sem id) ou altera um cliente ou fornecedor; devolve o id. */
+  salvarParceiro: (p: NovoParceiro, id?: string) => string
+  excluirParceiro: (id: string) => Desfazer
+  /** Atribui lançamentos a um cliente ou fornecedor (vazio tira da ficha). */
+  vincularLancamentos: (ids: string[], parceiroId: string | undefined) => Desfazer
+  /** Cadastra os nomes já usados nos lançamentos e na agenda, ligando o histórico. */
+  cadastrarSugeridos: (nomes: NomeSugerido[]) => Desfazer
+  /** Grava as linhas escolhidas de um extrato importado na conta indicada. */
+  importarExtrato: (contaId: string, linhas: LinhaImportacao[]) => Desfazer
+  atualizarEmpresa: (e: Partial<Empresa>) => void
+  atualizarPreferencias: (p: Partial<Preferencias>) => void
+  dispensarAviso: (id: string) => void
+  /** Sai da demonstração e começa com os dados do próprio negócio (no servidor, quando há um). */
+  comecar: (c: ConfigInicial, adicional?: boolean) => Promise<void>
+  /** Abre outro negócio da conta (ou um em que a pessoa é contadora). */
+  trocarNegocio: (empresaId: string) => Promise<void>
+  /** Busca de novo a conta (negócios, plano, indicações). */
+  recarregarConta: () => Promise<void>
+  /** O negócio aberto é de outra pessoa: o contador só vê, não grava. */
+  somenteLeitura: boolean
+  restaurarDemo: () => void
+  /** Há servidor (versão instalada) ou só o navegador (demonstração publicada)? */
+  servidor: 'verificando' | 'sem' | 'com'
+  conta: Conta | null
+  /** Situação do envio das mudanças ao servidor. */
+  salvamento: 'ok' | 'salvando' | 'erro'
+  /** Módulos do plano do cliente. Sem servidor (demonstração), undefined: tudo liberado. */
+  modulos: IdModulo[] | undefined
+  /** Por que o servidor recusou gravar (assinatura suspensa, manutenção), quando recusou. */
+  bloqueio: string | null
+  entrar: (email: string, senha: string) => Promise<Conta>
+  /** Cria a conta; leva junto o convite de contador e o código de indicação guardados neste navegador. */
+  criarConta: (nome: string, email: string, senha: string) => Promise<Conta>
+  /** Aceita o convite de contador guardado (ou o código dado) e abre o negócio do cliente. */
+  aceitarConvite: (codigo?: string) => Promise<boolean>
+  /** Senha nova pelo link do e-mail; já entra na conta. */
+  redefinirSenha: (codigo: string, senha: string) => Promise<Conta>
+  sair: () => Promise<void>
+}
+
+export type Desfazer = () => void
+
+const Ctx = createContext<Store | null>(null)
+
+export function StoreProvider({ children }: { children: ReactNode }) {
+  const [salvo, setSalvo] = useState<Salvo>(carregar)
+  const hoje = hojeDo(salvo.modo)
+  const [mes, setMes] = useState<MesISO>(mesDe(hoje))
+  const [servidor, setServidor] = useState<Store['servidor']>('verificando')
+  const [conta, setConta] = useState<Conta | null>(null)
+  const [salvamento, setSalvamento] = useState<Store['salvamento']>('ok')
+  const [bloqueio, setBloqueio] = useState<string | null>(null)
+  const salvoRef = useRef(salvo)
+  salvoRef.current = salvo
+  const somenteLeitura = servidor === 'com' && conta?.negocio?.papel === 'contador'
+  const leituraRef = useRef(somenteLeitura)
+  leituraRef.current = somenteLeitura
+
+  useEffect(() => {
+    if (salvo.noServidor) return
+    try {
+      if (salvo.modo === 'demo') localStorage.removeItem(CHAVE)
+      else localStorage.setItem(CHAVE, JSON.stringify(salvo))
+    } catch {
+      /* ignora: o app funciona sem persistir */
+    }
+  }, [salvo])
+
+  // ---------- Envio ao servidor ----------
+  // As mudanças entram numa fila e vão em lotes, uma de cada vez. Sem internet, juntam-se e
+  // tentam de novo a cada 5 segundos; nada se perde enquanto a página estiver aberta.
+  const fila = useRef<Mudancas | null>(null)
+  const enviando = useRef(false)
+  const enviar = useCallback(async () => {
+    if (enviando.current) return
+    enviando.current = true
+    while (fila.current) {
+      const lote = fila.current
+      fila.current = null
+      setSalvamento('salvando')
+      try {
+        await api('POST', 'sincronizar', lote)
+      } catch (e) {
+        const status = e instanceof ErroApi ? e.status : 0
+        if (status >= 400 && status < 500 && status !== 401 && status !== 408 && status !== 429) {
+          // O servidor recusou o lote: repetir não adianta. Fica registrado e a fila segue.
+          console.error('Mudança recusada pelo servidor', e, lote)
+          if (status === 403 && e instanceof ErroApi) setBloqueio(e.message)
+          setSalvamento('erro')
+          continue
+        }
+        fila.current = fila.current ? juntar(lote, fila.current) : lote
+        setSalvamento('erro')
+        enviando.current = false
+        if (status === 401) setConta(null)
+        else window.setTimeout(() => void enviar(), 5000)
+        return
+      }
+    }
+    setSalvamento('ok')
+    enviando.current = false
+  }, [])
+  const enfileirar = useCallback(
+    (m: Mudancas | null) => {
+      if (!m) return
+      fila.current = fila.current ? juntar(fila.current, m) : m
+      void enviar()
+    },
+    [enviar],
+  )
+  useEffect(() => {
+    const aviso = (e: BeforeUnloadEvent) => {
+      if (fila.current || enviando.current) e.preventDefault()
+    }
+    window.addEventListener('beforeunload', aviso)
+    return () => window.removeEventListener('beforeunload', aviso)
+  }, [])
+
+  // Toda mudança passa pelo gerador, para as contas fixas estarem sempre criadas.
+  const mudar = useCallback(
+    (f: (d: Dados) => Dados) => {
+      const s = salvoRef.current
+      // Contador: a tela não muda nada (o servidor também recusaria).
+      if (leituraRef.current) {
+        setBloqueio('Você está vendo este negócio como contador: dá para consultar e exportar, mas não para mudar nada.')
+        return
+      }
+      const dados = comPrevistos(f(s.dados), hojeDo(s.modo))
+      const novo = { ...s, dados }
+      salvoRef.current = novo
+      setSalvo(novo)
+      if (s.noServidor) enfileirar(diferencas(s.dados, dados))
+    },
+    [enfileirar],
+  )
+
+  /** Roda uma mudança e devolve como desfazê-la, sem perder o que mudou depois em outros registros. */
+  const desfazivel = useCallback(
+    (f: (d: Dados) => Dados): Desfazer => {
+      const antes = salvoRef.current.dados
+      mudar(f)
+      const depois = salvoRef.current.dados
+      return () => mudar((d) => reverterDados(d, antes, depois))
+    },
+    [mudar],
+  )
+
+  const carregarDoServidor = useCallback(async () => {
+    const { dados } = await api<{ dados: Dados | null }>('GET', 'dados')
+    if (!dados) return
+    const h = hojeReal()
+    const atualizado = comPrevistos(dados, h)
+    setSalvo({ modo: 'real', dados: atualizado, noServidor: true })
+    setMes(mesDe(h))
+    // Contas fixas do mês que virou desde o último acesso: o servidor também guarda.
+    enfileirar(diferencas(dados, atualizado))
+  }, [enfileirar])
+
+  useEffect(() => {
+    void (async () => {
+      const s = await verificarServidor()
+      if (!s.tem) return setServidor('sem')
+      setConta(s.conta)
+      if (s.conta?.temNegocio) await carregarDoServidor().catch(() => {})
+      setServidor('com')
+    })()
+  }, [carregarDoServidor])
+
+  const entrar = useCallback(
+    async (email: string, senha: string) => {
+      const entrou = await api<Conta>('POST', 'conta/entrar', { email, senha })
+      // A resposta do login é curta: plano, módulos e avisos vêm de /api/conta.
+      const c = await api<Conta>('GET', 'conta').catch(() => entrou)
+      setBloqueio(null)
+      // Mudanças que ficaram esperando porque a sessão tinha vencido vão antes de recarregar.
+      if (fila.current) await enviar()
+      if (c.temNegocio) await carregarDoServidor()
+      setConta(c)
+      return c
+    },
+    [carregarDoServidor, enviar],
+  )
+  const redefinirSenha = useCallback(
+    async (codigo: string, senha: string) => {
+      await api<Conta>('POST', 'conta/redefinir', { codigo, senha })
+      const c = await api<Conta>('GET', 'conta')
+      if (c.temNegocio) await carregarDoServidor()
+      setConta(c)
+      return c
+    },
+    [carregarDoServidor],
+  )
+  const criarConta = useCallback(async (nome: string, email: string, senha: string) => {
+    const extras = { convite: lerGuardado(CHAVE_CONVITE), indicacao: lerGuardado(CHAVE_INDICACAO) }
+    const criada = await api<Conta>('POST', 'conta/criar', { nome, email, senha, aceiteTermos: true, ...extras })
+    const c = await api<Conta>('GET', 'conta').catch(() => criada)
+    setConta(c)
+    return c
+  }, [])
+
+  const salvarLancamento = useCallback(
+    (l: NovoLancamento, id?: string, opcoes?: OpcoesRepetir) => {
+      const novoId = id ?? uid()
+      mudar((d) => {
+        const empresaId = d.empresa.id
+        const anterior = id ? d.lancamentos.find((x) => x.id === id) : undefined
+        let recorrencias = d.recorrencias
+        let lancamentos = d.lancamentos
+        let recorrenciaId = anterior?.recorrenciaId
+
+        if (l.situacao === 'previsto' && opcoes?.repetir && l.dataVencimento) {
+          // Conta fixa: a competência de cada mês é a data de vencimento.
+          l = { ...l, dataCompetencia: l.dataVencimento }
+          const modelo = {
+            natureza: l.natureza,
+            valor: l.valor,
+            categoriaId: l.categoriaId,
+            contaFinanceiraId: l.contaFinanceiraId,
+            formaPagamento: l.formaPagamento,
+            descricao: l.descricao,
+            contraparte: l.contraparte,
+            lembreteDias: l.lembreteDias,
+            parceiroId: l.parceiroId,
+          }
+          const dia = Number(l.dataCompetencia.slice(8, 10))
+          if (recorrenciaId) {
+            // Editar a conta fixa refaz só os previstos ainda não pagos (menos este).
+            recorrencias = recorrencias.map((r) =>
+              r.id === recorrenciaId ? { ...r, modelo, diaVencimento: dia, seFimDeSemana: opcoes.seFimDeSemana, valorVaria: opcoes.valorVaria, ultimaGeracao: l.dataCompetencia } : r,
+            )
+            lancamentos = lancamentos.filter((x) => !(x.recorrenciaId === recorrenciaId && x.situacao === 'previsto' && x.id !== id))
+          } else {
+            recorrenciaId = uid()
+            recorrencias = [
+              ...recorrencias,
+              {
+                id: recorrenciaId,
+                empresaId,
+                modelo,
+                frequencia: 'mensal',
+                diaVencimento: dia,
+                inicio: l.dataCompetencia,
+                seFimDeSemana: opcoes.seFimDeSemana,
+                valorVaria: opcoes.valorVaria,
+                ativa: true,
+                ultimaGeracao: l.dataCompetencia,
+              },
+            ]
+          }
+        } else if (recorrenciaId && opcoes && !opcoes.repetir) {
+          // Deixou de repetir: encerra a conta fixa e tira os próximos previstos.
+          const fim = l.dataCompetencia
+          recorrencias = recorrencias.map((r) => (r.id === recorrenciaId ? { ...r, ativa: false, fim } : r))
+          lancamentos = lancamentos.filter((x) => !(x.recorrenciaId === recorrenciaId && x.situacao === 'previsto' && x.id !== id && x.dataCompetencia > fim))
+        }
+
+        const registro: Lancamento = { ...l, id: novoId, empresaId, recorrenciaId }
+        lancamentos = id ? lancamentos.map((x) => (x.id === id ? registro : x)) : [...lancamentos, registro]
+
+        // "Paguei com dinheiro pessoal": cria o aporte espelho para o caixa não ficar errado.
+        lancamentos = lancamentos.filter((x) => x.espelhoDe !== novoId)
+        if (l.pagoComDinheiroPessoal && l.natureza === 'saida' && l.situacao === 'realizado') {
+          lancamentos.push({
+            id: uid(),
+            empresaId,
+            natureza: 'aporte',
+            valor: l.valor,
+            contaFinanceiraId: l.contaFinanceiraId,
+            situacao: 'realizado',
+            dataCompetencia: l.dataCompetencia,
+            dataPagamento: l.dataPagamento,
+            formaPagamento: 'outro',
+            descricao: `Aporte do dono: ${l.descricao || 'despesa paga com dinheiro pessoal'}`,
+            notaEmitida: 'nao_se_aplica',
+            espelhoDe: novoId,
+          })
+        }
+        return { ...d, lancamentos, recorrencias }
+      })
+      return novoId
+    },
+    [mudar],
+  )
+
+  const excluirLancamento = useCallback(
+    (id: string) =>
+      desfazivel((d) => {
+        const alvo = d.lancamentos.find((l) => l.id === id)
+        // Excluir um previsto de conta fixa vira "cancelado", para o gerador não recriar o mês.
+        if (alvo?.recorrenciaId && alvo.situacao === 'previsto') {
+          return { ...d, lancamentos: d.lancamentos.map((l) => (l.id === id ? { ...l, situacao: 'cancelado' as const } : l)) }
+        }
+        // Vai para a lixeira junto com o aporte espelho, para voltar inteiro.
+        const indo = d.lancamentos.filter((l) => l.id === id || l.espelhoDe === id)
+        return {
+          ...d,
+          lancamentos: d.lancamentos.filter((l) => l.id !== id && l.espelhoDe !== id),
+          pagamentosDas: d.pagamentosDas.map((p) => (p.lancamentoId === id ? { ...p, lancamentoId: undefined } : p)),
+          lixeira: indo.length ? [{ id: uid(), excluidoEm: hojeDo(salvoRef.current.modo), lancamentos: indo }, ...(d.lixeira ?? [])] : d.lixeira,
+        }
+      }),
+    [desfazivel],
+  )
+
+  const restaurarLancamento = useCallback(
+    (itemId: string) =>
+      mudar((d) => {
+        const item = d.lixeira?.find((i) => i.id === itemId)
+        if (!item) return d
+        const ids = new Set(d.lancamentos.map((l) => l.id))
+        const parceiros = new Set((d.parceiros ?? []).map((p) => p.id))
+        const contas = new Set(d.contas.map((c) => c.id))
+        // A ficha do cliente pode ter sido apagada depois; a conta financeira, nunca some.
+        const voltam = item.lancamentos
+          .filter((l) => !ids.has(l.id) && contas.has(l.contaFinanceiraId))
+          .map((l) => (l.parceiroId && !parceiros.has(l.parceiroId) ? { ...l, parceiroId: undefined } : l))
+        return { ...d, lancamentos: [...d.lancamentos, ...voltam], lixeira: d.lixeira!.filter((i) => i.id !== itemId) }
+      }),
+    [mudar],
+  )
+
+  const salvarCategoria = useCallback(
+    (c: Categoria) =>
+      mudar((d) => {
+        const existe = d.categorias.some((x) => x.id === c.id)
+        return { ...d, categorias: existe ? d.categorias.map((x) => (x.id === c.id ? c : x)) : [...d.categorias, c] }
+      }),
+    [mudar],
+  )
+
+  const marcarComoPago = useCallback(
+    (id: string, valorReal?: Centavos) =>
+      desfazivel((d) => ({
+        ...d,
+        lancamentos: d.lancamentos.map((l) =>
+          l.id === id ? { ...l, situacao: 'realizado' as const, dataPagamento: hoje, valor: valorReal && valorReal > 0 ? valorReal : l.valor } : l,
+        ),
+      })),
+    [desfazivel, hoje],
+  )
+
+  const anexarComprovante = useCallback(async (arquivo: File) => {
+    const c = await lerComprovante(arquivo)
+    if (!salvoRef.current.noServidor) return c
+    // Com servidor, o arquivo vai na hora; o lançamento guarda só o id, o nome e o tamanho.
+    await api('POST', 'comprovantes', { id: c.id, nome: c.nome, tipo: c.tipo, dados: c.dados!.slice(c.dados!.indexOf(',') + 1) })
+    return { id: c.id, nome: c.nome, tipo: c.tipo, tamanho: c.tamanho }
+  }, [])
+
+  const registrarPagamento = useCallback(
+    (id: string, detalhes: DetalhesPagamento) => desfazivel((d) => aplicarPagamento(d, id, detalhes, uid)),
+    [desfazivel],
+  )
+
+  const marcarDasPago = useCallback(
+    (competencia: MesISO) =>
+      desfazivel((d) => {
+        const valor = parametroDoAno(Number(competencia.slice(0, 4))).dasValorPorAtividade[d.empresa.atividade]
+        const lanc: Lancamento = {
+          id: uid(),
+          empresaId: d.empresa.id,
+          natureza: 'saida',
+          valor,
+          categoriaId: 'das',
+          contaFinanceiraId: d.contas.find((c) => c.tipo === 'banco')?.id ?? d.contas[0].id,
+          situacao: 'realizado',
+          dataCompetencia: hoje,
+          dataPagamento: hoje,
+          formaPagamento: 'boleto',
+          descricao: `DAS de ${competencia.slice(5, 7)}/${competencia.slice(0, 4)}`,
+          notaEmitida: 'nao_se_aplica',
+        }
+        const existe = d.pagamentosDas.some((p) => p.competencia === competencia)
+        const pagamentosDas = existe
+          ? d.pagamentosDas.map((p) => (p.competencia === competencia ? { ...p, lancamentoId: lanc.id } : p))
+          : [...d.pagamentosDas, { empresaId: d.empresa.id, competencia, valor, vencimento: vencimentoDas(competencia), lancamentoId: lanc.id }]
+        return { ...d, lancamentos: [...d.lancamentos, lanc], pagamentosDas }
+      }),
+    [desfazivel, hoje],
+  )
+
+  const separarReserva = useCallback(
+    (valor: Centavos, mesRef: MesISO) =>
+      desfazivel((d) => {
+        const competencia = mesRef === mesDe(hoje) ? hoje : `${mesRef}-28`
+        const origem = d.contas.find((c) => c.tipo === 'banco') ?? d.contas[0]
+        const destino = d.contas.find((c) => c.tipo === 'reserva')
+        if (!destino) return d
+        const t: Lancamento = {
+          id: uid(),
+          empresaId: d.empresa.id,
+          natureza: 'transferencia',
+          valor,
+          contaFinanceiraId: origem.id,
+          contaDestinoId: destino.id,
+          situacao: 'realizado',
+          dataCompetencia: competencia,
+          dataPagamento: hoje,
+          formaPagamento: 'pix',
+          descricao: 'Separado para a reserva',
+          notaEmitida: 'nao_se_aplica',
+        }
+        return { ...d, lancamentos: [...d.lancamentos, t] }
+      }),
+    [desfazivel, hoje],
+  )
+
+  const salvarAtendimento = useCallback(
+    (a: NovoAtendimento, id: string | undefined, gerarConta: boolean) => desfazivel((d) => gravarAtendimento(d, a, id ?? uid(), gerarConta, uid)),
+    [desfazivel],
+  )
+  const excluirAtendimento = useCallback((id: string) => desfazivel((d) => tirarAtendimento(d, id)), [desfazivel])
+  const salvarParceiro = useCallback(
+    (p: NovoParceiro, id?: string) => {
+      const novoId = id ?? uid()
+      mudar((d) => gravarParceiro(d, p, novoId, hojeDo(salvoRef.current.modo)))
+      return novoId
+    },
+    [mudar],
+  )
+  const excluirParceiro = useCallback((id: string) => desfazivel((d) => tirarParceiro(d, id)), [desfazivel])
+  const vincularLancamentos = useCallback((ids: string[], parceiroId: string | undefined) => desfazivel((d) => vincular(d, ids, parceiroId)), [desfazivel])
+  const cadastrarSugeridos = useCallback((nomes: NomeSugerido[]) => desfazivel((d) => gravarSugeridos(d, nomes, hojeDo(salvoRef.current.modo), uid)), [desfazivel])
+  const importarExtrato = useCallback(
+    (contaId: string, linhas: LinhaImportacao[]) => desfazivel((d) => aplicarImportacao(d, contaId, linhas, uid)),
+    [desfazivel],
+  )
+
+  const recorrenciaDe = useCallback((l: Lancamento) => (l.recorrenciaId ? salvo.dados.recorrencias.find((r) => r.id === l.recorrenciaId) : undefined), [salvo.dados.recorrencias])
+
+  const atualizarEmpresa = useCallback((e: Partial<Empresa>) => mudar((d) => ({ ...d, empresa: { ...d.empresa, ...e } })), [mudar])
+  const atualizarPreferencias = useCallback(
+    (p: Partial<Preferencias>) => mudar((d) => ({ ...d, preferencias: { ...d.preferencias, ...p } })),
+    [mudar],
+  )
+  const dispensarAviso = useCallback(
+    (id: string) => mudar((d) => ({ ...d, avisosDispensados: [...(d.avisosDispensados ?? []), id] })),
+    [mudar],
+  )
+  const aceitarConvite = useCallback(
+    async (codigo?: string) => {
+      const c = codigo ?? lerGuardado(CHAVE_CONVITE)
+      if (!c) return false
+      await api('POST', 'convite/aceitar', { codigo: c })
+      guardar(CHAVE_CONVITE, undefined)
+      const atual = await api<Conta>('GET', 'conta')
+      setConta(atual)
+      await carregarDoServidor()
+      return true
+    },
+    [carregarDoServidor],
+  )
+  const recarregarConta = useCallback(async () => {
+    const c = await api<Conta>('GET', 'conta')
+    setConta(c)
+  }, [])
+  const comecar = useCallback(
+    async (c: ConfigInicial, adicional = false) => {
+      const h = hojeReal()
+      const dados = dadosIniciais(c, h)
+      if (servidor === 'com') {
+        // Mudanças do negócio anterior vão antes de trocar.
+        if (fila.current) await enviar()
+        const r = await api<{ dados: Dados }>('POST', adicional ? 'negocio?adicional=1' : 'negocio', paraNovoNegocio(dados))
+        fila.current = null
+        setBloqueio(null)
+        setSalvo({ modo: 'real', dados: r.dados, noServidor: true })
+        setConta((x) => x && { ...x, temNegocio: true })
+        await recarregarConta().catch(() => {})
+      } else {
+        setSalvo({ modo: 'real', dados })
+      }
+      setMes(mesDe(h))
+    },
+    [servidor, enviar, recarregarConta],
+  )
+  const trocarNegocio = useCallback(
+    async (empresaId: string) => {
+      if (fila.current) await enviar()
+      await api('POST', 'negocios/abrir', { empresaId })
+      setBloqueio(null)
+      await recarregarConta()
+      await carregarDoServidor()
+    },
+    [enviar, recarregarConta, carregarDoServidor],
+  )
+  const restaurarDemo = useCallback(() => {
+    setSalvo({ modo: 'demo', dados: dadosDemo() })
+    setMes(mesDe(DEMO_HOJE))
+  }, [])
+  const sair = useCallback(async () => {
+    await api('POST', 'conta/sair').catch(() => {})
+    fila.current = null
+    setConta(null)
+    restaurarDemo()
+  }, [restaurarDemo])
+
+  const valor = useMemo<Store>(
+    () => ({
+      dados: salvo.dados,
+      modo: salvo.modo,
+      hoje,
+      mes,
+      setMes,
+      salvarLancamento,
+      excluirLancamento,
+      restaurarLancamento,
+      salvarCategoria,
+      marcarComoPago,
+      registrarPagamento,
+      anexarComprovante,
+      marcarDasPago,
+      separarReserva,
+      recorrenciaDe,
+      salvarAtendimento,
+      excluirAtendimento,
+      salvarParceiro,
+      excluirParceiro,
+      vincularLancamentos,
+      cadastrarSugeridos,
+      importarExtrato,
+      atualizarEmpresa,
+      atualizarPreferencias,
+      dispensarAviso,
+      comecar,
+      trocarNegocio,
+      recarregarConta,
+      somenteLeitura,
+      restaurarDemo,
+      servidor,
+      conta,
+      salvamento,
+      modulos: servidor === 'com' && conta?.assinatura ? conta.assinatura.modulos : undefined,
+      bloqueio,
+      entrar,
+      criarConta,
+      aceitarConvite,
+      redefinirSenha,
+      sair,
+    }),
+    [salvo, hoje, mes, salvarLancamento, excluirLancamento, restaurarLancamento, salvarCategoria, trocarNegocio, recarregarConta, somenteLeitura, marcarComoPago, registrarPagamento, anexarComprovante, marcarDasPago, separarReserva, recorrenciaDe, salvarAtendimento, excluirAtendimento, salvarParceiro, excluirParceiro, vincularLancamentos, cadastrarSugeridos, importarExtrato, atualizarEmpresa, atualizarPreferencias, dispensarAviso, comecar, restaurarDemo, servidor, conta, salvamento, bloqueio, entrar, criarConta, aceitarConvite, redefinirSenha, sair],
+  )
+  return <Ctx.Provider value={valor}>{children}</Ctx.Provider>
+}
+
+export function useStore(): Store {
+  const s = useContext(Ctx)
+  if (!s) throw new Error('useStore fora do StoreProvider')
+  return s
+}

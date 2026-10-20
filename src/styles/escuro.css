@@ -1,0 +1,88 @@
+/* Modo escuro: as mesmas cores do DESIGN.md em versão noturna. Liga com a classe "escuro" no
+   <html> (botão da lua no topo ou Configurações > Aparência). As cores fixas das telas
+   (bg-[#...]) ganham a versão escura em escuro-cores.css, gerado por script. */
+
+:root.escuro {
+  color-scheme: dark;
+  --color-bg: #0b1220;
+  --color-surface: #131c2e;
+  --color-sidebar: #0f1828;
+  --color-primary: #4d8dff;
+  --color-primary-hover: #6aa0ff;
+  --color-primary-soft: #18294a;
+  --color-primary-line: #2f4f86;
+  --color-navy: #9db9f0;
+  --color-slate: #8094b3;
+  --color-ink: #e7edf7;
+  --color-ink-2: #a3b2c9;
+  --color-muted: #7c8ba3;
+  --color-line: #233149;
+  --color-success: #3fd08f;
+  --color-success-soft: #10352a;
+  --color-danger: #ff6b7f;
+  --color-danger-soft: #3b1822;
+  --color-warning: #f7a456;
+  --color-warning-soft: #3a2513;
+  --color-hover: #1a2539;
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 32px -16px rgba(0, 0, 0, 0.6);
+  --shadow-card-hover: 0 2px 4px rgba(0, 0, 0, 0.35), 0 18px 40px -16px rgba(0, 0, 0, 0.7);
+  --shadow-pop: 0 24px 60px -12px rgba(0, 0, 0, 0.75);
+  --grade-grafico: #1f2b40;
+}
+
+:root.escuro body {
+  background-image:
+    radial-gradient(900px 480px at 92% -8%, rgba(77, 141, 255, 0.12), transparent 62%),
+    radial-gradient(700px 420px at 20% 110%, rgba(77, 141, 255, 0.07), transparent 60%);
+}
+:root.escuro .card {
+  border-color: rgba(60, 80, 112, 0.45);
+}
+/* Azul-marinho dos itens ativos: no escuro, um azul mais vivo para destacar do fundo. */
+:root.escuro .grad-navy {
+  background-image: linear-gradient(180deg, #2f5aa8 0%, #23468a 100%);
+}
+:root.escuro .ring-white {
+  --tw-ring-color: #1d2a40;
+}
+:root.escuro .bg-white\/80,
+:root.escuro .bg-white\/70,
+:root.escuro .hover\:bg-white\/70:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+:root.escuro .hover\:bg-white:hover {
+  background-color: var(--color-surface);
+}
+/* Gráficos (recharts) com cores fixas de texto e grade. */
+:root.escuro .recharts-cartesian-grid line {
+  stroke: #1f2b40;
+}
+:root.escuro .recharts-text {
+  fill: #a3b2c9;
+}
+:root.escuro .recharts-tooltip-cursor {
+  fill: #1a2539;
+}
+:root.escuro img[src$='logo-kodemi.png'] {
+  filter: brightness(1.6);
+}
+/* Troca suave ao mudar de tema. */
+:root.trocando-tema,
+:root.trocando-tema * {
+  transition:
+    background-color 0.35s ease,
+    border-color 0.35s ease,
+    color 0.35s ease !important;
+}
+
+/* Linha branca da borda do menu lateral. */
+:root.escuro .shadow-\[1px_0_0_rgba\(255\,255\,255\,0\.8\)\] {
+  --tw-shadow: none;
+  box-shadow: none;
+}
+/* "R$ 0,00" ainda vazio: cinza claro no claro, cinza apagado no escuro. */
+:root.escuro .text-\[\#c5cfdb\],
+:root.escuro .placeholder\:text-\[\#c5cfdb\]::placeholder {
+  color: #3b4a63;
+}
