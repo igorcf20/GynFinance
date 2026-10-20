@@ -59,6 +59,11 @@ No mesmo `.env`, `ADMIN_EMAILS` diz quem entra no painel de superadmin (`/app/#/
 mensalidades, assinantes, textos e imagens do site. Quem estiver nessa lista cria a conta normalmente
 no sistema com esse e-mail. Depois de mudar o `.env`, rode `docker compose up -d app` para valer.
 
+O assistente (o cliente manda foto, fala ou escreve e o sistema prepara os lançamentos) usa o
+serviço de inteligência artificial da Anthropic. A chave é colada em Superadmin > Sistema >
+Assistente (ou em `ANTHROPIC_API_KEY` no `.env`). O servidor precisa sair para `api.anthropic.com`
+e o nginx precisa aceitar pedidos de até 10 MB (`client_max_body_size 10m`), por causa das fotos.
+
 Para o sistema mandar e-mail ("Esqueci minha senha" e os lembretes do dia: contas vencendo, DAS,
 fechamento do mês e declaração anual do MEI), preencha `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`,
 `SMTP_PASS` e `EMAIL_REMETENTE` com os dados do provedor de e-mail. Sem eles tudo funciona, só não sai

@@ -183,7 +183,7 @@ function FormPlano({ fonte, plano, ordem, onFechar, onMudou }: { fonte: FonteAdm
           <p className="mt-2 text-[12px] text-ink-2">Módulos "em breve" ainda não existem no sistema. Marcar agora já deixa o plano pronto para quando chegarem.</p>
         </div>
         <div className="divide-y divide-line rounded-[12px] border border-line px-4">
-          <Toggle checked={d.temIa} onChange={(v) => muda('temIa', v)} label="Inteligência artificial" descricao="Libera os recursos de IA para este plano (quando a IA estiver ligada em Sistema)." />
+          <Toggle checked={d.temIa} onChange={(v) => muda('temIa', v)} label="Assistente (inteligência artificial)" descricao="Libera o assistente, que lê fotos de recibos e entende o que o cliente escreve ou fala, para este plano (quando ele estiver ligado em Sistema)." />
           <Toggle checked={d.ativo} onChange={(v) => muda('ativo', v)} label="Ativo" descricao="Aparece no site e pode ser escolhido para novos clientes." />
           <Toggle checked={d.destaque} onChange={(v) => muda('destaque', v)} label="Destaque no site" descricao='Ganha o selo "Mais escolhido" na página de preços.' />
         </div>

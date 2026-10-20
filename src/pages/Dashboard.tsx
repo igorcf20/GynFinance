@@ -1,4 +1,4 @@
-import { ArrowUpRight, ArrowDownRight, ChevronRight, CalendarClock, FileUp, PiggyBank, Wallet } from 'lucide-react'
+import { ArrowUpRight, ArrowDownRight, Camera, ChevronRight, CalendarClock, FileUp, PiggyBank, Sparkles, Wallet } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { SaldoSparkline, SobrouMesesChart } from '../components/financial/charts'
@@ -17,6 +17,7 @@ import { useStore } from '../data/store'
 import { addDias, addMeses, brl, nomeMes, pct } from '../lib/format'
 import { ValorAnimado } from '../components/ui/ValorAnimado'
 import { temModulo } from '../domain/planos'
+import { useTemAssistente } from './Assistente'
 
 function saudacao(): string {
   const h = new Date().getHours()
@@ -26,6 +27,7 @@ function saudacao(): string {
 export function Dashboard() {
   const { dados, hoje, mes, separarReserva, dispensarAviso, modulos } = useStore()
   const toast = useToast()
+  const temAssistente = useTemAssistente()
   const [confirmarReserva, setConfirmarReserva] = useState(false)
 
   const r = resumoMes(dados.lancamentos, mes)
@@ -105,6 +107,23 @@ export function Dashboard() {
           </Card>
 
           <FinancialSummary r={r} />
+
+          {temAssistente && (
+            <Link
+              to="/assistente"
+              className="card group relative flex items-center gap-4 overflow-hidden !py-4 transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow-card-hover)]"
+            >
+              <span className="grad-primario inline-flex size-11 shrink-0 items-center justify-center rounded-full text-white shadow-[var(--shadow-primary)]">
+                <Sparkles size={20} aria-hidden />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-bold text-ink">Lançar com o assistente</span>
+                <span className="block text-[13px] text-ink-2">Mande a foto do recibo, fale ou escreva. Ele preenche tudo e você só confirma.</span>
+              </span>
+              <Camera size={20} className="hidden shrink-0 text-primary sm:block" aria-hidden />
+              <ChevronRight size={18} className="shrink-0 text-primary transition-transform group-hover:translate-x-0.5" aria-hidden />
+            </Link>
+          )}
 
           <ReceberEAtraso lancamentos={dados.lancamentos} hoje={hoje} />
 

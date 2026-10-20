@@ -29,7 +29,7 @@ export function useGruposNav(): GrupoNav[] {
   const admin = conta?.admin || servidor === 'sem'
   return GRUPOS_NAV.map((g) => ({
     ...g,
-    itens: [...doPlano(g.itens, modulos).filter((i) => i.para !== '/mei' || dados.empresa.ehMei), ...(g.titulo === 'Ajustes' && admin ? [NAV_ADMIN] : [])],
+    itens: [...doPlano(g.itens, modulos, servidor !== 'com' || !conta || !!conta.assinatura?.temIa).filter((i) => i.para !== '/mei' || dados.empresa.ehMei), ...(g.titulo === 'Ajustes' && admin ? [NAV_ADMIN] : [])],
   })).filter((g) => g.itens.length)
 }
 
