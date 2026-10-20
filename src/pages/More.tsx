@@ -4,6 +4,7 @@ import { Header } from '../components/layout/Header'
 import { SeloNav, useGruposNav, useSelosNav } from '../components/layout/Sidebar'
 import { Card } from '../components/ui/Card'
 import { CartaoComecar } from '../components/layout/CartaoComecar'
+import { CartaoInstalar } from '../components/layout/AppInstalavel'
 import { useStore } from '../data/store'
 import { TrocaNegocio } from '../components/layout/TrocaNegocio'
 
@@ -26,6 +27,9 @@ export function More() {
         </div>
       )}
       <TrocaNegocio className="mb-4" />
+      <div className="mb-4 empty:hidden">
+        <CartaoInstalar />
+      </div>
       <div className="flex flex-col gap-4">
         {grupos.map((g, n) => (
           <section key={g.titulo ?? n} aria-label={g.titulo ?? 'Início'}>

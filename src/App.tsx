@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { HashRouter, Navigate, Route, Routes, UNSAFE_createMemoryHistory, unstable_HistoryRouter as HistoryRouter, useLocation } from 'react-router-dom'
+import { AvisoVersaoNova, TelaSemInternet } from './components/layout/AppInstalavel'
 import { LogoMarca } from './components/layout/Logo'
 import { SoNoPlano } from './components/layout/AvisosDoPlano'
 import { MainLayout } from './components/layout/MainLayout'
@@ -36,7 +37,7 @@ import { Transactions } from './pages/Transactions'
  * demonstração antes dos dados do negócio. Logado sem negócio: vai para a configuração inicial.
  */
 function Portao({ children }: { children: ReactNode }) {
-  const { servidor, conta } = useStore()
+  const { servidor, conta, conectar } = useStore()
   const { pathname } = useLocation()
   // A tela atual vai junto com os erros e com o chamado de suporte.
   definirPagina(pathname)
@@ -49,6 +50,7 @@ function Portao({ children }: { children: ReactNode }) {
       </div>
     )
   }
+  if (servidor === 'fora') return <TelaSemInternet onTentar={() => void conectar()} />
   // O superadmin entra no painel mesmo sem ter configurado um negócio próprio.
   if (conta && !conta.temNegocio && pathname !== '/comecar' && pathname !== '/redefinir-senha' && pathname !== '/convite' && !(conta.admin && pathname === '/admin')) return <Navigate to="/comecar" replace />
   return <>{children}</>
@@ -105,6 +107,8 @@ export default function App() {
             </Routes>
           </Portao>
         </Roteador>
+        {/* A demonstração em moldura não instala nada no aparelho; em desenvolvimento também não. */}
+        {import.meta.env.PROD && !dentroDeMoldura && <AvisoVersaoNova />}
       </ToastProvider>
     </StoreProvider>
     </ProtecaoDeErro>

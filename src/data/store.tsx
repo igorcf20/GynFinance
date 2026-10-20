@@ -202,7 +202,9 @@ interface Store {
   somenteLeitura: boolean
   restaurarDemo: () => void
   /** Há servidor (versão instalada) ou só o navegador (demonstração publicada)? */
-  servidor: 'verificando' | 'sem' | 'com'
+  servidor: 'verificando' | 'sem' | 'com' | 'fora'
+  /** Procura o servidor de novo (sem internet ao abrir, a conexão voltou). */
+  conectar: () => Promise<void>
   conta: Conta | null
   /** Situação do envio das mudanças ao servidor. */
   salvamento: 'ok' | 'salvando' | 'erro'
@@ -338,15 +340,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     enfileirar(diferencas(dados, atualizado))
   }, [enfileirar])
 
-  useEffect(() => {
-    void (async () => {
-      const s = await verificarServidor()
-      if (!s.tem) return setServidor('sem')
-      setConta(s.conta)
-      if (s.conta?.temNegocio) await carregarDoServidor().catch(() => {})
-      setServidor('com')
-    })()
+  const conectar = useCallback(async () => {
+    const s = await verificarServidor()
+    if (!s.tem) return setServidor('sem')
+    if (s.tem === 'fora') return setServidor('fora')
+    setConta(s.conta)
+    if (s.conta?.temNegocio) await carregarDoServidor().catch(() => {})
+    setServidor('com')
   }, [carregarDoServidor])
+  useEffect(() => {
+    void conectar()
+  }, [conectar])
 
   const entrar = useCallback(
     async (email: string, senha: string) => {
@@ -710,6 +714,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       somenteLeitura,
       restaurarDemo,
       servidor,
+      conectar,
       conta,
       salvamento,
       modulos: servidor === 'com' && conta?.assinatura ? conta.assinatura.modulos : undefined,
@@ -720,7 +725,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       redefinirSenha,
       sair,
     }),
-    [salvo, hoje, mes, salvarLancamento, excluirLancamento, restaurarLancamento, salvarCategoria, trocarNegocio, recarregarConta, somenteLeitura, marcarComoPago, registrarPagamento, anexarComprovante, marcarDasPago, separarReserva, recorrenciaDe, salvarAtendimento, excluirAtendimento, salvarParceiro, excluirParceiro, vincularLancamentos, cadastrarSugeridos, importarExtrato, atualizarEmpresa, atualizarPreferencias, dispensarAviso, comecar, restaurarDemo, servidor, conta, salvamento, bloqueio, entrar, criarConta, aceitarConvite, redefinirSenha, sair],
+    [salvo, hoje, mes, salvarLancamento, excluirLancamento, restaurarLancamento, salvarCategoria, trocarNegocio, recarregarConta, somenteLeitura, marcarComoPago, registrarPagamento, anexarComprovante, marcarDasPago, separarReserva, recorrenciaDe, salvarAtendimento, excluirAtendimento, salvarParceiro, excluirParceiro, vincularLancamentos, cadastrarSugeridos, importarExtrato, atualizarEmpresa, atualizarPreferencias, dispensarAviso, comecar, restaurarDemo, servidor, conectar, conta, salvamento, bloqueio, entrar, criarConta, aceitarConvite, redefinirSenha, sair],
   )
   return <Ctx.Provider value={valor}>{children}</Ctx.Provider>
 }
